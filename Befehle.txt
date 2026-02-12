@@ -1,0 +1,12 @@
+Befehle:
+
+flutter clean
+flutter upgrade
+flutter doctor -v
+flutter pub get
+dart run flutter_launcher_icons
+dart run server.dart
+
+Hinweis:
+- .env niemals committen. Stattdessen .env.example nutzen und lokal eine .env anlegen (z.B. gated/backend/.env).
+- gated.db nicht committen (liegt lokal in gated/backend/).

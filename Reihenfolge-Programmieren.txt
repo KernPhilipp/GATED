@@ -1,0 +1,210 @@
+## Phase 0 – Architektur & Grundentscheidungen (einmalig klären)
+
+**Ziel:** Saubere Basis, damit spätere Schritte logisch aufeinander aufbauen.
+
+* **Architektur**
+
+  * Flutter Web → spricht per HTTP mit Backend
+  * Backend → Dart (`shelf`) + SQLite
+  * Authentifizierung → Session-/Token-basiert (einfacher Start: stateless Token)
+* **Sicherheitsprinzipien**
+
+  * Passwörter niemals im Klartext
+  * Hashing mit **PBKDF2** (vorgegeben)
+  * Registrierung nur mit **Allow-List**
+* **Trennung**
+
+  * Flutter: nur UI + API-Calls
+  * Backend: Validierung, Auth-Logik, DB
+
+---
+
+## Phase 1 – Projektstruktur festlegen
+
+### 1.1 Backend-Ordner vorbereiten
+
+**Warum:** Ordnung von Anfang an, spätere Wartbarkeit.
+
+Empfohlene Struktur:
+
+```
+gated_backend/
+ ├─ bin/
+ │   └─ server.dart        # Einstiegspunkt
+ ├─ lib/
+ │   ├─ db/
+ │   │   └─ database.dart  # SQLite Init + Queries
+ │   ├─ auth/
+ │   │   ├─ hashing.dart   # PBKDF2 Logik
+ │   │   └─ allowlist.dart # erlaubte E-Mails
+ │   ├─ routes/
+ │   │   └─ auth_routes.dart
+ │   └─ middleware/
+ │       └─ cors.dart
+ └─ pubspec.yaml
+```
+
+---
+
+## Phase 2 – Datenbank & Auth-Grundlagen (Backend)
+
+### 2.1 SQLite Datenmodell definieren
+
+**Warum:** Erst Daten klären, dann Logik.
+
+Tabelle `users`:
+
+* `id` (int, PK)
+* `email` (unique)
+* `password_hash`
+* `password_salt`
+* `created_at`
+
+Optional später:
+
+* `last_login`
+* `role`
+
+---
+
+### 2.2 Allow-List umsetzen
+
+**Warum:** Sicherheitsanforderung von Codex.
+
+* Statische Liste oder SQLite-Tabelle `allowed_emails`
+* Prüfung **vor** Registrierung
+* Klare Fehlermeldung bei nicht erlaubter E-Mail
+
+---
+
+### 2.3 Passwort-Hashing (PBKDF2)
+
+**Warum:** Kritischer Sicherheitsbaustein.
+
+* Pro User:
+
+  * Zufälliges Salt
+  * Hash mit PBKDF2 (cryptography-Package)
+* Funktionen:
+
+  * `hashPassword(password)`
+  * `verifyPassword(password, hash, salt)`
+
+---
+
+## Phase 3 – Backend API (shelf)
+
+### 3.1 HTTP-Routen definieren
+
+**Warum:** Klare, testbare Schnittstellen.
+
+| Route            | Methode | Zweck         |
+| ---------------- | ------- | ------------- |
+| `/auth/register` | POST    | Registrierung |
+| `/auth/login`    | POST    | Login         |
+| `/auth/me`       | GET     | Token prüfen  |
+
+---
+
+### 3.2 CORS Middleware (ohne externe Packages)
+
+**Warum:** Flutter Web → Browser → CORS nötig.
+
+* Eigene Middleware:
+
+  * `Access-Control-Allow-Origin`
+  * `Access-Control-Allow-Headers`
+  * `OPTIONS` abfangen
+
+---
+
+### 3.3 Login-Ablauf
+
+1. Email + Passwort empfangen
+2. User aus DB laden
+3. Passwort prüfen
+4. Token erzeugen (z. B. random String)
+5. Token zurückgeben
+
+---
+
+## Phase 4 – Flutter Frontend
+
+### 4.1 UI-Screens
+
+**Warum:** UX klar trennen.
+
+* `login_screen.dart`
+* `register_screen.dart`
+
+Jeweils:
+
+* TextFields (E-Mail, Passwort)
+* Button
+* Error-Anzeige
+
+---
+
+### 4.2 API-Service
+
+**Warum:** Kein HTTP-Code in Widgets.
+
+`auth_service.dart`:
+
+* `login(email, password)`
+* `register(email, password)`
+* Speichern des Tokens (z. B. `SharedPreferences`)
+
+---
+
+### 4.3 Auth-State
+
+**Warum:** App soll wissen, ob User eingeloggt ist.
+
+* Einfacher `AuthProvider` oder `ValueNotifier`
+* Token vorhanden → eingeloggter Zustand
+
+---
+
+## Phase 5 – Lokale Ausführung (Windows)
+
+### 5.1 Backend starten
+
+* `dart run bin/server.dart`
+* Port z. B. `8080`
+* SQLite Datei lokal
+
+### 5.2 Flutter Web
+
+* `flutter run -d chrome`
+* Backend-URL auf `http://localhost:8080`
+
+---
+
+## Phase 6 – Vorbereitung Raspberry Pi
+
+**Was ändert sich später:**
+
+* IP statt `localhost`
+* Firewall/Port-Freigabe
+* SQLite-Pfad evtl. anpassen
+* Start als Service (systemd)
+
+**Was gleich bleibt:**
+
+* Code
+* API
+* Datenbankstruktur
+* Hashing
+
+---
+
+## Ergebnis nach diesem Plan
+
+Nach Abschluss aller Phasen habt ihr:
+
+* Sauberes Login + Registrierungssystem
+* Sichere Passwort-Speicherung
+* Allow-List-basierte Registrierung
+* Trennung von Frontend & Backend
+* Code, der **1:1** auf dem Raspberry Pi läuft
