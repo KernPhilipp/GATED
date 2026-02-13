@@ -6,7 +6,17 @@ flutter doctor -v
 flutter pub get
 dart run flutter_launcher_icons
 dart run server.dart
+dart pub global run rename
+dart pub global run rename setAppName --targets android,ios,web,windows,macos,linux --value "Katz-o-mat"
+dart pub global run rename getBundleId --targets android
+dart pub global run rename setBundleId --targets android --value "com.example.katzomat"
+dart pub global run rename getBundleId --targets ios
+dart pub global run rename setBundleId --targets ios --value "com.example.katzomat"
+dart pub global run rename getBundleId --targets windows
+dart pub global run rename setBundleId --targets windows --value "katzomat"
+dart pub global run rename getBundleId --targets macos
+dart pub global run rename setBundleId --targets macos --value "com.example.katzomat"
 
 Hinweis:
-- .env niemals committen. Stattdessen .env.example nutzen und lokal eine .env anlegen (z.B. gated/backend/.env).
-- gated.db nicht committen (liegt lokal in gated/backend/).
+- .env niemals committen. Stattdessen .env.example nutzen und lokal eine .env anlegen (z.B. katz-o-mat/backend/.env).
+- katzomat.db nicht committen (liegt lokal in katz-o-mat/backend/).
