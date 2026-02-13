@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 ThemeData buildLightTheme() {
   final base = ThemeData(
     colorScheme: ColorScheme.fromSeed(
-      seedColor: const Color(0xFF03045E),
+      seedColor: const Color(0xFFCAF0F8),
       brightness: Brightness.light,
     ),
     useMaterial3: true,
@@ -21,7 +21,7 @@ ThemeData buildLightTheme() {
 ThemeData buildDarkTheme() {
   final base = ThemeData(
     colorScheme: ColorScheme.fromSeed(
-      seedColor: const Color(0xFFCAF0F8),
+      seedColor: const Color(0xFF03045E),
       brightness: Brightness.dark,
     ),
     useMaterial3: true,

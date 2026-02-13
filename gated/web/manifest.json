@@ -1,11 +1,14 @@
 {
-    "name": "gated",
-    "short_name": "gated",
-    "start_url": ".",
+    "name": "GATED",
+    "short_name": "GATED",
+    "lang": "de",
+    "id": "/",
+    "scope": "/",
+    "start_url": "/",
     "display": "standalone",
     "background_color": "#CAF0F8",
     "theme_color": "#03045E",
-    "description": "A new Flutter project.",
+    "description": "Garage Access Technology for Entry Detection",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
