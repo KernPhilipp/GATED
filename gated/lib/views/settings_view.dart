@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../features/logo_assets.dart';
 import '../services/auth_service.dart';
 
@@ -42,7 +41,7 @@ class _SettingsViewState extends State<SettingsView> {
           const SizedBox(height: 15),
           Card(
             child: ListTile(
-              leading: const Icon(Icons.logout),
+              leading: const Icon(Icons.logout_rounded),
               title: const Text('Abmelden'),
               subtitle: const Text('Aktuelle Sitzung beenden'),
               onTap: _handleLogout,
@@ -51,7 +50,7 @@ class _SettingsViewState extends State<SettingsView> {
           const SizedBox(height: 15),
           Card(
             child: ListTile(
-              leading: const Icon(Icons.info_outline),
+              leading: const Icon(Icons.info_outline_rounded),
               title: const Text('Über GATED'),
               subtitle: const Text('App-Informationen anzeigen'),
               onTap: _showAboutDialog,

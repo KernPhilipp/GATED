@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../logo_assets.dart';
 import 'navbar_constants.dart';
 import 'navbar_item.dart';

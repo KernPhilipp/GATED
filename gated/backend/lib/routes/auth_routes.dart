@@ -3,7 +3,6 @@ import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
-
 import '../auth/allowlist.dart';
 import '../auth/hashing.dart';
 import '../auth/jwt_service.dart';

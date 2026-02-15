@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../features/navbar/navbar.dart';
 import '../views/settings_view.dart';
 
@@ -16,10 +15,10 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
   final List<({String label, IconData icon})> _navItems = [
-    (label: 'Dashboard', icon: Icons.dashboard),
-    (label: 'Kennzeichen', icon: Icons.list),
-    (label: 'Profil', icon: Icons.person),
-    (label: 'Einstellungen', icon: Icons.settings),
+    (label: 'Dashboard', icon: Icons.dashboard_rounded),
+    (label: 'Kennzeichen', icon: Icons.view_list_rounded),
+    (label: 'Profil', icon: Icons.person_rounded),
+    (label: 'Einstellungen', icon: Icons.settings_rounded),
   ];
 
   @override

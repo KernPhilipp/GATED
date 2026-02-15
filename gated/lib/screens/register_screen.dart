@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
 import '../services/auth_service.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -113,8 +112,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   },
                                   icon: Icon(
                                     _obscurePassword
-                                        ? Icons.visibility_off
-                                        : Icons.visibility,
+                                        ? Icons.visibility_off_rounded
+                                        : Icons.visibility_rounded,
                                   ),
                                 ),
                               ),

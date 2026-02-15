@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import 'navbar_constants.dart';
 
 class NavbarItem extends StatelessWidget {
