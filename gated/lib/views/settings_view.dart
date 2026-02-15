@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../features/logo_assets.dart';
 import '../services/auth_service.dart';
+import '../utils/snackbar_utils.dart';
 
 class SettingsView extends StatefulWidget {
   const SettingsView({super.key, required this.onThemeModeChanged});
@@ -83,10 +84,11 @@ class _SettingsViewState extends State<SettingsView> {
       Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
     } catch (_) {
       if (!mounted) return;
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.clearSnackBars();
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Abmeldung fehlgeschlagen.')),
+      showAppSnackBar(
+        context,
+        message: 'Abmeldung fehlgeschlagen.',
+        isError: true,
+        withCloseAction: true,
       );
     }
   }

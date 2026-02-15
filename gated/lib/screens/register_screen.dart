@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/auth_service.dart';
+import '../utils/snackbar_utils.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -85,7 +86,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
                                 ).hasMatch(email);
                                 if (!isValidEmail) {
-                                  return 'Bitte eine gultige E-Mail eingeben.';
+                                  return 'Bitte eine gültige E-Mail eingeben.';
                                 }
                                 return null;
                               },
@@ -198,9 +199,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/login');
     } on AuthException catch (e) {
-      _showError(e.message);
+      showAppSnackBar(
+        context,
+        message: e.message,
+        isError: true,
+        withCloseAction: true,
+      );
     } catch (_) {
-      _showError('Registrierung fehlgeschlagen. Bitte erneut versuchen.');
+      showAppSnackBar(
+        context,
+        message: 'Registrierung fehlgeschlagen. Bitte erneut versuchen.',
+        isError: true,
+        withCloseAction: true,
+      );
     } finally {
       if (mounted && _isLoading) {
         setState(() => _isLoading = false);
@@ -229,29 +240,5 @@ class _RegisterScreenState extends State<RegisterScreen> {
         );
       },
     );
-  }
-
-  void _showError(String message) {
-    if (!mounted) return;
-    final messenger = ScaffoldMessenger.of(context);
-    const duration = Duration(seconds: 3);
-    messenger.clearSnackBars();
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Theme.of(context).colorScheme.error,
-        action: SnackBarAction(
-          label: 'Schließen',
-          textColor: Theme.of(context).colorScheme.onError,
-          onPressed: () {
-            messenger.hideCurrentSnackBar();
-          },
-        ),
-      ),
-    );
-    Future.delayed(duration, () {
-      if (!mounted) return;
-      messenger.hideCurrentSnackBar();
-    });
   }
 }
