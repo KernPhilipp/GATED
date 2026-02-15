@@ -29,7 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final views = <Widget>[
       const Placeholder(key: ValueKey('dashboard-view')),
       const Placeholder(key: ValueKey('kennzeichen-view')),
-      const Placeholder(key: ValueKey('profil-view')),
+      const Placeholder(key: ValueKey('profile-view')),
       SettingsView(onThemeModeChanged: widget.onThemeModeChanged),
     ];
 
