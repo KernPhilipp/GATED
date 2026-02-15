@@ -157,6 +157,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                 'Noch keinen Account? Registrieren',
                               ),
                             ),
+                            const SizedBox(height: 5),
+                            TextButton(
+                              onPressed: _isLoading
+                                  ? null
+                                  : _showForgotPasswordDialog,
+                              child: const Text('Passwort vergessen?'),
+                            ),
                           ],
                         ),
                       ),
@@ -173,6 +180,29 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _focusPasswordField() {
     FocusScope.of(context).requestFocus(_passwordFocusNode);
+  }
+
+  Future<void> _showForgotPasswordDialog() async {
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Passwort vergessen'),
+          content: const Text(
+            'Bitte wende dich an Felix Haader, Philipp Kern oder Tobias Halwax.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _submitLogin() {
