@@ -48,7 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 400),
                   child: Padding(
-                    padding: const EdgeInsets.all(10.0),
+                    padding: const EdgeInsets.all(30.0),
                     child: AutofillGroup(
                       child: Form(
                         key: _formKey,
