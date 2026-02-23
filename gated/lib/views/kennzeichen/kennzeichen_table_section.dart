@@ -54,17 +54,18 @@ class KennzeichenTableSection extends StatelessWidget {
         Card(
           child: Padding(
             padding: const EdgeInsets.all(20),
-            child: LayoutBuilder(
-              builder: (context, constraints) =>
-                  _buildContent(availableWidth: constraints.maxWidth),
-            ),
+            child: _buildContent(),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildContent({required double availableWidth}) {
+  Widget _buildContent() {
+    if (isLoading) {
+      return Column(children: [Center(child: CircularProgressIndicator())]);
+    }
+
     if (rows.isEmpty) {
       return Column(
         children: [

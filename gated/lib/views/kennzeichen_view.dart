@@ -12,6 +12,8 @@ class KennzeichenView extends StatefulWidget {
 }
 
 class _KennzeichenViewState extends State<KennzeichenView> {
+  static const Duration _minimumLoadDuration = Duration(seconds: 1);
+
   final KennzeichenService _kennzeichenService = const KennzeichenService();
   final List<EditableKennzeichenRow> _rows = [];
 
@@ -65,6 +67,7 @@ class _KennzeichenViewState extends State<KennzeichenView> {
 
   Future<void> _loadRows({bool refreshOnly = false}) async {
     if (!mounted) return;
+    final loadStartedAt = DateTime.now();
 
     setState(() {
       if (refreshOnly) {
@@ -103,6 +106,12 @@ class _KennzeichenViewState extends State<KennzeichenView> {
     } catch (_) {
       _showErrorSnackBar('Laden der Kennzeichen fehlgeschlagen.');
     } finally {
+      final elapsed = DateTime.now().difference(loadStartedAt);
+      final remaining = _minimumLoadDuration - elapsed;
+      if (remaining > Duration.zero) {
+        await Future.delayed(remaining);
+      }
+
       if (mounted) {
         setState(() {
           _isLoading = false;
