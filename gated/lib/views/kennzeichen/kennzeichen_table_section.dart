@@ -81,78 +81,88 @@ class KennzeichenTableSection extends StatelessWidget {
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      child: DataTable(
-        columnSpacing: 20,
-        showBottomBorder: true,
-        columns: const [
-          DataColumn(label: Text('Lehrer')),
-          DataColumn(label: Text('Kennzeichen')),
-          DataColumn(label: Text('Aktionen')),
-        ],
-        rows: [
-          for (final row in rows)
-            DataRow.byIndex(
-              index: row.localRowId,
-              cells: [
-                DataCell(
-                  Padding(
-                    padding: const EdgeInsets.only(top: 5.0, bottom: 5.0),
-                    child: TextField(
-                      controller: row.teacherController,
-                      enabled: !row.isBusy,
-                      decoration: const InputDecoration(
-                        hintText: 'z.B. Max Mustermann',
-                      ),
-                      textInputAction: TextInputAction.next,
-                    ),
-                  ),
-                ),
-                DataCell(
-                  Padding(
-                    padding: const EdgeInsets.only(top: 5.0, bottom: 5.0),
-                    child: TextField(
-                      controller: row.licensePlateController,
-                      enabled: !row.isBusy,
-                      decoration: const InputDecoration(
-                        hintText: 'z.B. HA123AB',
-                      ),
-                      textCapitalization: TextCapitalization.characters,
-                      onSubmitted: (_) => onSaveRow(row),
-                    ),
-                  ),
-                ),
-                DataCell(
-                  Padding(
-                    padding: const EdgeInsets.only(top: 5.0, bottom: 5.0),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          tooltip: row.id == null
-                              ? 'Speichern'
-                              : 'Änderungen speichern',
-                          onPressed: row.isBusy ? null : () => onSaveRow(row),
-                          icon: row.isBusy
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 3,
-                                  ),
-                                )
-                              : const Icon(Icons.save_rounded),
-                        ),
-                        IconButton(
-                          tooltip: 'Löschen',
-                          onPressed: row.isBusy ? null : () => onDeleteRow(row),
-                          icon: const Icon(Icons.delete_outline_rounded),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+      child: Builder(
+        builder: (context) {
+          final theme = Theme.of(context);
+          final borderColor = theme.dividerColor;
+
+          return DataTable(
+            columnSpacing: 20,
+            headingRowHeight: 50,
+            dataRowMaxHeight: 80,
+            border: TableBorder(
+              top: BorderSide(color: borderColor, width: 3),
+              right: BorderSide(color: borderColor, width: 3),
+              bottom: BorderSide(color: borderColor, width: 3),
+              left: BorderSide(color: borderColor, width: 3),
+              horizontalInside: BorderSide(color: borderColor, width: 1),
+              verticalInside: BorderSide(color: borderColor, width: 1),
+              borderRadius: BorderRadius.circular(8),
             ),
-        ],
+            columns: const [
+              DataColumn(label: Text('Lehrer')),
+              DataColumn(label: Text('Kennzeichen')),
+              DataColumn(label: Text('Aktionen')),
+            ],
+            rows: [
+              for (final row in rows)
+                DataRow.byIndex(
+                  index: row.localRowId,
+                  cells: [
+                    DataCell(
+                      TextField(
+                        controller: row.teacherController,
+                        enabled: !row.isBusy,
+                        decoration: const InputDecoration(
+                          hintText: 'z.B. Max Mustermann',
+                        ),
+                        textInputAction: TextInputAction.next,
+                      ),
+                    ),
+                    DataCell(
+                      TextField(
+                        controller: row.licensePlateController,
+                        enabled: !row.isBusy,
+                        decoration: const InputDecoration(
+                          hintText: 'z.B. HA123AB',
+                        ),
+                        textCapitalization: TextCapitalization.characters,
+                        onSubmitted: (_) => onSaveRow(row),
+                      ),
+                    ),
+                    DataCell(
+                      Row(
+                        children: [
+                          IconButton(
+                            tooltip: row.id == null
+                                ? 'Speichern'
+                                : 'Änderungen speichern',
+                            onPressed: row.isBusy ? null : () => onSaveRow(row),
+                            icon: row.isBusy
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 3,
+                                    ),
+                                  )
+                                : const Icon(Icons.save_rounded),
+                          ),
+                          IconButton(
+                            tooltip: 'Löschen',
+                            onPressed: row.isBusy
+                                ? null
+                                : () => onDeleteRow(row),
+                            icon: const Icon(Icons.delete_outline_rounded),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          );
+        },
       ),
     );
   }

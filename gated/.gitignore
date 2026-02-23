@@ -35,6 +35,7 @@ migrate_working_dir/
 .env
 backend/.env
 backend/gated.db
+backend/kennzeichen.db
 
 # Symbolication related
 app.*.symbols
