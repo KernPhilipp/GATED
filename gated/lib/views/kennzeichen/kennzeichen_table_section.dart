@@ -1,0 +1,159 @@
+import 'package:flutter/material.dart';
+import 'editable_kennzeichen_row.dart';
+
+class KennzeichenTableSection extends StatelessWidget {
+  const KennzeichenTableSection({
+    super.key,
+    required this.rows,
+    required this.isLoading,
+    required this.isRefreshing,
+    required this.onAddRow,
+    required this.onRefresh,
+    required this.onSaveRow,
+    required this.onDeleteRow,
+  });
+
+  final List<EditableKennzeichenRow> rows;
+  final bool isLoading;
+  final bool isRefreshing;
+  final VoidCallback onAddRow;
+  final VoidCallback onRefresh;
+  final ValueChanged<EditableKennzeichenRow> onSaveRow;
+  final ValueChanged<EditableKennzeichenRow> onDeleteRow;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 20,
+          runSpacing: 20,
+          alignment: WrapAlignment.start,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            FilledButton.icon(
+              onPressed: onAddRow,
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Eintrag hinzufügen'),
+            ),
+            OutlinedButton.icon(
+              onPressed: isRefreshing ? null : onRefresh,
+              icon: isRefreshing
+                  ? const SizedBox(
+                      width: 13,
+                      height: 13,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.refresh_rounded),
+              label: const Text('Aktualisieren'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: LayoutBuilder(
+              builder: (context, constraints) =>
+                  _buildContent(availableWidth: constraints.maxWidth),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildContent({required double availableWidth}) {
+    if (rows.isEmpty) {
+      return Column(
+        children: [
+          const Text('Noch keine Kennzeichen vorhanden.'),
+          const SizedBox(height: 20),
+          FilledButton.icon(
+            onPressed: onAddRow,
+            icon: const Icon(Icons.add_rounded),
+            label: const Text('Ersten Eintrag anlegen'),
+          ),
+        ],
+      );
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: DataTable(
+        columnSpacing: 20,
+        showBottomBorder: true,
+        columns: const [
+          DataColumn(label: Text('Lehrer')),
+          DataColumn(label: Text('Kennzeichen')),
+          DataColumn(label: Text('Aktionen')),
+        ],
+        rows: [
+          for (final row in rows)
+            DataRow.byIndex(
+              index: row.localRowId,
+              cells: [
+                DataCell(
+                  Padding(
+                    padding: const EdgeInsets.only(top: 5.0, bottom: 5.0),
+                    child: TextField(
+                      controller: row.teacherController,
+                      enabled: !row.isBusy,
+                      decoration: const InputDecoration(
+                        hintText: 'z.B. Max Mustermann',
+                      ),
+                      textInputAction: TextInputAction.next,
+                    ),
+                  ),
+                ),
+                DataCell(
+                  Padding(
+                    padding: const EdgeInsets.only(top: 5.0, bottom: 5.0),
+                    child: TextField(
+                      controller: row.licensePlateController,
+                      enabled: !row.isBusy,
+                      decoration: const InputDecoration(
+                        hintText: 'z.B. HA123AB',
+                      ),
+                      textCapitalization: TextCapitalization.characters,
+                      onSubmitted: (_) => onSaveRow(row),
+                    ),
+                  ),
+                ),
+                DataCell(
+                  Padding(
+                    padding: const EdgeInsets.only(top: 5.0, bottom: 5.0),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          tooltip: row.id == null
+                              ? 'Speichern'
+                              : 'Änderungen speichern',
+                          onPressed: row.isBusy ? null : () => onSaveRow(row),
+                          icon: row.isBusy
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 3,
+                                  ),
+                                )
+                              : const Icon(Icons.save_rounded),
+                        ),
+                        IconButton(
+                          tooltip: 'Löschen',
+                          onPressed: row.isBusy ? null : () => onDeleteRow(row),
+                          icon: const Icon(Icons.delete_outline_rounded),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+}

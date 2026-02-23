@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../features/navbar/navbar.dart';
+import '../views/kennzeichen_view.dart';
 import '../views/settings_view.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -27,7 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final isPhone = width < 500;
     final views = <Widget>[
       const Placeholder(key: ValueKey('dashboard-view')),
-      const Placeholder(key: ValueKey('kennzeichen-view')),
+      const KennzeichenView(key: ValueKey('kennzeichen-view')),
       const Placeholder(key: ValueKey('profile-view')),
       SettingsView(onThemeModeChanged: widget.onThemeModeChanged),
     ];
