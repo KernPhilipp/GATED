@@ -113,8 +113,11 @@ class KennzeichenTableSection extends StatelessWidget {
                       TextField(
                         controller: row.teacherController,
                         enabled: !row.isBusy,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           hintText: 'z.B. Max Mustermann',
+                          hintStyle: TextStyle(
+                            color: Theme.of(context).colorScheme.outline,
+                          ),
                         ),
                         textInputAction: TextInputAction.next,
                       ),
@@ -123,8 +126,11 @@ class KennzeichenTableSection extends StatelessWidget {
                       TextField(
                         controller: row.licensePlateController,
                         enabled: !row.isBusy,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           hintText: 'z.B. HA123AB',
+                          hintStyle: TextStyle(
+                            color: Theme.of(context).colorScheme.outline,
+                          ),
                         ),
                         textCapitalization: TextCapitalization.characters,
                         onSubmitted: (_) => onSaveRow(row),
