@@ -40,10 +40,13 @@ class KennzeichenTableSection extends StatelessWidget {
             OutlinedButton.icon(
               onPressed: isRefreshing ? null : onRefresh,
               icon: isRefreshing
-                  ? const SizedBox(
-                      width: 13,
-                      height: 13,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                  ? Padding(
+                      padding: const EdgeInsets.only(right: 2, left: 2),
+                      child: const SizedBox(
+                        width: 13,
+                        height: 13,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
                     )
                   : const Icon(Icons.refresh_rounded),
               label: const Text('Aktualisieren'),
@@ -85,7 +88,7 @@ class KennzeichenTableSection extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        const minTableWidth = 500.0;
+        const minTableWidth = 300.0;
         const columnCount = 3;
 
         final availableWidth = constraints.maxWidth.isFinite
