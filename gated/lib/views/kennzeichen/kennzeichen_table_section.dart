@@ -88,7 +88,8 @@ class KennzeichenTableSection extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        const minTableWidth = 300.0;
+        const minTableWidth = 350.0;
+        const minTableActionWidth = 100.0;
         const columnCount = 3;
 
         final availableWidth = constraints.maxWidth.isFinite
@@ -98,6 +99,9 @@ class KennzeichenTableSection extends StatelessWidget {
             ? minTableWidth
             : availableWidth;
         final columnWidth = tableWidth / columnCount;
+        final tableActionWidth = columnWidth < minTableActionWidth
+            ? minTableActionWidth
+            : columnWidth;
 
         final theme = Theme.of(context);
         final borderColor = theme.dividerColor;
@@ -161,8 +165,8 @@ class KennzeichenTableSection extends StatelessWidget {
                         ),
                       ),
                       DataCell(
-                        _dataCell(
-                          width: columnWidth,
+                        _buttonCell(
+                          width: tableActionWidth,
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -222,5 +226,9 @@ class KennzeichenTableSection extends StatelessWidget {
         child: child,
       ),
     );
+  }
+
+  Widget _buttonCell({required double width, required Widget child}) {
+    return SizedBox(width: width, child: child);
   }
 }
