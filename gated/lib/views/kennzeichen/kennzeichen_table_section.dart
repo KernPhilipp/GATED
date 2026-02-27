@@ -138,6 +138,10 @@ class KennzeichenTableSection extends StatelessWidget {
         const minTableWidth = 350.0;
         const minTableActionWidth = 100.0;
         const columnCount = 3;
+        const sortArrowIconSize = 16.0;
+        const sortArrowPadding = 2.0;
+        const sortIndicatorWidth = sortArrowIconSize + (sortArrowPadding * 2);
+        const sortRightPadding = 10.0;
 
         final availableWidth = constraints.maxWidth.isFinite
             ? constraints.maxWidth
@@ -176,14 +180,28 @@ class KennzeichenTableSection extends StatelessWidget {
               ),
               columns: [
                 DataColumn(
-                  label: _headerCell('Lehrer', columnWidth),
+                  headingRowAlignment: MainAxisAlignment.start,
+                  label: _headerCell(
+                    'Lehrer',
+                    columnWidth,
+                    isSortable: true,
+                    sortIndicatorWidth: sortIndicatorWidth,
+                    sortRightPadding: sortRightPadding,
+                  ),
                   onSort: onSort,
                 ),
                 DataColumn(
-                  label: _headerCell('Kennzeichen', columnWidth),
+                  headingRowAlignment: MainAxisAlignment.start,
+                  label: _headerCell(
+                    'Kennzeichen',
+                    columnWidth,
+                    isSortable: true,
+                    sortIndicatorWidth: sortIndicatorWidth,
+                    sortRightPadding: sortRightPadding,
+                  ),
                   onSort: onSort,
                 ),
-                DataColumn(label: _headerCell('Aktionen', columnWidth)),
+                DataColumn(label: _headerCell('Aktionen', tableActionWidth)),
               ],
               rows: [
                 for (final row in rows)
@@ -265,9 +283,19 @@ class KennzeichenTableSection extends StatelessWidget {
     );
   }
 
-  Widget _headerCell(String text, double width) {
+  Widget _headerCell(
+    String text,
+    double width, {
+    bool isSortable = false,
+    double sortIndicatorWidth = 0,
+    double sortRightPadding = 0,
+  }) {
+    final adjustedWidth = isSortable
+        ? (width - sortIndicatorWidth - sortRightPadding).clamp(0.0, width)
+        : width;
+
     return SizedBox(
-      width: width,
+      width: adjustedWidth,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Text(text),
