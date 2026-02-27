@@ -16,10 +16,13 @@ class _KennzeichenViewState extends State<KennzeichenView> {
 
   final KennzeichenService _kennzeichenService = const KennzeichenService();
   final List<EditableKennzeichenRow> _rows = [];
+  final TextEditingController _searchController = TextEditingController();
 
   bool _isLoading = true;
   bool _isRefreshing = false;
   int _nextLocalRowId = 0;
+  int? _sortColumnIndex;
+  bool _sortAscending = true;
 
   @override
   void initState() {
@@ -29,6 +32,7 @@ class _KennzeichenViewState extends State<KennzeichenView> {
 
   @override
   void dispose() {
+    _searchController.dispose();
     for (final row in _rows) {
       row.dispose();
     }
@@ -38,6 +42,8 @@ class _KennzeichenViewState extends State<KennzeichenView> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final visibleRows = _buildVisibleRows();
+    final searchQuery = _searchController.text.trim();
 
     return Padding(
       padding: const EdgeInsets.all(24),
@@ -52,9 +58,18 @@ class _KennzeichenViewState extends State<KennzeichenView> {
           ),
           const SizedBox(height: 20),
           KennzeichenTableSection(
-            rows: _rows,
+            rows: visibleRows,
+            hasAnyRows: _rows.isNotEmpty,
+            searchController: _searchController,
+            searchQuery: searchQuery,
+            sortColumnIndex: _sortColumnIndex,
+            sortAscending: _sortAscending,
             isLoading: _isLoading,
             isRefreshing: _isRefreshing,
+            onSearchChanged: (_) => _handleSearchChanged(),
+            onClearSearch: _clearSearch,
+            onSort: _handleSort,
+            onRowChanged: _handleRowChanged,
             onAddRow: _addEmptyRow,
             onRefresh: () => _loadRows(refreshOnly: true),
             onSaveRow: _saveRow,
@@ -63,6 +78,68 @@ class _KennzeichenViewState extends State<KennzeichenView> {
         ],
       ),
     );
+  }
+
+  List<EditableKennzeichenRow> _buildVisibleRows() {
+    final searchQuery = _searchController.text.trim().toLowerCase();
+    final visibleRows = searchQuery.isEmpty
+        ? List<EditableKennzeichenRow>.from(_rows)
+        : _rows.where((row) {
+            final teacher = row.teacherController.text.trim().toLowerCase();
+            final licensePlate = row.licensePlateController.text
+                .trim()
+                .toLowerCase();
+            return teacher.contains(searchQuery) ||
+                licensePlate.contains(searchQuery);
+          }).toList();
+
+    if (_sortColumnIndex == null) {
+      return visibleRows;
+    }
+
+    visibleRows.sort((a, b) {
+      final result = switch (_sortColumnIndex) {
+        0 => a.teacherController.text.trim().toLowerCase().compareTo(
+          b.teacherController.text.trim().toLowerCase(),
+        ),
+        1 => a.licensePlateController.text.trim().toLowerCase().compareTo(
+          b.licensePlateController.text.trim().toLowerCase(),
+        ),
+        _ => a.localRowId.compareTo(b.localRowId),
+      };
+
+      return _sortAscending ? result : -result;
+    });
+
+    return visibleRows;
+  }
+
+  void _handleSearchChanged() {
+    setState(() {});
+  }
+
+  void _clearSearch() {
+    if (_searchController.text.isEmpty) {
+      return;
+    }
+
+    _searchController.clear();
+    setState(() {});
+  }
+
+  void _handleSort(int columnIndex, bool ascending) {
+    setState(() {
+      _sortColumnIndex = columnIndex;
+      _sortAscending = ascending;
+    });
+  }
+
+  void _handleRowChanged() {
+    if (_searchController.text.trim().isEmpty && _sortColumnIndex == null) {
+      return;
+    }
+
+    setState(() {});
   }
 
   Future<void> _loadRows({bool refreshOnly = false}) async {

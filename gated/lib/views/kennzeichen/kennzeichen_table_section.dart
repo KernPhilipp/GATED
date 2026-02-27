@@ -5,8 +5,17 @@ class KennzeichenTableSection extends StatelessWidget {
   const KennzeichenTableSection({
     super.key,
     required this.rows,
+    required this.hasAnyRows,
+    required this.searchController,
+    required this.searchQuery,
+    required this.sortColumnIndex,
+    required this.sortAscending,
     required this.isLoading,
     required this.isRefreshing,
+    required this.onSearchChanged,
+    required this.onClearSearch,
+    required this.onSort,
+    required this.onRowChanged,
     required this.onAddRow,
     required this.onRefresh,
     required this.onSaveRow,
@@ -14,8 +23,17 @@ class KennzeichenTableSection extends StatelessWidget {
   });
 
   final List<EditableKennzeichenRow> rows;
+  final bool hasAnyRows;
+  final TextEditingController searchController;
+  final String searchQuery;
+  final int? sortColumnIndex;
+  final bool sortAscending;
   final bool isLoading;
   final bool isRefreshing;
+  final ValueChanged<String> onSearchChanged;
+  final VoidCallback onClearSearch;
+  final void Function(int columnIndex, bool ascending) onSort;
+  final VoidCallback onRowChanged;
   final VoidCallback onAddRow;
   final VoidCallback onRefresh;
   final ValueChanged<EditableKennzeichenRow> onSaveRow;
@@ -55,6 +73,25 @@ class KennzeichenTableSection extends StatelessWidget {
         ),
         const SizedBox(height: 20),
         SizedBox(
+          child: TextField(
+            controller: searchController,
+            onChanged: onSearchChanged,
+            decoration: InputDecoration(
+              labelText: 'Suche',
+              hintText: 'Nach Lehrer oder Kennzeichen filtern',
+              prefixIcon: const Icon(Icons.search_rounded),
+              suffixIcon: searchController.text.isEmpty
+                  ? null
+                  : IconButton(
+                      tooltip: 'Suche leeren',
+                      onPressed: onClearSearch,
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        SizedBox(
           width: double.infinity,
           child: Card(
             child: Padding(
@@ -72,7 +109,7 @@ class KennzeichenTableSection extends StatelessWidget {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (rows.isEmpty) {
+    if (!hasAnyRows) {
       return Column(
         children: [
           const Text('Noch keine Kennzeichen vorhanden.'),
@@ -84,6 +121,10 @@ class KennzeichenTableSection extends StatelessWidget {
           ),
         ],
       );
+    }
+
+    if (rows.isEmpty) {
+      return Center(child: Text('Keine Treffer für "$searchQuery".'));
     }
 
     return LayoutBuilder(
@@ -116,6 +157,8 @@ class KennzeichenTableSection extends StatelessWidget {
               columnSpacing: 0,
               headingRowHeight: 50,
               dataRowMaxHeight: 80,
+              sortColumnIndex: sortColumnIndex,
+              sortAscending: sortAscending,
               border: TableBorder(
                 top: BorderSide(color: borderColor, width: 3),
                 right: BorderSide(color: borderColor, width: 3),
@@ -126,8 +169,14 @@ class KennzeichenTableSection extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
               columns: [
-                DataColumn(label: _headerCell('Lehrer', columnWidth)),
-                DataColumn(label: _headerCell('Kennzeichen', columnWidth)),
+                DataColumn(
+                  label: _headerCell('Lehrer', columnWidth),
+                  onSort: onSort,
+                ),
+                DataColumn(
+                  label: _headerCell('Kennzeichen', columnWidth),
+                  onSort: onSort,
+                ),
                 DataColumn(label: _headerCell('Aktionen', columnWidth)),
               ],
               rows: [
@@ -141,6 +190,7 @@ class KennzeichenTableSection extends StatelessWidget {
                           child: TextField(
                             controller: row.teacherController,
                             enabled: !row.isBusy,
+                            onChanged: (_) => onRowChanged(),
                             decoration: InputDecoration(
                               hintText: 'z.B. Max Mustermann',
                               hintStyle: TextStyle(color: hintColor),
@@ -155,6 +205,7 @@ class KennzeichenTableSection extends StatelessWidget {
                           child: TextField(
                             controller: row.licensePlateController,
                             enabled: !row.isBusy,
+                            onChanged: (_) => onRowChanged(),
                             decoration: InputDecoration(
                               hintText: 'z.B. HA123AB',
                               hintStyle: TextStyle(color: hintColor),
