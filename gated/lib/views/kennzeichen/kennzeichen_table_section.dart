@@ -51,9 +51,15 @@ class KennzeichenTableSection extends StatelessWidget {
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             FilledButton.icon(
-              onPressed: onAddRow,
+              onPressed: searchQuery.isNotEmpty ? null : onAddRow,
               icon: const Icon(Icons.add_rounded),
               label: const Text('Eintrag hinzufügen'),
+              style: searchQuery.isNotEmpty
+                  ? FilledButton.styleFrom(
+                      foregroundColor: Theme.of(context).disabledColor,
+                      backgroundColor: Theme.of(context).disabledColor,
+                    )
+                  : null,
             ),
             OutlinedButton.icon(
               onPressed: isRefreshing ? null : onRefresh,
@@ -109,7 +115,7 @@ class KennzeichenTableSection extends StatelessWidget {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (!hasAnyRows) {
+    if (!hasAnyRows && searchQuery.isEmpty) {
       return Column(
         children: [
           const Text('Noch keine Kennzeichen vorhanden.'),
