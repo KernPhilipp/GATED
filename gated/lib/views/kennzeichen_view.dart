@@ -51,23 +51,23 @@ class _KennzeichenViewState extends State<KennzeichenView> {
       sortAscending: _sortAscending,
     );
 
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Kennzeichen', style: theme.textTheme.headlineMedium),
-          const SizedBox(height: 20),
-          Text(
-            'Lehrer und zugehörige Kennzeichen verwalten.',
-            style: theme.textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 20),
-          Stack(
-            children: [
-              AbsorbPointer(
-                absorbing: _isMutating,
-                child: KennzeichenTableSection(
+    return Stack(
+      children: [
+        AbsorbPointer(
+          absorbing: _isMutating,
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Kennzeichen', style: theme.textTheme.headlineMedium),
+                const SizedBox(height: 20),
+                Text(
+                  'Lehrer und zugehörige Kennzeichen verwalten.',
+                  style: theme.textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 20),
+                KennzeichenTableSection(
                   rows: visibleRows,
                   hasAnyRows: _rows.isNotEmpty,
                   searchController: _searchController,
@@ -84,11 +84,20 @@ class _KennzeichenViewState extends State<KennzeichenView> {
                   onEditRow: _editRow,
                   onDeleteRow: _deleteRow,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ],
-      ),
+        ),
+        if (_isMutating)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: ColoredBox(
+                color: Colors.black26,
+                child: Center(child: CircularProgressIndicator.adaptive()),
+              ),
+            ),
+          ),
+      ],
     );
   }
 
