@@ -1,7 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/kennzeichen_service.dart';
 import '../utils/snackbar_utils.dart';
 import 'kennzeichen/editable_kennzeichen_row.dart';
+import 'kennzeichen/kennzeichen_edit_dialog.dart';
+import 'kennzeichen/kennzeichen_row_filter_sort.dart';
+import 'kennzeichen/kennzeichen_rows_controller.dart';
 import 'kennzeichen/kennzeichen_table_section.dart';
 
 class KennzeichenView extends StatefulWidget {
@@ -14,13 +18,13 @@ class KennzeichenView extends StatefulWidget {
 class _KennzeichenViewState extends State<KennzeichenView> {
   static const Duration _minimumLoadDuration = Duration(seconds: 1);
 
-  final KennzeichenService _kennzeichenService = const KennzeichenService();
+  final KennzeichenRowsController _rowsController = KennzeichenRowsController();
   final List<EditableKennzeichenRow> _rows = [];
   final TextEditingController _searchController = TextEditingController();
 
   bool _isLoading = true;
   bool _isRefreshing = false;
-  int _nextLocalRowId = 0;
+  bool _isMutating = false;
   int? _sortColumnIndex;
   bool _sortAscending = true;
 
@@ -33,17 +37,19 @@ class _KennzeichenViewState extends State<KennzeichenView> {
   @override
   void dispose() {
     _searchController.dispose();
-    for (final row in _rows) {
-      row.dispose();
-    }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final visibleRows = _buildVisibleRows();
     final searchQuery = _searchController.text.trim();
+    final visibleRows = buildVisibleKennzeichenRows(
+      rows: _rows,
+      searchQuery: searchQuery,
+      sortColumnIndex: _sortColumnIndex,
+      sortAscending: _sortAscending,
+    );
 
     return Padding(
       padding: const EdgeInsets.all(24),
@@ -57,65 +63,33 @@ class _KennzeichenViewState extends State<KennzeichenView> {
             style: theme.textTheme.bodyMedium,
           ),
           const SizedBox(height: 20),
-          KennzeichenTableSection(
-            rows: visibleRows,
-            hasAnyRows: _rows.isNotEmpty,
-            searchController: _searchController,
-            searchQuery: searchQuery,
-            sortColumnIndex: _sortColumnIndex,
-            sortAscending: _sortAscending,
-            isLoading: _isLoading,
-            isRefreshing: _isRefreshing,
-            onSearchChanged: (_) => _handleSearchChanged(),
-            onClearSearch: _clearSearch,
-            onSort: _handleSort,
-            onRowChanged: _handleRowChanged,
-            onAddRow: _addEmptyRow,
-            onRefresh: () => _loadRows(refreshOnly: true),
-            onSaveRow: _saveRow,
-            onDeleteRow: _deleteRow,
+          Stack(
+            children: [
+              AbsorbPointer(
+                absorbing: _isMutating,
+                child: KennzeichenTableSection(
+                  rows: visibleRows,
+                  hasAnyRows: _rows.isNotEmpty,
+                  searchController: _searchController,
+                  searchQuery: searchQuery,
+                  sortColumnIndex: _sortColumnIndex,
+                  sortAscending: _sortAscending,
+                  isLoading: _isLoading,
+                  isRefreshing: _isRefreshing,
+                  onSearchChanged: (_) => setState(() {}),
+                  onClearSearch: _clearSearch,
+                  onSort: _handleSort,
+                  onAddRow: _openCreateDialog,
+                  onRefresh: () => _loadRows(refreshOnly: true),
+                  onEditRow: _editRow,
+                  onDeleteRow: _deleteRow,
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
-  }
-
-  List<EditableKennzeichenRow> _buildVisibleRows() {
-    final searchQuery = _searchController.text.trim().toLowerCase();
-    final visibleRows = searchQuery.isEmpty
-        ? List<EditableKennzeichenRow>.from(_rows)
-        : _rows.where((row) {
-            final teacher = row.teacherController.text.trim().toLowerCase();
-            final licensePlate = row.licensePlateController.text
-                .trim()
-                .toLowerCase();
-            return teacher.contains(searchQuery) ||
-                licensePlate.contains(searchQuery);
-          }).toList();
-
-    if (_sortColumnIndex == null) {
-      return visibleRows;
-    }
-
-    visibleRows.sort((a, b) {
-      final result = switch (_sortColumnIndex) {
-        0 => a.teacherController.text.trim().toLowerCase().compareTo(
-          b.teacherController.text.trim().toLowerCase(),
-        ),
-        1 => a.licensePlateController.text.trim().toLowerCase().compareTo(
-          b.licensePlateController.text.trim().toLowerCase(),
-        ),
-        _ => a.localRowId.compareTo(b.localRowId),
-      };
-
-      return _sortAscending ? result : -result;
-    });
-
-    return visibleRows;
-  }
-
-  void _handleSearchChanged() {
-    setState(() {});
   }
 
   void _clearSearch() {
@@ -134,16 +108,11 @@ class _KennzeichenViewState extends State<KennzeichenView> {
     });
   }
 
-  void _handleRowChanged() {
-    if (_searchController.text.trim().isEmpty && _sortColumnIndex == null) {
+  Future<void> _loadRows({bool refreshOnly = false}) async {
+    if (!mounted) {
       return;
     }
 
-    setState(() {});
-  }
-
-  Future<void> _loadRows({bool refreshOnly = false}) async {
-    if (!mounted) return;
     final loadStartedAt = DateTime.now();
 
     setState(() {
@@ -155,22 +124,9 @@ class _KennzeichenViewState extends State<KennzeichenView> {
     });
 
     try {
-      final entries = await _kennzeichenService.fetchEntries();
-      if (!mounted) return;
-
-      final newRows = entries
-          .map(
-            (entry) => EditableKennzeichenRow(
-              localRowId: _nextLocalRowId++,
-              id: entry.id,
-              teacherName: entry.teacherName,
-              licensePlate: entry.licensePlate,
-            ),
-          )
-          .toList();
-
-      for (final row in _rows) {
-        row.dispose();
+      final newRows = await _rowsController.loadRows();
+      if (!mounted) {
+        return;
       }
 
       setState(() {
@@ -180,6 +136,8 @@ class _KennzeichenViewState extends State<KennzeichenView> {
       });
     } on KennzeichenException catch (e) {
       _showErrorSnackBar(e.message);
+    } on TimeoutException {
+      _showErrorSnackBar('Zeitüberschreitung beim Laden der Kennzeichen.');
     } catch (_) {
       _showErrorSnackBar('Laden der Kennzeichen fehlgeschlagen.');
     } finally {
@@ -198,88 +156,119 @@ class _KennzeichenViewState extends State<KennzeichenView> {
     }
   }
 
-  void _addEmptyRow() {
-    setState(() {
-      _rows.add(
-        EditableKennzeichenRow(
-          localRowId: _nextLocalRowId++,
-          teacherName: '',
-          licensePlate: '',
-        ),
-      );
-    });
-  }
+  Future<void> _openCreateDialog() async {
+    final data = await showKennzeichenEditDialog(
+      context,
+      title: 'Neuen Eintrag anlegen',
+      confirmLabel: 'Anlegen',
+    );
 
-  Future<void> _saveRow(EditableKennzeichenRow row) async {
-    final teacherName = row.teacherController.text.trim();
-    final licensePlate = row.licensePlateController.text.trim().toUpperCase();
-    final isCreate = row.id == null;
-
-    if (teacherName.isEmpty || licensePlate.isEmpty) {
-      _showErrorSnackBar('Bitte Lehrername und/oder Kennzeichen ausfüllen.');
+    if (!mounted || data == null) {
       return;
     }
 
-    setState(() => row.isBusy = true);
+    setState(() => _isMutating = true);
 
     try {
-      final saved = isCreate
-          ? await _kennzeichenService.createEntry(
-              teacherName: teacherName,
-              licensePlate: licensePlate,
-            )
-          : await _kennzeichenService.updateEntry(
-              id: row.id!,
-              teacherName: teacherName,
-              licensePlate: licensePlate,
-            );
-
-      if (!mounted) return;
+      final newRow = await _rowsController.createRow(
+        teacherName: data.teacherName,
+        licensePlate: data.licensePlate,
+      );
+      if (!mounted) {
+        return;
+      }
 
       setState(() {
-        row.id = saved.id;
-        row.teacherController.text = saved.teacherName;
-        row.licensePlateController.text = saved.licensePlate;
+        _rows.add(newRow);
       });
 
-      showAppSnackBar(
-        context,
-        message: isCreate ? 'Eintrag erstellt.' : 'Eintrag gespeichert.',
-      );
+      showAppSnackBar(context, message: 'Eintrag erstellt.');
     } on KennzeichenException catch (e) {
       _showErrorSnackBar(e.message);
+    } on TimeoutException {
+      _showErrorSnackBar('Zeitüberschreitung beim Speichern.');
     } catch (_) {
       _showErrorSnackBar('Speichern fehlgeschlagen.');
     } finally {
       if (mounted) {
-        setState(() => row.isBusy = false);
+        setState(() => _isMutating = false);
+      }
+    }
+  }
+
+  Future<void> _editRow(EditableKennzeichenRow row) async {
+    final data = await showKennzeichenEditDialog(
+      context,
+      title: 'Eintrag bearbeiten',
+      confirmLabel: 'Speichern',
+      initialTeacherName: row.teacherName,
+      initialLicensePlate: row.licensePlate,
+    );
+
+    if (!mounted || data == null) {
+      return;
+    }
+
+    setState(() {
+      row.isBusy = true;
+      _isMutating = true;
+    });
+
+    try {
+      final updatedEntry = await _rowsController.updateRow(
+        row: row,
+        teacherName: data.teacherName,
+        licensePlate: data.licensePlate,
+      );
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _rowsController.applyUpdatedEntry(row, updatedEntry);
+      });
+
+      showAppSnackBar(context, message: 'Eintrag gespeichert.');
+    } on KennzeichenException catch (e) {
+      _showErrorSnackBar(e.message);
+    } on TimeoutException {
+      _showErrorSnackBar('Zeitüberschreitung beim Speichern.');
+    } catch (_) {
+      _showErrorSnackBar('Speichern fehlgeschlagen.');
+    } finally {
+      if (mounted) {
+        setState(() {
+          row.isBusy = false;
+          _isMutating = false;
+        });
       }
     }
   }
 
   Future<void> _deleteRow(EditableKennzeichenRow row) async {
-    if (row.id == null) {
-      setState(() {
-        _rows.remove(row);
-      });
-      row.dispose();
-      return;
-    }
-
-    setState(() => row.isBusy = true);
+    setState(() {
+      row.isBusy = true;
+      _isMutating = true;
+    });
 
     try {
-      await _kennzeichenService.deleteEntry(row.id!);
-      if (!mounted) return;
+      await _rowsController.deleteRow(row);
+      if (!mounted) {
+        return;
+      }
 
       setState(() {
         _rows.remove(row);
       });
-      row.dispose();
 
       showAppSnackBar(context, message: 'Eintrag gelöscht.');
     } on KennzeichenException catch (e) {
       _showErrorSnackBar(e.message);
+      if (mounted) {
+        setState(() => row.isBusy = false);
+      }
+    } on TimeoutException {
+      _showErrorSnackBar('Zeitüberschreitung beim Löschen.');
       if (mounted) {
         setState(() => row.isBusy = false);
       }
@@ -288,11 +277,18 @@ class _KennzeichenViewState extends State<KennzeichenView> {
       if (mounted) {
         setState(() => row.isBusy = false);
       }
+    } finally {
+      if (mounted) {
+        setState(() => _isMutating = false);
+      }
     }
   }
 
   void _showErrorSnackBar(String message) {
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
+
     showAppSnackBar(
       context,
       message: message,

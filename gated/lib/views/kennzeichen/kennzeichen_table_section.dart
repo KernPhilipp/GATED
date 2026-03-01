@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'editable_kennzeichen_row.dart';
+import 'kennzeichen_data_table.dart';
+import 'kennzeichen_table_actions.dart';
 
 class KennzeichenTableSection extends StatelessWidget {
   const KennzeichenTableSection({
@@ -15,10 +17,9 @@ class KennzeichenTableSection extends StatelessWidget {
     required this.onSearchChanged,
     required this.onClearSearch,
     required this.onSort,
-    required this.onRowChanged,
     required this.onAddRow,
     required this.onRefresh,
-    required this.onSaveRow,
+    required this.onEditRow,
     required this.onDeleteRow,
   });
 
@@ -33,10 +34,9 @@ class KennzeichenTableSection extends StatelessWidget {
   final ValueChanged<String> onSearchChanged;
   final VoidCallback onClearSearch;
   final void Function(int columnIndex, bool ascending) onSort;
-  final VoidCallback onRowChanged;
   final VoidCallback onAddRow;
   final VoidCallback onRefresh;
-  final ValueChanged<EditableKennzeichenRow> onSaveRow;
+  final ValueChanged<EditableKennzeichenRow> onEditRow;
   final ValueChanged<EditableKennzeichenRow> onDeleteRow;
 
   @override
@@ -44,57 +44,14 @@ class KennzeichenTableSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Wrap(
-          spacing: 20,
-          runSpacing: 20,
-          alignment: WrapAlignment.start,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            FilledButton.icon(
-              onPressed: searchQuery.isNotEmpty ? null : onAddRow,
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('Eintrag hinzufügen'),
-              style: searchQuery.isNotEmpty
-                  ? FilledButton.styleFrom(
-                      foregroundColor: Theme.of(context).disabledColor,
-                      backgroundColor: Theme.of(context).disabledColor,
-                    )
-                  : null,
-            ),
-            OutlinedButton.icon(
-              onPressed: isRefreshing ? null : onRefresh,
-              icon: isRefreshing
-                  ? Padding(
-                      padding: const EdgeInsets.only(right: 2, left: 2),
-                      child: const SizedBox(
-                        width: 13,
-                        height: 13,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    )
-                  : const Icon(Icons.refresh_rounded),
-              label: const Text('Aktualisieren'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        SizedBox(
-          child: TextField(
-            controller: searchController,
-            onChanged: onSearchChanged,
-            decoration: InputDecoration(
-              labelText: 'Suche',
-              hintText: 'Nach Lehrer oder Kennzeichen filtern',
-              prefixIcon: const Icon(Icons.search_rounded),
-              suffixIcon: searchController.text.isEmpty
-                  ? null
-                  : IconButton(
-                      tooltip: 'Suche leeren',
-                      onPressed: onClearSearch,
-                      icon: const Icon(Icons.close_rounded),
-                    ),
-            ),
-          ),
+        KennzeichenTableActions(
+          searchController: searchController,
+          searchQuery: searchQuery,
+          isRefreshing: isRefreshing,
+          onSearchChanged: onSearchChanged,
+          onClearSearch: onClearSearch,
+          onAddRow: onAddRow,
+          onRefresh: onRefresh,
         ),
         const SizedBox(height: 20),
         SizedBox(
@@ -133,187 +90,13 @@ class KennzeichenTableSection extends StatelessWidget {
       return Center(child: Text('Keine Treffer für "$searchQuery".'));
     }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        const minTableWidth = 350.0;
-        const minTableActionWidth = 100.0;
-        const columnCount = 3;
-        const sortArrowIconSize = 16.0;
-        const sortArrowPadding = 2.0;
-        const sortIndicatorWidth = sortArrowIconSize + (sortArrowPadding * 2);
-        const sortRightPadding = 10.0;
-
-        final availableWidth = constraints.maxWidth.isFinite
-            ? constraints.maxWidth
-            : minTableWidth;
-        final tableWidth = availableWidth < minTableWidth
-            ? minTableWidth
-            : availableWidth;
-        final columnWidth = tableWidth / columnCount;
-        final tableActionWidth = columnWidth < minTableActionWidth
-            ? minTableActionWidth
-            : columnWidth;
-
-        final theme = Theme.of(context);
-        final borderColor = theme.dividerColor;
-        final hintColor = theme.colorScheme.outline;
-
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minWidth: tableWidth),
-            child: DataTable(
-              horizontalMargin: 0,
-              columnSpacing: 0,
-              headingRowHeight: 50,
-              dataRowMaxHeight: 80,
-              sortColumnIndex: sortColumnIndex,
-              sortAscending: sortAscending,
-              border: TableBorder(
-                top: BorderSide(color: borderColor, width: 3),
-                right: BorderSide(color: borderColor, width: 3),
-                bottom: BorderSide(color: borderColor, width: 3),
-                left: BorderSide(color: borderColor, width: 3),
-                horizontalInside: BorderSide(color: borderColor, width: 1),
-                verticalInside: BorderSide(color: borderColor, width: 1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              columns: [
-                DataColumn(
-                  headingRowAlignment: MainAxisAlignment.start,
-                  label: _headerCell(
-                    'Lehrer',
-                    columnWidth,
-                    isSortable: true,
-                    sortIndicatorWidth: sortIndicatorWidth,
-                    sortRightPadding: sortRightPadding,
-                  ),
-                  onSort: onSort,
-                ),
-                DataColumn(
-                  headingRowAlignment: MainAxisAlignment.start,
-                  label: _headerCell(
-                    'Kennzeichen',
-                    columnWidth,
-                    isSortable: true,
-                    sortIndicatorWidth: sortIndicatorWidth,
-                    sortRightPadding: sortRightPadding,
-                  ),
-                  onSort: onSort,
-                ),
-                DataColumn(label: _headerCell('Aktionen', tableActionWidth)),
-              ],
-              rows: [
-                for (final row in rows)
-                  DataRow.byIndex(
-                    index: row.localRowId,
-                    cells: [
-                      DataCell(
-                        _dataCell(
-                          width: columnWidth,
-                          child: TextField(
-                            controller: row.teacherController,
-                            enabled: !row.isBusy,
-                            onChanged: (_) => onRowChanged(),
-                            decoration: InputDecoration(
-                              hintText: 'z.B. Max Mustermann',
-                              hintStyle: TextStyle(color: hintColor),
-                            ),
-                            textInputAction: TextInputAction.next,
-                          ),
-                        ),
-                      ),
-                      DataCell(
-                        _dataCell(
-                          width: columnWidth,
-                          child: TextField(
-                            controller: row.licensePlateController,
-                            enabled: !row.isBusy,
-                            onChanged: (_) => onRowChanged(),
-                            decoration: InputDecoration(
-                              hintText: 'z.B. HA123AB',
-                              hintStyle: TextStyle(color: hintColor),
-                            ),
-                            textCapitalization: TextCapitalization.characters,
-                            onSubmitted: (_) => onSaveRow(row),
-                          ),
-                        ),
-                      ),
-                      DataCell(
-                        _buttonCell(
-                          width: tableActionWidth,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              IconButton(
-                                tooltip: row.id == null
-                                    ? 'Speichern'
-                                    : 'Änderungen speichern',
-                                onPressed: row.isBusy
-                                    ? null
-                                    : () => onSaveRow(row),
-                                icon: row.isBusy
-                                    ? const SizedBox(
-                                        width: 18,
-                                        height: 18,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 3,
-                                        ),
-                                      )
-                                    : const Icon(Icons.save_rounded),
-                              ),
-                              IconButton(
-                                tooltip: 'Löschen',
-                                onPressed: row.isBusy
-                                    ? null
-                                    : () => onDeleteRow(row),
-                                icon: const Icon(Icons.delete_outline_rounded),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-              ],
-            ),
-          ),
-        );
-      },
+    return KennzeichenDataTable(
+      rows: rows,
+      sortColumnIndex: sortColumnIndex,
+      sortAscending: sortAscending,
+      onSort: onSort,
+      onEditRow: onEditRow,
+      onDeleteRow: onDeleteRow,
     );
-  }
-
-  Widget _headerCell(
-    String text,
-    double width, {
-    bool isSortable = false,
-    double sortIndicatorWidth = 0,
-    double sortRightPadding = 0,
-  }) {
-    final adjustedWidth = isSortable
-        ? (width - sortIndicatorWidth - sortRightPadding).clamp(0.0, width)
-        : width;
-
-    return SizedBox(
-      width: adjustedWidth,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Text(text),
-      ),
-    );
-  }
-
-  Widget _dataCell({required double width, required Widget child}) {
-    return SizedBox(
-      width: width,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: child,
-      ),
-    );
-  }
-
-  Widget _buttonCell({required double width, required Widget child}) {
-    return SizedBox(width: width, child: child);
   }
 }

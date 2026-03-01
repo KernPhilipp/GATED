@@ -1,22 +1,14 @@
-import 'package:flutter/material.dart';
-
 class EditableKennzeichenRow {
   EditableKennzeichenRow({
     required this.localRowId,
-    required String teacherName,
-    required String licensePlate,
-    this.id,
-  }) : teacherController = TextEditingController(text: teacherName),
-       licensePlateController = TextEditingController(text: licensePlate);
+    required this.id,
+    required this.teacherName,
+    required this.licensePlate,
+  });
 
   final int localRowId;
-  int? id;
+  final int id;
+  String teacherName;
+  String licensePlate;
   bool isBusy = false;
-  final TextEditingController teacherController;
-  final TextEditingController licensePlateController;
-
-  void dispose() {
-    teacherController.dispose();
-    licensePlateController.dispose();
-  }
 }
