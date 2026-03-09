@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../config/app_config.dart';
 
 class KennzeichenEntry {
   final int id;
@@ -28,12 +29,14 @@ class KennzeichenEntry {
 }
 
 class KennzeichenService {
-  const KennzeichenService({this.baseUrl = 'http://localhost:8080'});
+  const KennzeichenService({this.baseUrl = AppConfig.apiBaseUrl});
 
   final String baseUrl;
 
   Future<List<KennzeichenEntry>> fetchEntries() async {
-    final response = await http.get(Uri.parse('$baseUrl/kennzeichen'));
+    final response = await http.get(
+      Uri.parse('$_normalizedBaseUrl/kennzeichen'),
+    );
 
     if (response.statusCode != 200) {
       throw KennzeichenException(_messageForStatus(response.statusCode));
@@ -64,7 +67,7 @@ class KennzeichenService {
     required String licensePlate,
   }) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/kennzeichen'),
+      Uri.parse('$_normalizedBaseUrl/kennzeichen'),
       headers: const {'Content-Type': 'application/json'},
       body: jsonEncode({
         'teacherName': teacherName,
@@ -85,7 +88,7 @@ class KennzeichenService {
     required String licensePlate,
   }) async {
     final response = await http.put(
-      Uri.parse('$baseUrl/kennzeichen/$id'),
+      Uri.parse('$_normalizedBaseUrl/kennzeichen/$id'),
       headers: const {'Content-Type': 'application/json'},
       body: jsonEncode({
         'teacherName': teacherName,
@@ -101,7 +104,9 @@ class KennzeichenService {
   }
 
   Future<void> deleteEntry(int id) async {
-    final response = await http.delete(Uri.parse('$baseUrl/kennzeichen/$id'));
+    final response = await http.delete(
+      Uri.parse('$_normalizedBaseUrl/kennzeichen/$id'),
+    );
 
     if (response.statusCode != 204) {
       throw KennzeichenException(_messageForStatus(response.statusCode));
@@ -133,6 +138,10 @@ class KennzeichenService {
         return 'Server-Fehler. Bitte später versuchen.';
     }
   }
+
+  String get _normalizedBaseUrl => baseUrl.endsWith('/')
+      ? baseUrl.substring(0, baseUrl.length - 1)
+      : baseUrl;
 }
 
 class KennzeichenException implements Exception {

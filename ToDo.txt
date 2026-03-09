@@ -1,2 +1,3 @@
-Sicherheit: Serverseitigen Logout ergänzen (z. B. /auth/logout + Refresh-Token widerrufen/Blacklist), damit Tokens nicht nur clientseitig gelöscht werden.
+﻿Sicherheit: Serverseitigen Logout ergänzen (z. B. /auth/logout + Refresh-Token widerrufen/Blacklist), damit Tokens nicht nur clientseitig gelöscht werden.
 Optional später: GitHub Secrets/Variables für CI/CD konfigurieren (statt sensibler Werte in lokalen Dateien).
+CI: Separaten GitHub-Workflow für push/pull_request anlegen (Flutter + Backend Analyze/Test), ohne Release-Artefakte hochzuladen.

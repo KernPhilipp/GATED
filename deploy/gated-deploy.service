@@ -1,0 +1,11 @@
+[Unit]
+Description=Deploy latest GATED release from GitHub
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Environment="GITHUB_REPO=KernPhilipp/GATED"
+EnvironmentFile=-/opt/gated/shared/deploy.env
+ExecStart=/opt/gated/bin/gated-deploy.sh

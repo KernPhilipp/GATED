@@ -1,0 +1,10 @@
+[Unit]
+Description=Check for new GATED release
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=10min
+Unit=gated-deploy.service
+
+[Install]
+WantedBy=timers.target

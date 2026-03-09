@@ -1,0 +1,17 @@
+[Unit]
+Description=GATED Dart backend
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=gated
+Group=gated
+WorkingDirectory=/opt/gated/current/backend
+EnvironmentFile=/opt/gated/shared/backend.env
+ExecStart=/usr/bin/env dart run server.dart
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

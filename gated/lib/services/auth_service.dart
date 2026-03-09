@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/app_config.dart';
 
 class AuthService {
-  const AuthService({this.baseUrl = 'http://localhost:8080'});
+  const AuthService({this.baseUrl = AppConfig.apiBaseUrl});
 
   final String baseUrl;
   static final Future<SharedPreferencesWithCache> _prefs =
@@ -18,7 +19,7 @@ class AuthService {
     required String password,
   }) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/auth/login'),
+      Uri.parse('$_normalizedBaseUrl/auth/login'),
       headers: const {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'password': password}),
     );
@@ -53,7 +54,7 @@ class AuthService {
     required String password,
   }) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/auth/register'),
+      Uri.parse('$_normalizedBaseUrl/auth/register'),
       headers: const {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'password': password}),
     );
@@ -95,6 +96,10 @@ class AuthService {
     final prefs = await _prefs;
     await prefs.remove(_tokenKey);
   }
+
+  String get _normalizedBaseUrl => baseUrl.endsWith('/')
+      ? baseUrl.substring(0, baseUrl.length - 1)
+      : baseUrl;
 }
 
 class AuthException implements Exception {

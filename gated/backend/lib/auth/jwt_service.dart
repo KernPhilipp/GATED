@@ -6,7 +6,10 @@ final DotEnv _dotEnv = DotEnv();
 late final String _jwtSecret;
 
 void loadJwtEnv() {
-  _dotEnv.load();
+  final envFile = File('.env');
+  if (envFile.existsSync()) {
+    _dotEnv.load();
+  }
   _jwtSecret = _loadJwtSecret();
 }
 

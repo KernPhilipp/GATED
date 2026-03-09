@@ -1,0 +1,86 @@
+name: Build And Package Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  RELEASE_TAG: ${{ github.event.release.tag_name || github.ref_name }}
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Flutter dependencies
+        working-directory: gated
+        run: flutter pub get
+
+      - name: Flutter analyze
+        working-directory: gated
+        run: flutter analyze
+
+      - name: Flutter tests
+        working-directory: gated
+        run: |
+          if [ -d "test" ]; then
+            flutter test
+          else
+            echo "No Flutter tests found. Skipping."
+          fi
+
+      - name: Build Flutter web release
+        working-directory: gated
+        run: flutter build web --release --dart-define=API_BASE_URL=/api
+
+      - name: Backend dependencies
+        working-directory: gated/backend
+        run: dart pub get
+
+      - name: Backend analyze
+        working-directory: gated/backend
+        run: dart analyze
+
+      - name: Backend tests
+        working-directory: gated/backend
+        run: |
+          if [ -d "test" ]; then
+            dart test
+          else
+            echo "No backend tests found. Skipping."
+          fi
+
+      - name: Build release package
+        run: |
+          bash deploy/build_release_package.sh "${RELEASE_TAG}"
+
+      - name: Upload package as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gated-release-${{ env.RELEASE_TAG }}
+          path: |
+            .release-dist/gated-release.tar.gz
+            .release-dist/gated-release.tar.gz.sha256
+          if-no-files-found: error
+
+      - name: Upload package to GitHub release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.release.tag_name }}
+          files: |
+            .release-dist/gated-release.tar.gz
+            .release-dist/gated-release.tar.gz.sha256
+          overwrite_files: true
