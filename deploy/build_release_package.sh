@@ -4,7 +4,7 @@ set -euo pipefail
 TAG_NAME="${1:-dev}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 BUILD_ROOT="${REPO_ROOT}/.release-build"
 DIST_ROOT="${REPO_ROOT}/.release-dist"
 PACKAGE_NAME="gated-release.tar.gz"
