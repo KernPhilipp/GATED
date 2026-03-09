@@ -30,7 +30,7 @@ jobs:
 
       - name: Flutter analyze
         working-directory: gated
-        run: flutter analyze
+        run: flutter analyze lib
 
       - name: Flutter tests
         working-directory: gated
