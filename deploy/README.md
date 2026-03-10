@@ -68,10 +68,15 @@ sudo systemctl start gated-deploy.service
 sudo nginx -t && sudo systemctl restart nginx
 ```
 
+Frontend URL:
+
+- `http://<pi-ip>:8090`
+
 ## Smoke checks
 
 ```bash
 systemctl status gated-backend.service
 curl -i http://127.0.0.1:8080/health
-curl -i http://<pi>/api/auth/me
+curl -i http://127.0.0.1:8090
+curl -i http://<pi-ip>:8090
 ```

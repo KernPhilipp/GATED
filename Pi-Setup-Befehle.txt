@@ -1,0 +1,80 @@
+GATED - Raspberry Pi Befehle (naechster Termin)
+
+1) Projekt holen/aktualisieren
+--------------------------------
+cd ~
+[ -d GATED ] || git clone https://github.com/KernPhilipp/GATED.git
+cd GATED
+git pull
+
+2) Dart installieren (nur falls noch nicht vorhanden)
+------------------------------------------------------
+dart --version || (
+  sudo apt update &&
+  sudo apt install -y apt-transport-https wget gnupg &&
+  wget -qO- https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor -o /usr/share/keyrings/dart.gpg &&
+  echo "deb [signed-by=/usr/share/keyrings/dart.gpg] https://storage.googleapis.com/download.dartlang.org/linux/debian stable main" | sudo tee /etc/apt/sources.list.d/dart_stable.list >/dev/null &&
+  sudo apt update &&
+  sudo apt install -y dart
+)
+
+3) Deploy-Dateien installieren/aktualisieren
+---------------------------------------------
+sudo apt install -y nginx curl tar
+sudo mkdir -p /opt/gated/{bin,releases,shared,state,tmp}
+
+sudo install -m 0750 deploy/deploy_release.sh /opt/gated/bin/gated-deploy.sh
+sudo install -m 0644 deploy/gated-backend.service /etc/systemd/system/gated-backend.service
+sudo install -m 0644 deploy/gated-deploy.service /etc/systemd/system/gated-deploy.service
+sudo install -m 0644 deploy/gated-deploy.timer /etc/systemd/system/gated-deploy.timer
+sudo install -m 0644 deploy/gated.conf /etc/nginx/sites-available/gated
+sudo ln -sfn /etc/nginx/sites-available/gated /etc/nginx/sites-enabled/gated
+sudo rm -f /etc/nginx/sites-enabled/default
+
+4) Env-Dateien anlegen (falls noch nicht da)
+---------------------------------------------
+sudo cp -n deploy/backend.env.example /opt/gated/shared/backend.env
+sudo cp -n deploy/deploy.env.example /opt/gated/shared/deploy.env
+
+5) Wichtige Werte pruefen/anpassen
+----------------------------------
+sudo nano /opt/gated/shared/backend.env
+# JWT_SECRET setzen (nicht leer!)
+
+sudo nano /opt/gated/shared/deploy.env
+# GITHUB_REPO=KernPhilipp/GATED
+# GITHUB_TOKEN nur noetig, falls Repo wieder privat ist
+
+6) Rechte und Dienste
+---------------------
+sudo chown -R gated:gated /opt/gated/releases /opt/gated/shared /opt/gated/state /opt/gated/tmp
+sudo systemctl daemon-reload
+sudo systemctl enable gated-backend.service
+sudo systemctl enable --now gated-deploy.timer
+sudo nginx -t && sudo systemctl restart nginx
+
+7) Erstes manuelles Deploy
+--------------------------
+sudo systemctl start gated-deploy.service
+sudo systemctl status gated-deploy.service --no-pager
+sudo journalctl -u gated-deploy.service -n 120 --no-pager
+
+8) Backend/Health pruefen
+-------------------------
+sudo systemctl status gated-backend.service --no-pager
+for i in {1..20}; do curl -fsS http://127.0.0.1:8080/health && echo "health ok" && break; sleep 1; done
+
+9) Aktuellen Tag fixieren (wenn Release v0.1.2 schon laeuft)
+-------------------------------------------------------------
+echo "v0.1.2" | sudo tee /opt/gated/state/last_tag
+sudo systemctl reset-failed gated-deploy.service
+
+10) Frontend aufrufen
+---------------------
+hostname -I
+# Dann im Browser: http://<PI-IP>:8090
+
+11) Wenn etwas fehlschlaegt: diese Logs schicken
+------------------------------------------------
+sudo journalctl -u gated-backend.service -n 120 --no-pager
+sudo journalctl -u gated-deploy.service -n 120 --no-pager
