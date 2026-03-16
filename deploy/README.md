@@ -77,7 +77,7 @@ Frontend URL:
 
 ```bash
 systemctl status gated-backend.service
-curl -i http://127.0.0.1:8080/health
+curl -i http://127.0.0.1:8091/health
 curl -i http://127.0.0.1:8090
 curl -i http://<pi-ip>:8090
 ```

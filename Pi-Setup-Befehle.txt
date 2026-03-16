@@ -62,7 +62,7 @@ sudo journalctl -u gated-deploy.service -n 120 --no-pager
 8) Backend/Health pruefen
 -------------------------
 sudo systemctl status gated-backend.service --no-pager
-for i in {1..20}; do curl -fsS http://127.0.0.1:8080/health && echo "health ok" && break; sleep 1; done
+for i in {1..20}; do curl -fsS http://127.0.0.1:8091/health && echo "health ok" && break; sleep 1; done
 
 9) Aktuellen Tag fixieren (wenn Release v0.1.2 schon laeuft)
 -------------------------------------------------------------

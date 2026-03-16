@@ -11,7 +11,7 @@ import 'lib/routes/kennzeichen_routes.dart';
 
 void main() async {
   loadJwtEnv();
-  final port = _readPortFromEnv(defaultValue: 8080);
+  final port = _readPortFromEnv(defaultValue: 8091);
   final authDbPath = _readStringFromEnv(
     'AUTH_DB_PATH',
     defaultValue: 'gated.db',
