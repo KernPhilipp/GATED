@@ -7,5 +7,5 @@ Wants=network-online.target
 Type=oneshot
 User=root
 Environment="GITHUB_REPO=KernPhilipp/GATED"
-EnvironmentFile=-/opt/gated/shared/deploy.env
-ExecStart=/opt/gated/bin/gated-deploy.sh
+EnvironmentFile=-/home/gated/gated-frontend/shared/deploy.env
+ExecStart=/home/gated/gated-frontend/bin/gated-deploy.sh

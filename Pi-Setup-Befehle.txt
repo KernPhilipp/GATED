@@ -21,9 +21,9 @@ dart --version || (
 3) Deploy-Dateien installieren/aktualisieren
 ---------------------------------------------
 sudo apt install -y nginx curl tar
-sudo mkdir -p /opt/gated/{bin,releases,shared,state,tmp}
+sudo mkdir -p /home/gated/gated-frontend/{bin,releases,shared,state,tmp}
 
-sudo install -m 0750 deploy/deploy_release.sh /opt/gated/bin/gated-deploy.sh
+sudo install -m 0750 deploy/deploy_release.sh /home/gated/gated-frontend/bin/gated-deploy.sh
 sudo install -m 0644 deploy/gated-backend.service /etc/systemd/system/gated-backend.service
 sudo install -m 0644 deploy/gated-deploy.service /etc/systemd/system/gated-deploy.service
 sudo install -m 0644 deploy/gated-deploy.timer /etc/systemd/system/gated-deploy.timer
@@ -33,21 +33,21 @@ sudo rm -f /etc/nginx/sites-enabled/default
 
 4) Env-Dateien anlegen (falls noch nicht da)
 ---------------------------------------------
-sudo cp -n deploy/backend.env.example /opt/gated/shared/backend.env
-sudo cp -n deploy/deploy.env.example /opt/gated/shared/deploy.env
+sudo cp -n deploy/backend.env.example /home/gated/gated-frontend/shared/backend.env
+sudo cp -n deploy/deploy.env.example /home/gated/gated-frontend/shared/deploy.env
 
 5) Wichtige Werte pruefen/anpassen
 ----------------------------------
-sudo nano /opt/gated/shared/backend.env
+sudo nano /home/gated/gated-frontend/shared/backend.env
 # JWT_SECRET setzen (nicht leer!)
 
-sudo nano /opt/gated/shared/deploy.env
+sudo nano /home/gated/gated-frontend/shared/deploy.env
 # GITHUB_REPO=KernPhilipp/GATED
 # GITHUB_TOKEN nur noetig, falls Repo wieder privat ist
 
 6) Rechte und Dienste
 ---------------------
-sudo chown -R gated:gated /opt/gated/releases /opt/gated/shared /opt/gated/state /opt/gated/tmp
+sudo chown -R gated:gated /home/gated/gated-frontend/releases /home/gated/gated-frontend/shared /home/gated/gated-frontend/state /home/gated/gated-frontend/tmp
 sudo systemctl daemon-reload
 sudo systemctl enable gated-backend.service
 sudo systemctl enable --now gated-deploy.timer
@@ -66,7 +66,7 @@ for i in {1..20}; do curl -fsS http://127.0.0.1:8080/health && echo "health ok" 
 
 9) Aktuellen Tag fixieren (wenn Release v0.1.2 schon laeuft)
 -------------------------------------------------------------
-echo "v0.1.2" | sudo tee /opt/gated/state/last_tag
+echo "v0.1.3" | sudo tee /home/gated/gated-frontend/state/last_tag
 sudo systemctl reset-failed gated-deploy.service
 
 10) Frontend aufrufen

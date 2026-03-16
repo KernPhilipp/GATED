@@ -32,13 +32,13 @@ Prerequisites:
 Create layout:
 
 ```bash
-sudo mkdir -p /opt/gated/{bin,releases,shared,state,tmp}
+sudo mkdir -p /home/gated/gated-frontend/{bin,releases,shared,state,tmp}
 ```
 
 Install files:
 
 ```bash
-sudo install -m 0750 deploy/deploy_release.sh /opt/gated/bin/gated-deploy.sh
+sudo install -m 0750 deploy/deploy_release.sh /home/gated/gated-frontend/bin/gated-deploy.sh
 sudo install -m 0644 deploy/gated-backend.service /etc/systemd/system/gated-backend.service
 sudo install -m 0644 deploy/gated-deploy.service /etc/systemd/system/gated-deploy.service
 sudo install -m 0644 deploy/gated-deploy.timer /etc/systemd/system/gated-deploy.timer
@@ -49,14 +49,14 @@ sudo ln -sfn /etc/nginx/sites-available/gated /etc/nginx/sites-enabled/gated
 Create env files:
 
 ```bash
-sudo cp deploy/backend.env.example /opt/gated/shared/backend.env
-sudo cp deploy/deploy.env.example /opt/gated/shared/deploy.env
+sudo cp deploy/backend.env.example /home/gated/gated-frontend/shared/backend.env
+sudo cp deploy/deploy.env.example /home/gated/gated-frontend/shared/deploy.env
 ```
 
 Edit values (important):
 
-- `/opt/gated/shared/backend.env` -> set `JWT_SECRET`
-- `/opt/gated/shared/deploy.env` -> check `GITHUB_REPO`
+- `/home/gated/gated-frontend/shared/backend.env` -> set `JWT_SECRET`
+- `/home/gated/gated-frontend/shared/deploy.env` -> check `GITHUB_REPO`
 
 Enable/start services:
 

@@ -8,7 +8,7 @@ if ! flock -n 200; then
   exit 0
 fi
 
-GATED_ROOT="${GATED_ROOT:-/opt/gated}"
+GATED_ROOT="${GATED_ROOT:-/home/gated/gated-frontend}"
 RELEASES_DIR="${RELEASES_DIR:-${GATED_ROOT}/releases}"
 CURRENT_LINK="${CURRENT_LINK:-${GATED_ROOT}/current}"
 SHARED_DIR="${SHARED_DIR:-${GATED_ROOT}/shared}"
