@@ -17,6 +17,8 @@ TMP_DIR="${TMP_DIR:-${GATED_ROOT}/tmp}"
 BACKEND_ENV_FILE="${BACKEND_ENV_FILE:-${SHARED_DIR}/backend.env}"
 BACKEND_SERVICE_NAME="${BACKEND_SERVICE_NAME:-gated-backend.service}"
 BACKEND_HEALTH_URL="${BACKEND_HEALTH_URL:-http://127.0.0.1:8080/health}"
+APP_USER="${APP_USER:-gated}"
+APP_GROUP="${APP_GROUP:-${APP_USER}}"
 KEEP_RELEASES="${KEEP_RELEASES:-5}"
 ASSET_NAME="${ASSET_NAME:-gated-release.tar.gz}"
 FORCE_DEPLOY="${FORCE_DEPLOY:-0}"
@@ -141,11 +143,10 @@ fi
 
 ln -sfn "${BACKEND_ENV_FILE}" "${release_dir}/backend/.env"
 
-log "Installing backend dependencies in new release"
-(
-  cd "${release_dir}/backend"
-  dart pub get
-)
+chown -R "${APP_USER}:${APP_GROUP}" "${release_dir}"
+
+log "Installing backend dependencies in new release as ${APP_USER}"
+su -s /bin/bash "${APP_USER}" -c "cd \"${release_dir}/backend\" && dart pub get"
 
 previous_release=""
 if [[ -L "${CURRENT_LINK}" ]]; then

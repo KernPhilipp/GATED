@@ -57,6 +57,7 @@ Edit values (important):
 
 - `/home/gated/gated-frontend/shared/backend.env` -> set `JWT_SECRET`
 - `/home/gated/gated-frontend/shared/deploy.env` -> check `GITHUB_REPO`
+- optional in `deploy.env`: `APP_USER` / `APP_GROUP` if the service should not run as `gated`
 
 Enable/start services:
 
