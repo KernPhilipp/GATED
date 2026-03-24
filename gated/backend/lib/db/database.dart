@@ -5,12 +5,14 @@ class DbUser {
   final String email;
   final String passwordHash;
   final String salt;
+  final String createdAt;
 
   const DbUser({
     required this.id,
     required this.email,
     required this.passwordHash,
     required this.salt,
+    required this.createdAt,
   });
 
   factory DbUser.fromRow(Row row) {
@@ -19,6 +21,7 @@ class DbUser {
       email: row['email'] as String,
       passwordHash: row['password_hash'] as String,
       salt: row['password_salt'] as String,
+      createdAt: row['created_at'] as String,
     );
   }
 }
@@ -89,7 +92,7 @@ VALUES (?, ?, ?);
 
   Future<DbUser?> getUserByEmail(String email) async {
     final stmt = db.prepare('''
-SELECT id, email, password_hash, password_salt
+SELECT id, email, password_hash, password_salt, created_at
 FROM users
 WHERE email = ?
 LIMIT 1;
@@ -100,6 +103,41 @@ LIMIT 1;
         return null;
       }
       return DbUser.fromRow(result.first);
+    } finally {
+      stmt.close();
+    }
+  }
+
+  Future<DbUser?> getUserById(int id) async {
+    final stmt = db.prepare('''
+SELECT id, email, password_hash, password_salt, created_at
+FROM users
+WHERE id = ?
+LIMIT 1;
+''');
+    try {
+      final result = stmt.select([id]);
+      if (result.isEmpty) {
+        return null;
+      }
+      return DbUser.fromRow(result.first);
+    } finally {
+      stmt.close();
+    }
+  }
+
+  Future<void> updateUserPassword({
+    required int userId,
+    required String passwordHash,
+    required String salt,
+  }) async {
+    final stmt = db.prepare('''
+UPDATE users
+SET password_hash = ?, password_salt = ?
+WHERE id = ?;
+''');
+    try {
+      stmt.execute([passwordHash, salt, userId]);
     } finally {
       stmt.close();
     }

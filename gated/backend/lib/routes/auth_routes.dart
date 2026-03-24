@@ -1,8 +1,10 @@
 import 'dart:convert';
+
+import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 import 'package:sqlite3/sqlite3.dart';
-import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
+
 import '../auth/allowlist.dart';
 import '../auth/hashing.dart';
 import '../auth/jwt_service.dart';
@@ -74,26 +76,111 @@ Router buildAuthRouter(DatabaseService db) => Router()
       headers: {'Content-Type': 'application/json'},
     );
   })
-  ..get('/auth/me', (Request request) {
-    final authHeader = request.headers['Authorization'];
-
-    if (authHeader == null || !authHeader.startsWith('Bearer')) {
-      return Response.forbidden('No token');
-    }
-
-    final token = authHeader.substring(7);
-
+  ..get('/auth/me', (Request request) async {
     try {
-      final jwt = verifyJwt(token);
+      final authContext = await _authenticateRequest(request, db);
       return Response.ok(
-        jsonEncode(jwt.payload),
+        jsonEncode({
+          'uid': authContext.user.id,
+          'email': authContext.user.email,
+          'createdAt': authContext.user.createdAt,
+        }),
         headers: {'Content-Type': 'application/json'},
       );
-    } on JWTExpiredException {
-      return Response.forbidden('Token expired');
-    } on JWTInvalidException {
-      return Response.forbidden('Invalid token');
+    } on _AuthRouteException catch (e) {
+      return e.response;
+    } catch (_) {
+      return Response.internalServerError(body: 'Unexpected error');
+    }
+  })
+  ..post('/auth/change-password', (Request request) async {
+    try {
+      final authContext = await _authenticateRequest(request, db);
+      final body = await request.readAsString();
+      final data = jsonDecode(body);
+
+      final currentPassword = data['currentPassword'];
+      final newPassword = data['newPassword'];
+
+      if (currentPassword is! String || newPassword is! String) {
+        return Response.badRequest(body: 'Missing data');
+      }
+
+      if (currentPassword.isEmpty || newPassword.isEmpty) {
+        return Response.badRequest(body: 'Missing data');
+      }
+
+      if (currentPassword == newPassword) {
+        return Response(409, body: 'Password unchanged');
+      }
+
+      final valid = await verifyPassword(
+        currentPassword,
+        authContext.user.passwordHash,
+        authContext.user.salt,
+      );
+
+      if (!valid) {
+        return Response.forbidden('Invalid current password');
+      }
+
+      final hash = await hashPassword(newPassword);
+      await db.updateUserPassword(
+        userId: authContext.user.id,
+        passwordHash: hash.hashBase64,
+        salt: hash.saltBase64,
+      );
+
+      return Response.ok('Password updated');
+    } on _AuthRouteException catch (e) {
+      return e.response;
     } catch (_) {
       return Response.internalServerError(body: 'Unexpected error');
     }
   });
+
+Future<_AuthContext> _authenticateRequest(
+  Request request,
+  DatabaseService db,
+) async {
+  final authHeader = request.headers['Authorization'];
+
+  if (authHeader == null || !authHeader.startsWith('Bearer ')) {
+    throw _AuthRouteException(Response.forbidden('No token'));
+  }
+
+  final token = authHeader.substring(7);
+
+  try {
+    final jwt = verifyJwt(token);
+    final rawUserId = jwt.payload['uid'];
+    final userId = rawUserId is int ? rawUserId : int.tryParse('$rawUserId');
+
+    if (userId == null) {
+      throw _AuthRouteException(Response.forbidden('Invalid token'));
+    }
+
+    final user = await db.getUserById(userId);
+    if (user == null) {
+      throw _AuthRouteException(Response.forbidden('User not found'));
+    }
+
+    return _AuthContext(user: user);
+  } on JWTExpiredException {
+    throw _AuthRouteException(Response.forbidden('Token expired'));
+  } on JWTInvalidException {
+    throw _AuthRouteException(Response.forbidden('Invalid token'));
+  }
+}
+
+class _AuthContext {
+  const _AuthContext({required this.user});
+
+  final DbUser user;
+}
+
+class _AuthRouteException implements Exception {
+  const _AuthRouteException(this.response);
+
+  final Response response;
+}

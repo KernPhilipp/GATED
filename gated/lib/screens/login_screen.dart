@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../services/auth_service.dart';
 import '../utils/snackbar_utils.dart';
 
@@ -221,6 +224,7 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await _authService.login(email: email, password: password);
       TextInput.finishAutofillContext();
+      unawaited(_authService.prefetchCurrentUser());
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/home');
     } on AuthException catch (e) {
