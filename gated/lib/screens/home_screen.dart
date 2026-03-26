@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../features/navbar/navbar.dart';
 import '../services/auth_service.dart';
+import '../views/dashboard_view.dart';
 import '../views/kennzeichen_view.dart';
 import '../views/profile_view.dart';
 import '../views/settings_view.dart';
@@ -20,6 +21,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _authService = const AuthService();
   int _selectedIndex = 0;
+  late final List<Widget> _views;
 
   final List<({String label, IconData icon})> _navItems = [
     (label: 'Dashboard', icon: Icons.dashboard_rounded),
@@ -32,25 +34,34 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     unawaited(_authService.prefetchCurrentUser());
+    _views = [
+      const DashboardView(key: ValueKey('dashboard-view')),
+      const KennzeichenView(key: ValueKey('kennzeichen-view')),
+      const ProfileView(key: ValueKey('profile-view')),
+      SettingsView(
+        key: const ValueKey('settings-view'),
+        onThemeModeChanged: widget.onThemeModeChanged,
+      ),
+    ];
   }
 
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
     final isPhone = width < 500;
-    final views = <Widget>[
-      const Placeholder(key: ValueKey('dashboard-view')),
-      const KennzeichenView(key: ValueKey('kennzeichen-view')),
-      const ProfileView(key: ValueKey('profile-view')),
-      SettingsView(onThemeModeChanged: widget.onThemeModeChanged),
-    ];
 
     final content = LayoutBuilder(
       builder: (context, constraints) {
         return SingleChildScrollView(
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: views[_selectedIndex],
+            child: SizedBox(
+              width: double.infinity,
+              child: IndexedStack(
+                index: _selectedIndex,
+                children: _views,
+              ),
+            ),
           ),
         );
       },

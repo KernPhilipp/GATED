@@ -31,7 +31,7 @@ void main() async {
   final apiHandler = Cascade()
       .add(healthRouter.call)
       .add(buildAuthRouter(authDb).call)
-      .add(buildKennzeichenRouter(kennzeichenDb).call)
+      .add(buildKennzeichenRouter(kennzeichenDb, authDb).call)
       .handler;
 
   final handler = Pipeline().addMiddleware(cors()).addHandler(apiHandler);

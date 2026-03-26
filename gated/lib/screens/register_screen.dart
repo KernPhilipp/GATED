@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
+import '../features/auth/autofill_focus_recovery.dart';
+import '../features/logo_assets.dart';
 import '../services/auth_service.dart';
 import '../utils/snackbar_utils.dart';
 
@@ -10,7 +13,8 @@ class RegisterScreen extends StatefulWidget {
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> {
+class _RegisterScreenState extends State<RegisterScreen>
+    with AutofillFocusRecovery<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -20,6 +24,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   bool _isLoading = false;
   bool _obscurePassword = true;
+
+  @override
+  void initState() {
+    super.initState();
+    registerAutofillFocusNode(_emailFocusNode);
+    registerAutofillFocusNode(_passwordFocusNode);
+  }
 
   @override
   void dispose() {
@@ -33,10 +44,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final logoAsset = isDarkMode
-        ? 'assets/logo/logo-hell.png'
-        : 'assets/logo/logo-dunkel.png';
+    final logoAsset = getFullLogoAsset(Theme.of(context).brightness);
 
     return Scaffold(
       body: LayoutBuilder(
@@ -72,10 +80,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               focusNode: _emailFocusNode,
                               keyboardType: TextInputType.emailAddress,
                               textInputAction: TextInputAction.next,
-                              autofillHints: const [AutofillHints.email],
+                              autofillHints: const [
+                                AutofillHints.username,
+                                AutofillHints.email,
+                              ],
                               decoration: const InputDecoration(
                                 labelText: 'E-Mail',
                               ),
+                              onTap: () {
+                                markAutofillInteraction(_emailFocusNode);
+                              },
                               onFieldSubmitted: (_) => _focusPasswordField(),
                               validator: (value) {
                                 final email = (value ?? '').trim();
@@ -96,6 +110,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               controller: _passwordController,
                               focusNode: _passwordFocusNode,
                               obscureText: _obscurePassword,
+                              keyboardType: TextInputType.visiblePassword,
                               enableSuggestions: false,
                               autocorrect: false,
                               textInputAction: TextInputAction.done,
@@ -118,6 +133,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   ),
                                 ),
                               ),
+                              onTap: () {
+                                markAutofillInteraction(_passwordFocusNode);
+                              },
                               onFieldSubmitted: (_) => _submitRegister(),
                               validator: (value) {
                                 if ((value ?? '').isEmpty) {

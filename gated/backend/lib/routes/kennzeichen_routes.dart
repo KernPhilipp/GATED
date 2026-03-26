@@ -2,18 +2,26 @@ import 'dart:convert';
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 import 'package:sqlite3/sqlite3.dart';
+import '../auth/request_auth.dart';
+import '../db/database.dart';
 import '../db/license_plate_database.dart';
 
 const _jsonHeaders = {'Content-Type': 'application/json'};
 
-Router buildKennzeichenRouter(LicensePlateDatabaseService db) => Router()
+Router buildKennzeichenRouter(
+  LicensePlateDatabaseService db,
+  DatabaseService authDb,
+) => Router()
   ..get('/kennzeichen', (Request request) async {
     try {
+      await authenticateRequest(request, authDb);
       final entries = await db.getAllTeacherLicensePlates();
       return Response.ok(
         jsonEncode({'items': entries.map((entry) => entry.toJson()).toList()}),
         headers: _jsonHeaders,
       );
+    } on RequestAuthenticationException catch (e) {
+      return e.response;
     } catch (_) {
       return Response.internalServerError(body: 'Unexpected error');
     }
@@ -33,6 +41,7 @@ Router buildKennzeichenRouter(LicensePlateDatabaseService db) => Router()
     }
 
     try {
+      await authenticateRequest(request, authDb);
       final created = await db.createTeacherLicensePlate(
         teacherName: teacherName,
         licensePlate: licensePlate.toUpperCase(),
@@ -47,6 +56,8 @@ Router buildKennzeichenRouter(LicensePlateDatabaseService db) => Router()
         return Response(409, body: 'License plate already exists');
       }
       return Response.internalServerError(body: 'Database error');
+    } on RequestAuthenticationException catch (e) {
+      return e.response;
     } catch (_) {
       return Response.internalServerError(body: 'Unexpected error');
     }
@@ -71,6 +82,7 @@ Router buildKennzeichenRouter(LicensePlateDatabaseService db) => Router()
     }
 
     try {
+      await authenticateRequest(request, authDb);
       final updated = await db.updateTeacherLicensePlate(
         id: parsedId,
         teacherName: teacherName,
@@ -85,6 +97,8 @@ Router buildKennzeichenRouter(LicensePlateDatabaseService db) => Router()
         return Response(409, body: 'License plate already exists');
       }
       return Response.internalServerError(body: 'Database error');
+    } on RequestAuthenticationException catch (e) {
+      return e.response;
     } catch (_) {
       return Response.internalServerError(body: 'Unexpected error');
     }
@@ -96,11 +110,14 @@ Router buildKennzeichenRouter(LicensePlateDatabaseService db) => Router()
     }
 
     try {
+      await authenticateRequest(request, authDb);
       final deleted = await db.deleteTeacherLicensePlate(parsedId);
       if (!deleted) {
         return Response.notFound('Not found');
       }
       return Response(204);
+    } on RequestAuthenticationException catch (e) {
+      return e.response;
     } catch (_) {
       return Response.internalServerError(body: 'Unexpected error');
     }

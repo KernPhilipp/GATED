@@ -170,7 +170,7 @@ class AuthService {
     }
 
     if (response.statusCode == 403) {
-      if (_isTokenError(response.body)) {
+      if (isTokenErrorResponse(response.body)) {
         await clearToken();
         throw const SessionExpiredException();
       }
@@ -228,7 +228,7 @@ class AuthService {
       return user;
     }
 
-    if (response.statusCode == 403 && _isTokenError(response.body)) {
+    if (response.statusCode == 403 && isTokenErrorResponse(response.body)) {
       await clearToken();
       throw const SessionExpiredException();
     }
@@ -257,6 +257,12 @@ class AuthService {
     await prefs.remove(_tokenKey);
   }
 
+  Future<Map<String, String>> authorizedHeaders({
+    bool includeJsonContentType = false,
+  }) {
+    return _authorizedHeaders(includeJsonContentType: includeJsonContentType);
+  }
+
   void _clearCachedCurrentUser() {
     _cachedCurrentUser = null;
     _currentUserRequest = null;
@@ -277,14 +283,6 @@ class AuthService {
     };
   }
 
-  bool _isTokenError(String responseBody) {
-    final normalized = responseBody.trim().toLowerCase();
-    return normalized == 'no token' ||
-        normalized == 'token expired' ||
-        normalized == 'invalid token' ||
-        normalized == 'user not found';
-  }
-
   String get _normalizedBaseUrl => baseUrl.endsWith('/')
       ? baseUrl.substring(0, baseUrl.length - 1)
       : baseUrl;
@@ -300,6 +298,14 @@ class SessionExpiredException extends AuthException {
   const SessionExpiredException([
     super.message = 'Sitzung abgelaufen. Bitte erneut anmelden.',
   ]);
+}
+
+bool isTokenErrorResponse(String responseBody) {
+  final normalized = responseBody.trim().toLowerCase();
+  return normalized == 'no token' ||
+      normalized == 'token expired' ||
+      normalized == 'invalid token' ||
+      normalized == 'user not found';
 }
 
 const _tokenKey = 'auth_token';

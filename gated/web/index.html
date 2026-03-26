@@ -19,24 +19,174 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="application-name" content="GATED">
   <meta name="theme-color" media="(prefers-color-scheme: light)" content="#CAF0F8">
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#03045E">
   <meta name="description" content="Garage Access Technology for Entry Detection">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="GATED">
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="icons/Icon-192.png">
 
   <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png" />
+  <link rel="icon" type="image/png" sizes="64x64" href="favicon.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/Icon-192.png" />
 
   <title>GATED</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    :root {
+      color-scheme: light dark;
+      --splash-background: #caf0f8;
+      --splash-surface: rgba(255, 255, 255, 0.78);
+      --splash-shadow: rgba(3, 4, 94, 0.14);
+      --splash-text: #03045e;
+      --splash-muted: #355070;
+      --splash-progress-track: rgba(3, 4, 94, 0.14);
+      --splash-progress-fill-start: #03045e;
+      --splash-progress-fill-end: #0077b6;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --splash-background: #03045e;
+        --splash-surface: rgba(2, 27, 92, 0.84);
+        --splash-shadow: rgba(0, 0, 0, 0.32);
+        --splash-text: #caf0f8;
+        --splash-muted: rgba(202, 240, 248, 0.84);
+        --splash-progress-track: rgba(202, 240, 248, 0.18);
+        --splash-progress-fill-start: #caf0f8;
+        --splash-progress-fill-end: #90e0ef;
+      }
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      background: var(--splash-background);
+    }
+
+    body {
+      overflow: hidden;
+      font-family: "Segoe UI", Arial, sans-serif;
+    }
+
+    #app-splash {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background:
+        radial-gradient(circle at top, rgba(144, 224, 239, 0.34), transparent 38%),
+        linear-gradient(160deg, var(--splash-background), rgba(3, 4, 94, 0.08));
+      z-index: 9999;
+      transition: opacity 220ms ease, visibility 220ms ease;
+    }
+
+    #app-splash.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .splash-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+      min-width: min(100%, 320px);
+      padding: 28px 32px;
+      border-radius: 28px;
+      background: var(--splash-surface);
+      box-shadow: 0 20px 70px var(--splash-shadow);
+      backdrop-filter: blur(20px);
+      text-align: center;
+    }
+
+    .splash-card img {
+      width: 96px;
+      height: 96px;
+    }
+
+    .splash-title {
+      color: var(--splash-text);
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+    }
+
+    .splash-subtitle {
+      color: var(--splash-muted);
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    .splash-progress {
+      width: 132px;
+      height: 6px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: var(--splash-progress-track);
+    }
+
+    .splash-progress::after {
+      content: "";
+      display: block;
+      width: 42%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(
+        90deg,
+        var(--splash-progress-fill-start),
+        var(--splash-progress-fill-end)
+      );
+      animation: splash-progress 1.2s ease-in-out infinite;
+    }
+
+    @keyframes splash-progress {
+      from {
+        transform: translateX(-110%);
+      }
+
+      to {
+        transform: translateX(260%);
+      }
+    }
+  </style>
 </head>
 
 <body>
+  <div id="app-splash" aria-label="GATED wird geladen">
+    <div class="splash-card">
+      <img src="icons/Icon-192.png" alt="GATED Icon">
+      <div class="splash-title">GATED</div>
+      <div class="splash-subtitle">
+        Garage Access Technology for Entry Detection
+      </div>
+      <div class="splash-progress" aria-hidden="true"></div>
+    </div>
+  </div>
+  <script>
+    window.addEventListener("flutter-first-frame", function () {
+      const splash = document.getElementById("app-splash");
+      if (!splash) {
+        return;
+      }
+
+      splash.classList.add("hidden");
+      window.setTimeout(function () {
+        splash.remove();
+      }, 320);
+    });
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 

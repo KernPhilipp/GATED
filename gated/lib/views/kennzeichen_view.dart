@@ -1,5 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+
+import '../features/auth/session_expiration.dart';
+import '../services/auth_service.dart';
 import '../services/kennzeichen_service.dart';
 import '../utils/snackbar_utils.dart';
 import 'kennzeichen/editable_kennzeichen_row.dart';
@@ -18,6 +21,7 @@ class KennzeichenView extends StatefulWidget {
 class _KennzeichenViewState extends State<KennzeichenView> {
   static const Duration _minimumLoadDuration = Duration(seconds: 1);
 
+  final AuthService _authService = const AuthService();
   final KennzeichenRowsController _rowsController = KennzeichenRowsController();
   final List<EditableKennzeichenRow> _rows = [];
   final TextEditingController _searchController = TextEditingController();
@@ -25,6 +29,7 @@ class _KennzeichenViewState extends State<KennzeichenView> {
   bool _isLoading = true;
   bool _isRefreshing = false;
   bool _isMutating = false;
+  bool _isRedirectingToLogin = false;
   int? _sortColumnIndex;
   bool _sortAscending = true;
 
@@ -143,6 +148,8 @@ class _KennzeichenViewState extends State<KennzeichenView> {
           ..clear()
           ..addAll(newRows);
       });
+    } on SessionExpiredException catch (e) {
+      await _handleSessionExpired(e.message);
     } on KennzeichenException catch (e) {
       _showErrorSnackBar(e.message);
     } on TimeoutException {
@@ -192,6 +199,8 @@ class _KennzeichenViewState extends State<KennzeichenView> {
       });
 
       showAppSnackBar(context, message: 'Eintrag erstellt.');
+    } on SessionExpiredException catch (e) {
+      await _handleSessionExpired(e.message);
     } on KennzeichenException catch (e) {
       _showErrorSnackBar(e.message);
     } on TimeoutException {
@@ -238,6 +247,11 @@ class _KennzeichenViewState extends State<KennzeichenView> {
       });
 
       showAppSnackBar(context, message: 'Eintrag gespeichert.');
+    } on SessionExpiredException catch (e) {
+      if (mounted) {
+        setState(() => row.isBusy = false);
+      }
+      await _handleSessionExpired(e.message);
     } on KennzeichenException catch (e) {
       _showErrorSnackBar(e.message);
     } on TimeoutException {
@@ -271,6 +285,11 @@ class _KennzeichenViewState extends State<KennzeichenView> {
       });
 
       showAppSnackBar(context, message: 'Eintrag gelöscht.');
+    } on SessionExpiredException catch (e) {
+      if (mounted) {
+        setState(() => row.isBusy = false);
+      }
+      await _handleSessionExpired(e.message);
     } on KennzeichenException catch (e) {
       _showErrorSnackBar(e.message);
       if (mounted) {
@@ -303,6 +322,19 @@ class _KennzeichenViewState extends State<KennzeichenView> {
       message: message,
       isError: true,
       withCloseAction: true,
+    );
+  }
+
+  Future<void> _handleSessionExpired(String message) async {
+    if (_isRedirectingToLogin || !mounted) {
+      return;
+    }
+
+    _isRedirectingToLogin = true;
+    await redirectToLoginAfterSessionExpired(
+      context,
+      authService: _authService,
+      message: message,
     );
   }
 }

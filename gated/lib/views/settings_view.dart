@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../features/logo_assets.dart';
 import '../services/auth_service.dart';
@@ -57,6 +58,19 @@ class _SettingsViewState extends State<SettingsView> {
               onTap: _showAboutDialog,
             ),
           ),
+          if (kIsWeb) ...[
+            const SizedBox(height: 15),
+            const Card(
+              child: ListTile(
+                leading: Icon(Icons.install_desktop_rounded),
+                title: Text('Als Web-App installieren'),
+                subtitle: Text(
+                  'Die Installation wird im Browser auf localhost oder ueber '
+                  'HTTPS angeboten.',
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

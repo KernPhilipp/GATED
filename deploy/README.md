@@ -73,6 +73,22 @@ Frontend URL:
 
 - `http://<pi-ip>:8090`
 
+## Installierbare Web-App im LAN
+
+Damit Browser GATED als installierbare Web-App anbieten, braucht die
+Auslieferung einen sicheren Kontext:
+
+- `http://localhost` fuer lokale Entwicklung
+- `https://<hostname>` fuer Zugriffe im LAN
+
+Wichtig:
+
+- Die normale HTTP-URL `http://<pi-ip>:8090` funktioniert weiterhin als Website.
+- Chrome, Edge und andere Chromium-Browser bieten die PWA-Installation auf
+  einer LAN-IP ohne HTTPS in der Regel nicht an.
+- Fuer eine echte Browser-Installation im Netzwerk ist daher ein Zertifikat
+  auf einem vertrauenswuerdigen Hostnamen notwendig.
+
 ## Smoke checks
 
 ```bash

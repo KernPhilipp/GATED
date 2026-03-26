@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../features/auth/session_expiration.dart';
 import '../services/auth_service.dart';
 import '../utils/snackbar_utils.dart';
 
@@ -218,8 +219,10 @@ class _ProfileViewState extends State<ProfileView> {
                 TextFormField(
                   controller: _currentPasswordController,
                   obscureText: _obscureCurrentPassword,
+                  keyboardType: TextInputType.visiblePassword,
                   enableSuggestions: false,
                   autocorrect: false,
+                  autofillHints: const [AutofillHints.password],
                   decoration: InputDecoration(
                     labelText: 'Aktuelles Passwort',
                     suffixIcon: IconButton(
@@ -249,8 +252,10 @@ class _ProfileViewState extends State<ProfileView> {
                 TextFormField(
                   controller: _newPasswordController,
                   obscureText: _obscureNewPassword,
+                  keyboardType: TextInputType.visiblePassword,
                   enableSuggestions: false,
                   autocorrect: false,
+                  autofillHints: const [AutofillHints.newPassword],
                   decoration: InputDecoration(
                     labelText: 'Neues Passwort',
                     suffixIcon: IconButton(
@@ -283,8 +288,10 @@ class _ProfileViewState extends State<ProfileView> {
                 TextFormField(
                   controller: _confirmPasswordController,
                   obscureText: _obscureConfirmPassword,
+                  keyboardType: TextInputType.visiblePassword,
                   enableSuggestions: false,
                   autocorrect: false,
+                  autofillHints: const [AutofillHints.newPassword],
                   decoration: InputDecoration(
                     labelText: 'Neues Passwort bestätigen',
                     suffixIcon: IconButton(
@@ -480,31 +487,11 @@ class _ProfileViewState extends State<ProfileView> {
     }
 
     _isRedirectingToLogin = true;
-    await _authService.clearToken();
-
-    if (!mounted) return;
-
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Sitzung abgelaufen'),
-          content: Text(message),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('Zum Login'),
-            ),
-          ],
-        );
-      },
+    await redirectToLoginAfterSessionExpired(
+      context,
+      authService: _authService,
+      message: message,
     );
-
-    if (!mounted) return;
-    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
   }
 
   String _formatCreatedAt(DateTime? createdAt) {

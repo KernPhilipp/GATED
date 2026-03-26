@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 import 'package:sqlite3/sqlite3.dart';
@@ -8,17 +7,22 @@ import 'package:sqlite3/sqlite3.dart';
 import '../auth/allowlist.dart';
 import '../auth/hashing.dart';
 import '../auth/jwt_service.dart';
+import '../auth/request_auth.dart';
 import '../db/database.dart';
 
 Router buildAuthRouter(DatabaseService db) => Router()
   ..post('/auth/register', (Request request) async {
-    final body = await request.readAsString();
-    final data = jsonDecode(body);
+    final data = await _readJsonObject(request);
+    if (data == null) {
+      return Response.badRequest(body: 'Invalid JSON body');
+    }
 
     final email = data['email'];
     final password = data['password'];
-
-    if (email == null || password == null) {
+    if (email is! String ||
+        password is! String ||
+        email.trim().isEmpty ||
+        password.isEmpty) {
       return Response.badRequest(body: 'Missing data');
     }
 
@@ -47,13 +51,17 @@ Router buildAuthRouter(DatabaseService db) => Router()
     return Response.ok('Registered');
   })
   ..post('/auth/login', (Request request) async {
-    final body = await request.readAsString();
-    final data = jsonDecode(body);
+    final data = await _readJsonObject(request);
+    if (data == null) {
+      return Response.badRequest(body: 'Invalid JSON body');
+    }
 
     final email = data['email'];
     final password = data['password'];
-
-    if (email == null || password == null) {
+    if (email is! String ||
+        password is! String ||
+        email.trim().isEmpty ||
+        password.isEmpty) {
       return Response.badRequest(body: 'Missing data');
     }
 
@@ -78,7 +86,7 @@ Router buildAuthRouter(DatabaseService db) => Router()
   })
   ..get('/auth/me', (Request request) async {
     try {
-      final authContext = await _authenticateRequest(request, db);
+      final authContext = await authenticateRequest(request, db);
       return Response.ok(
         jsonEncode({
           'uid': authContext.user.id,
@@ -87,7 +95,7 @@ Router buildAuthRouter(DatabaseService db) => Router()
         }),
         headers: {'Content-Type': 'application/json'},
       );
-    } on _AuthRouteException catch (e) {
+    } on RequestAuthenticationException catch (e) {
       return e.response;
     } catch (_) {
       return Response.internalServerError(body: 'Unexpected error');
@@ -95,18 +103,19 @@ Router buildAuthRouter(DatabaseService db) => Router()
   })
   ..post('/auth/change-password', (Request request) async {
     try {
-      final authContext = await _authenticateRequest(request, db);
-      final body = await request.readAsString();
-      final data = jsonDecode(body);
+      final authContext = await authenticateRequest(request, db);
+      final data = await _readJsonObject(request);
+      if (data == null) {
+        return Response.badRequest(body: 'Invalid JSON body');
+      }
 
       final currentPassword = data['currentPassword'];
       final newPassword = data['newPassword'];
 
-      if (currentPassword is! String || newPassword is! String) {
-        return Response.badRequest(body: 'Missing data');
-      }
-
-      if (currentPassword.isEmpty || newPassword.isEmpty) {
+      if (currentPassword is! String ||
+          newPassword is! String ||
+          currentPassword.isEmpty ||
+          newPassword.isEmpty) {
         return Response.badRequest(body: 'Missing data');
       }
 
@@ -132,55 +141,30 @@ Router buildAuthRouter(DatabaseService db) => Router()
       );
 
       return Response.ok('Password updated');
-    } on _AuthRouteException catch (e) {
+    } on RequestAuthenticationException catch (e) {
       return e.response;
     } catch (_) {
       return Response.internalServerError(body: 'Unexpected error');
     }
   });
 
-Future<_AuthContext> _authenticateRequest(
-  Request request,
-  DatabaseService db,
-) async {
-  final authHeader = request.headers['Authorization'];
-
-  if (authHeader == null || !authHeader.startsWith('Bearer ')) {
-    throw _AuthRouteException(Response.forbidden('No token'));
+Future<Map<String, dynamic>?> _readJsonObject(Request request) async {
+  final raw = await request.readAsString();
+  if (raw.trim().isEmpty) {
+    return null;
   }
-
-  final token = authHeader.substring(7);
 
   try {
-    final jwt = verifyJwt(token);
-    final rawUserId = jwt.payload['uid'];
-    final userId = rawUserId is int ? rawUserId : int.tryParse('$rawUserId');
-
-    if (userId == null) {
-      throw _AuthRouteException(Response.forbidden('Invalid token'));
+    final decoded = jsonDecode(raw);
+    if (decoded is Map<String, dynamic>) {
+      return decoded;
     }
-
-    final user = await db.getUserById(userId);
-    if (user == null) {
-      throw _AuthRouteException(Response.forbidden('User not found'));
+    if (decoded is Map) {
+      return decoded.map((key, value) => MapEntry(key.toString(), value));
     }
-
-    return _AuthContext(user: user);
-  } on JWTExpiredException {
-    throw _AuthRouteException(Response.forbidden('Token expired'));
-  } on JWTInvalidException {
-    throw _AuthRouteException(Response.forbidden('Invalid token'));
+  } catch (_) {
+    return null;
   }
-}
 
-class _AuthContext {
-  const _AuthContext({required this.user});
-
-  final DbUser user;
-}
-
-class _AuthRouteException implements Exception {
-  const _AuthRouteException(this.response);
-
-  final Response response;
+  return null;
 }
