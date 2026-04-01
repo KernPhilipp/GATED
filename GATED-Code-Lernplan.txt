@@ -1,0 +1,2054 @@
+GATED-Code-Lernplan
+Stabile Referenzdatei fuer Dokumentation, Verstaendnis und spaetere Erklaer-Chats
+
+====================================================================
+Benutzung des Plans
+====================================================================
+
+Ziel dieses Dokuments:
+Dieser Plan soll dir helfen, GATED systematisch zu verstehen, zu dokumentieren
+und als Lernbasis fuer weitere Flutter- und Dart-Projekte zu verwenden.
+
+Wofuer der Plan gedacht ist:
+- Flutter-Grundlagen am echten Projekt lernen
+- Dart-Grundlagen am echten Projekt lernen
+- Architektur und Datenfluss von GATED verstehen
+- Code-Dokumentation vorbereiten
+- Spaetere Erklaer-Chats ueber stabile IDs eindeutig machen
+
+Wie du mit dem Plan arbeitest:
+1. Arbeite die Kapitel in der vorgegebenen Reihenfolge ab.
+2. Springe innerhalb eines Kapitels erst dann weiter, wenn du die
+   Unterpunkte wirklich selbst in eigenen Worten erklaeren kannst.
+3. Nutze pro Lernsitzung idealerweise nur einen Unterpunkt.
+4. Schreibe bei jedem Unterpunkt eigene Notizen in das vorgegebene Schema.
+5. Bitte in spaeteren Chats immer genau eine ID nennen.
+
+Beispiel fuer spaetere Chat-Anfragen:
+- Erklaere M01.02
+- Gehe mit mir M05.03 Schritt fuer Schritt durch
+- Stelle mir Kontrollfragen zu M09.04
+- Hilf mir beim Dokumentieren von M11.07
+
+Verbindliche Arbeitsreihenfolge innerhalb jedes Unterpunkts:
+1. Datei einmal komplett lesen
+2. Importe und Abhaengigkeiten markieren
+3. Genannte Symbole einzeln verstehen
+4. Datenfluss in eigenen Worten aufschreiben
+5. Eigene Notizen ausfuellen
+6. Erst dann zum naechsten Unterpunkt wechseln
+
+Wichtiger Fokus:
+- Handgeschriebener Dart- und Flutter-Code hat Prioritaet
+- Generierte Plattformdateien werden nur zur Einordnung betrachtet
+- Ziel ist Verstaendnis, nicht bloesses Durchlesen
+
+====================================================================
+Referenzschema
+====================================================================
+
+ID-System:
+- Kapitel haben IDs wie M00, M01, M02
+- Unterpunkte haben IDs wie M01.01, M05.03, M12.04
+- Diese IDs bleiben absichtlich stabil, auch wenn sich spaeter Zeilennummern
+  oder kleinere Dateiinhalte aendern
+
+Jeder Unterpunkt benutzt immer dieselben Felder:
+- ID
+- Ziel
+- Dateien
+- Symbole
+- Was verstehen
+- Eigene Notizen
+- Erledigt wenn
+
+Pflichtstruktur fuer Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+
+Regel fuer Referenzen:
+- Es werden Dateipfade und Symbolnamen referenziert
+- Es werden absichtlich keine Zeilennummern verwendet
+- Dadurch bleibt der Plan auch nach spaeteren Codeaenderungen brauchbar
+
+====================================================================
+Glossar
+====================================================================
+
+Widget:
+Eine UI-Baueinheit in Flutter. Widgets beschreiben, was dargestellt werden soll.
+
+State:
+Der veraenderliche Zustand eines StatefulWidgets. Wenn sich State aendert,
+wird build erneut ausgefuehrt.
+
+BuildContext:
+Ein Objekt, das die Position eines Widgets im Widget-Baum repraesentiert und
+Zugriff auf Theme, Navigator und andere geerbte Daten gibt.
+
+Future:
+Ein Dart-Objekt fuer einen Wert, der erst spaeter verfuegbar ist, zum Beispiel
+nach einem HTTP-Request oder Dateizugriff.
+
+Navigator:
+Flutter-Mechanismus zum Wechseln zwischen Screens oder Routen.
+
+Route:
+Eine Zielseite oder Navigationsstation in Flutter.
+
+Service:
+Eine Klasse, die fachliche oder technische Aufgaben kapselt, zum Beispiel HTTP,
+Speicherung oder Authentifizierung.
+
+JWT:
+JSON Web Token. Ein signiertes Token, das Benutzerinformationen enthaelt und
+zur Authentifizierung verwendet wird.
+
+SQLite:
+Eine leichtgewichtige lokale relationale Datenbank, die in Dateien gespeichert
+wird.
+
+CORS:
+Cross-Origin Resource Sharing. Browser-Regeln fuer Requests zwischen
+unterschiedlichen Urspruengen, zum Beispiel Flutter Web und Backend.
+
+Pipeline:
+Ein shelf-Konzept, um Middleware schrittweise vor einen Request-Handler zu
+schalten.
+
+Cascade:
+Ein shelf-Konzept, bei dem mehrere Handler nacheinander ausprobiert werden,
+bis einer den Request beantwortet.
+
+====================================================================
+M00 Orientierung
+====================================================================
+
+Kapitelziel:
+Bevor du Details liest, sollst du das Projekt als Ganzes verstehen: Was ist
+handgeschrieben, was ist generiert, wo liegt Frontend, wo liegt Backend, wie
+wird gebaut und wie wird deployed.
+
+M00.01
+ID: M00.01
+Ziel:
+Repo-Aufbau grob verstehen und wichtige Hauptordner benennen koennen.
+Dateien:
+- README.md
+- gated/
+- gated/backend/
+- deploy/
+- .github/
+Symbole:
+- Keine Code-Symbole, nur Struktur
+Was verstehen:
+- Welche Rolle das Repo insgesamt hat
+- Warum Frontend, Backend und Deploy getrennte Bereiche sind
+- Welche Teile fuer deine Dokumentation spaeter relevant sind
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du das Repo in 60 Sekunden muendlich erklaeren kannst
+- Du die Ordner `gated`, `gated/backend`, `deploy`, `.github` sicher zuordnen kannst
+
+M00.02
+ID: M00.02
+Ziel:
+Handgeschriebenen Code von generierten Plattformdateien unterscheiden lernen.
+Dateien:
+- gated/lib/
+- gated/backend/
+- gated/android/
+- gated/ios/
+- gated/linux/
+- gated/macos/
+- gated/windows/
+- gated/web/
+Symbole:
+- Keine Code-Symbole, nur Dateitypen und Ordnerrollen
+Was verstehen:
+- Warum `lib/` und `backend/` Lernkern sind
+- Warum Plattformordner meist Flutter-Boilerplate oder Build-Integration enthalten
+- Welche Dateien du spaeter nur kurz einordnen musst
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du sagen kannst, welche Dateien du tief lesen musst und welche nur Kontext sind
+
+M00.03
+ID: M00.03
+Ziel:
+Flutter- und Backend-Abhaengigkeiten auf einen Blick verstehen.
+Dateien:
+- gated/pubspec.yaml
+- gated/backend/pubspec.yaml
+- gated/analysis_options.yaml
+Symbole:
+- Abhaengigkeitseintraege in `dependencies` und `dev_dependencies`
+Was verstehen:
+- Welche Packages im Frontend gebraucht werden
+- Welche Packages im Backend gebraucht werden
+- Was Lints fuer Codequalitaet und Stil bedeuten
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du fuer jedes wichtige Package kurz den Zweck sagen kannst
+
+M00.04
+ID: M00.04
+Ziel:
+Build-, Release- und Deploy-Kontext einordnen.
+Dateien:
+- .github/workflows/release.yml
+- deploy/README.md
+- deploy/build_release_package.sh
+- deploy/deploy_release.sh
+Symbole:
+- Workflow-Schritte
+- Release-Paket
+- Deploy-Skript
+Was verstehen:
+- Wie aus Code ein auslieferbares Release wird
+- Warum Frontend und Backend zusammen paketiert werden
+- Warum Deploy und Runtime-Konfiguration getrennt sind
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du den Weg von GitHub Release bis Raspberry Pi grob erklaeren kannst
+
+====================================================================
+M01 Flutter-Startpunkt
+====================================================================
+
+Kapitelziel:
+Verstehen, wie die Flutter-App startet, wie die erste Route bestimmt wird und
+wie Theme und Konfiguration auf die App wirken.
+
+M01.01
+ID: M01.01
+Ziel:
+Den kleinsten Einstiegspunkt der App verstehen.
+Dateien:
+- gated/lib/main.dart
+Symbole:
+- main
+- runApp
+Was verstehen:
+- Warum `main()` der Prozess-Startpunkt ist
+- Warum `runApp` den Widget-Baum startet
+- Warum `main.dart` absichtlich klein gehalten ist
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du `main.dart` auswendig in eigenen Worten erklaeren kannst
+
+M01.02
+ID: M01.02
+Ziel:
+Die App-Shell und den Routing-Start verstehen.
+Dateien:
+- gated/lib/app/app.dart
+Symbole:
+- GatedApp
+- _GatedAppState
+- _resolveInitialRoute
+- _setThemeMode
+- _AppLaunchScreen
+Was verstehen:
+- Warum `GatedApp` ein StatefulWidget ist
+- Wie beim Start entschieden wird, ob Login oder Home gezeigt wird
+- Warum `FutureBuilder` fuer die Startentscheidung verwendet wird
+- Welche Rolle `routes` und `home` im `MaterialApp` spielen
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du den kompletten Startfluss ab App-Start bis zur ersten sichtbaren Seite erklaeren kannst
+
+M01.03
+ID: M01.03
+Ziel:
+Theme-Aufbau und visuelle Grundkonfiguration verstehen.
+Dateien:
+- gated/lib/app/theme.dart
+Symbole:
+- buildLightTheme
+- buildDarkTheme
+- ThemeData
+- ColorScheme.fromSeed
+Was verstehen:
+- Wie Light- und Dark-Theme erzeugt werden
+- Warum `copyWith` verwendet wird
+- Welche Rolle `google_fonts` fuer die App spielt
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du sagen kannst, wie ein neues Projekt ein aehnliches Theme uebernehmen koennte
+
+M01.04
+ID: M01.04
+Ziel:
+Build-Konfiguration und API-Basisadresse verstehen.
+Dateien:
+- gated/lib/config/app_config.dart
+Symbole:
+- AppConfig
+- AppConfig.apiBaseUrl
+- String.fromEnvironment
+Was verstehen:
+- Warum die API-URL nicht hart in Services steht
+- Wie `--dart-define` mit `String.fromEnvironment` zusammenspielt
+- Warum lokal `http://localhost:8091` der Default ist
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du erklaeren kannst, wie dieselbe App lokal und im Deploy unterschiedliche API-Ziele nutzen kann
+
+====================================================================
+M02 Auth-UI Grundlagen
+====================================================================
+
+Kapitelziel:
+Den sichtbaren Authentifizierungsbereich verstehen: Login, Registrierung,
+Autofill-Verhalten, Logos und Snackbars.
+
+M02.01
+ID: M02.01
+Ziel:
+Die Login-Seite als StatefulWidget komplett verstehen.
+Dateien:
+- gated/lib/screens/login_screen.dart
+Symbole:
+- LoginScreen
+- _LoginScreenState
+- _focusPasswordField
+- _submitLogin
+- _handleLogin
+- _showForgotPasswordDialog
+Was verstehen:
+- Wie Controller, FocusNodes und Formularvalidierung zusammenarbeiten
+- Warum `_submitLogin` und `_handleLogin` getrennt sind
+- Wie Ladezustand, Fehler und Navigation behandelt werden
+- Wie `TextInput.finishAutofillContext()` eingesetzt wird
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du den Login-Screen ohne Code in einzelne Verantwortungen zerlegen kannst
+
+M02.02
+ID: M02.02
+Ziel:
+Die Registrierungsseite mit dem Login vergleichen.
+Dateien:
+- gated/lib/screens/register_screen.dart
+Symbole:
+- RegisterScreen
+- _RegisterScreenState
+- _focusPasswordField
+- _submitRegister
+- _handleRegister
+- _showRegistrationSuccessDialog
+Was verstehen:
+- Welche Teile fast gleich wie im Login sind
+- Welche Teile bewusst anders sind
+- Warum nach erfolgreicher Registrierung nicht direkt eingeloggt wird
+- Wie Erfolg und Fehler getrennt kommuniziert werden
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du Gemeinsamkeiten und Unterschiede von Login und Register sauber vergleichen kannst
+
+M02.03
+ID: M02.03
+Ziel:
+Wiederverwendbare UI-Helfer im Auth-Bereich verstehen.
+Dateien:
+- gated/lib/features/logo_assets.dart
+- gated/lib/utils/snackbar_utils.dart
+Symbole:
+- getCompactLogoAsset
+- getFullLogoAsset
+- showAppSnackBar
+Was verstehen:
+- Wie Theme-Helligkeit die Logo-Auswahl beeinflusst
+- Warum Snackbars in eine Utility-Datei ausgelagert wurden
+- Was die Timer-Logik in `showAppSnackBar` leisten soll
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du erklaeren kannst, warum solche Helfer die Screens einfacher machen
+
+M02.04
+ID: M02.04
+Ziel:
+Das spezielle Autofill-Fokusverhalten auf Web verstehen.
+Dateien:
+- gated/lib/features/auth/autofill_focus_recovery.dart
+Symbole:
+- AutofillFocusRecovery
+- registerAutofillFocusNode
+- markAutofillInteraction
+- _handleAppResumed
+Was verstehen:
+- Warum ein Mixin statt einer normalen Klasse verwendet wird
+- Warum `AppLifecycleListener` gebraucht wird
+- Wofuer `kIsWeb` prueft
+- Welche Probleme Browser-Autofill verursachen kann
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du das Mixin an einem zweiten Formular einsetzen koenntest
+
+====================================================================
+M03 Auth-Service und Sitzung
+====================================================================
+
+Kapitelziel:
+Die nicht sichtbare Auth-Logik verstehen: HTTP-Requests, Token-Speicherung,
+Cache, Fehlerabbildung und Session-Ablauf.
+
+M03.01
+ID: M03.01
+Ziel:
+Das Datenmodell fuer den aktuell angemeldeten Benutzer verstehen.
+Dateien:
+- gated/lib/services/auth_service.dart
+Symbole:
+- AuthUser
+- AuthUser.fromJson
+Was verstehen:
+- Wie Backend-JSON in ein Dart-Objekt uebersetzt wird
+- Warum `createdAt` optional ist
+- Warum ein Factory Constructor verwendet wird
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du ein aehnliches Modellobjekt selbst bauen koenntest
+
+M03.02
+ID: M03.02
+Ziel:
+Login, Registrierung und Passwortaenderung im Service verstehen.
+Dateien:
+- gated/lib/services/auth_service.dart
+Symbole:
+- AuthService.login
+- AuthService.register
+- AuthService.changePassword
+- AuthException
+- SessionExpiredException
+Was verstehen:
+- Wie HTTP-Statuscodes in nutzerfreundliche Fehlermeldungen uebersetzt werden
+- Warum `Content-Type` nicht immer gesetzt wird
+- Wie Auth-Fehler von Session-Fehlern unterschieden werden
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du die drei Methoden ohne Code als Request-Response-Ablauf beschreiben kannst
+
+M03.03
+ID: M03.03
+Ziel:
+Token-Verwaltung und Header-Erzeugung verstehen.
+Dateien:
+- gated/lib/services/auth_service.dart
+Symbole:
+- readToken
+- clearToken
+- authorizedHeaders
+- _authorizedHeaders
+- _saveToken
+- _tokenKey
+Was verstehen:
+- Warum das Token in Shared Preferences gespeichert wird
+- Warum es eine zentrale Header-Methode gibt
+- Warum fehlende Tokens als Session-Ablauf behandelt werden
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du einen authentifizierten Request im Kopf Schritt fuer Schritt nachbauen kannst
+
+M03.04
+ID: M03.04
+Ziel:
+Caching und Request-Koordination fuer den aktuellen Benutzer verstehen.
+Dateien:
+- gated/lib/services/auth_service.dart
+Symbole:
+- getCurrentUser
+- refreshCurrentUser
+- prefetchCurrentUser
+- _startCurrentUserRequest
+- _fetchCurrentUser
+- _cachedCurrentUser
+- _currentUserRequest
+- _currentUserCacheVersion
+Was verstehen:
+- Warum gleichzeitige Requests zusammengefuehrt werden
+- Warum ein Cache den Start und Profilaufruf beschleunigt
+- Warum der Cache invalidiert werden muss
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du erklaeren kannst, warum hier nicht einfach immer neu geladen wird
+
+M03.05
+ID: M03.05
+Ziel:
+Den Session-Ablauf im UI verstehen.
+Dateien:
+- gated/lib/features/auth/session_expiration.dart
+- gated/lib/services/auth_service.dart
+Symbole:
+- redirectToLoginAfterSessionExpired
+- isTokenErrorResponse
+- SessionExpiredException
+Was verstehen:
+- Wie Backend-Antworten auf Token-Fehler erkannt werden
+- Warum zuerst Token geloescht und dann navigiert wird
+- Warum der Nutzer einen Dialog statt einer stillen Weiterleitung bekommt
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du den kompletten Ablauf einer abgelaufenen Sitzung erklaeren kannst
+
+====================================================================
+M04 App-Shell und Navigation
+====================================================================
+
+Kapitelziel:
+Verstehen, wie sich der eingeloggte Bereich aufbaut und wie zwischen Views
+gewechselt wird.
+
+M04.01
+ID: M04.01
+Ziel:
+Die Home-Shell des eingeloggten Bereichs verstehen.
+Dateien:
+- gated/lib/screens/home_screen.dart
+Symbole:
+- HomeScreen
+- _HomeScreenState
+- _navItems
+- _views
+- _onNavTap
+Was verstehen:
+- Wie die Navigationseintraege definiert sind
+- Warum `IndexedStack` statt dauerndem Neuladen der Views benutzt wird
+- Warum es unterschiedliche Navigation fuer Phone und groessere Screens gibt
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du erklaeren kannst, wie der eingeloggte Hauptbereich organisiert ist
+
+M04.02
+ID: M04.02
+Ziel:
+Die Sidebar-Komponente verstehen.
+Dateien:
+- gated/lib/features/navbar/navbar.dart
+- gated/lib/features/logo_assets.dart
+Symbole:
+- NavigationSidebar
+- getCompactLogoAsset
+- getFullLogoAsset
+Was verstehen:
+- Wie Breite und Logo vom Bildschirm abhaengen
+- Wie Animationen beim Umschalten zwischen kompakter und grosser Navigation wirken
+- Warum die Sidebar rein praesentational gebaut ist
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du die Props der Sidebar sauber beschreiben kannst
+
+M04.03
+ID: M04.03
+Ziel:
+Ein einzelnes Navigationselement verstehen.
+Dateien:
+- gated/lib/features/navbar/navbar_item.dart
+- gated/lib/features/navbar/navbar_constants.dart
+Symbole:
+- NavbarItem
+- compactSizeNav
+- normalSizeNav
+- bigSizeDisplay
+- compactLogoHeight
+- expandedLogoHeight
+Was verstehen:
+- Wie LayoutBuilder fuer responsive Darstellung genutzt wird
+- Wie Auswahlzustand visuell markiert wird
+- Warum Text optional ausgeblendet werden kann
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du eine zweite responsive Navigationskomponente nach aehnlichem Muster bauen koenntest
+
+M04.04
+ID: M04.04
+Ziel:
+Die Dashboard-View als einfache Platzhalter-Ansicht einordnen.
+Dateien:
+- gated/lib/views/dashboard_view.dart
+Symbole:
+- DashboardView
+Was verstehen:
+- Warum diese Datei bewusst einfach ist
+- Welche Rolle Platzhalter-Views in iterativer Entwicklung spielen
+- Wie `kIsWeb` fuer web-spezifische Hinweise benutzt wird
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du die Datei als Beispiel fuer eine reine Darstellungs-View erklaeren kannst
+
+====================================================================
+M05 Kennzeichen-Hauptflow
+====================================================================
+
+Kapitelziel:
+Den groessten Frontend-Feature-Flow des Projekts verstehen: Laden, Filtern,
+Sortieren, Erstellen, Bearbeiten, Loeschen und Session-Behandlung.
+
+M05.01
+ID: M05.01
+Ziel:
+Den State der Kennzeichen-Ansicht kartieren.
+Dateien:
+- gated/lib/views/kennzeichen_view.dart
+Symbole:
+- _rows
+- _searchController
+- _isLoading
+- _isRefreshing
+- _isMutating
+- _sortColumnIndex
+- _sortAscending
+- _minimumLoadDuration
+Was verstehen:
+- Welche Daten dauerhaft gehalten werden
+- Welche Flags nur fuer UI-Zustaende existieren
+- Warum Mutationen global blockiert werden koennen
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du jede State-Variable der Datei einer klaren Aufgabe zuordnen kannst
+
+M05.02
+ID: M05.02
+Ziel:
+Build-Methode und sichtbaren Aufbau der Kennzeichen-Ansicht verstehen.
+Dateien:
+- gated/lib/views/kennzeichen_view.dart
+- gated/lib/views/kennzeichen/kennzeichen_table_section.dart
+Symbole:
+- build
+- buildVisibleKennzeichenRows
+- KennzeichenTableSection
+Was verstehen:
+- Wie Suchtext und Sortierung die sichtbaren Zeilen bestimmen
+- Warum ein `Stack` fuer das globale Busy-Overlay genutzt wird
+- Warum die Tabelle in Unterkomponenten zerlegt wurde
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du den Weg von `_rows` bis zur sichtbaren Tabelle erklaeren kannst
+
+M05.03
+ID: M05.03
+Ziel:
+Laden und Aktualisieren der Kennzeichen verstehen.
+Dateien:
+- gated/lib/views/kennzeichen_view.dart
+- gated/lib/views/kennzeichen/kennzeichen_rows_controller.dart
+Symbole:
+- _loadRows
+- _handleSessionExpired
+- _showErrorSnackBar
+- KennzeichenRowsController.loadRows
+Was verstehen:
+- Wie Initialladen und Refresh zusammengefuehrt werden
+- Warum eine Mindestladezeit eingebaut wurde
+- Wie Fehler, Timeout und Session-Ablauf unterschiedlich behandelt werden
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du das Ladeverhalten inklusive `try/catch/finally` Schritt fuer Schritt erklaeren kannst
+
+M05.04
+ID: M05.04
+Ziel:
+Erstellen neuer Kennzeichen-Eintraege verstehen.
+Dateien:
+- gated/lib/views/kennzeichen_view.dart
+- gated/lib/views/kennzeichen/kennzeichen_edit_dialog.dart
+- gated/lib/views/kennzeichen/kennzeichen_rows_controller.dart
+Symbole:
+- _openCreateDialog
+- showKennzeichenEditDialog
+- KennzeichenRowsController.createRow
+Was verstehen:
+- Wie ein Dialog Daten sammelt und an die View zurueckgibt
+- Warum nach erfolgreichem Speichern lokal `_rows.add(newRow)` reicht
+- Wie Erfolg und Fehler visualisiert werden
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du den kompletten Create-Flow vom Button bis zur neuen Tabellenzeile beschreiben kannst
+
+M05.05
+ID: M05.05
+Ziel:
+Bearbeiten vorhandener Eintraege verstehen.
+Dateien:
+- gated/lib/views/kennzeichen_view.dart
+- gated/lib/views/kennzeichen/kennzeichen_rows_controller.dart
+Symbole:
+- _editRow
+- KennzeichenRowsController.updateRow
+- KennzeichenRowsController.applyUpdatedEntry
+- row.isBusy
+Was verstehen:
+- Warum bestehende Daten als Initialwerte in den Dialog gehen
+- Warum `row.isBusy` nur fuer die betroffene Zeile gesetzt wird
+- Warum nach dem Update das vorhandene Objekt aktualisiert wird
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du erklaeren kannst, wie die UI weiss, welche Zeile gerade bearbeitet wird
+
+M05.06
+ID: M05.06
+Ziel:
+Loeschen und Fehlerfaelle verstehen.
+Dateien:
+- gated/lib/views/kennzeichen_view.dart
+- gated/lib/views/kennzeichen/kennzeichen_rows_controller.dart
+Symbole:
+- _deleteRow
+- KennzeichenRowsController.deleteRow
+- _showErrorSnackBar
+Was verstehen:
+- Warum bei Fehlern `row.isBusy` explizit zurueckgesetzt wird
+- Warum bei Erfolg `_rows.remove(row)` reicht
+- Wie Session-Ablauf auch waehrend Mutationen abgefangen wird
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du Unterschiede zwischen Create, Update und Delete im State-Handling erklaeren kannst
+
+====================================================================
+M06 Kennzeichen-Unterbausteine
+====================================================================
+
+Kapitelziel:
+Die kleineren Bausteine hinter dem Kennzeichen-Feature verstehen und in
+Darstellung, Datenmodell und Steuerung trennen koennen.
+
+M06.01
+ID: M06.01
+Ziel:
+Das lokale Zeilenmodell verstehen.
+Dateien:
+- gated/lib/views/kennzeichen/editable_kennzeichen_row.dart
+Symbole:
+- EditableKennzeichenRow
+- localRowId
+- id
+- teacherName
+- licensePlate
+- isBusy
+Was verstehen:
+- Unterschied zwischen lokaler Tabellen-ID und Datenbank-ID
+- Warum `isBusy` direkt an der Zeile haengt
+- Warum diese Klasse mutierbar ist
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du diese Klasse von `KennzeichenEntry` unterscheiden kannst
+
+M06.02
+ID: M06.02
+Ziel:
+Filter- und Sortierlogik isoliert verstehen.
+Dateien:
+- gated/lib/views/kennzeichen/kennzeichen_row_filter_sort.dart
+Symbole:
+- buildVisibleKennzeichenRows
+Was verstehen:
+- Warum auf Kopien statt auf der Originalliste gearbeitet wird
+- Wie Suche case-insensitive umgesetzt wird
+- Wie Sortierung ueber `sortColumnIndex` und `sortAscending` gesteuert wird
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du dieselbe Logik fuer ein anderes Tabellenfeature anpassen koenntest
+
+M06.03
+ID: M06.03
+Ziel:
+Die Controller-Schicht zwischen View und Service verstehen.
+Dateien:
+- gated/lib/views/kennzeichen/kennzeichen_rows_controller.dart
+- gated/lib/services/kennzeichen_service.dart
+Symbole:
+- KennzeichenRowsController
+- loadRows
+- createRow
+- updateRow
+- deleteRow
+- applyUpdatedEntry
+- _toEditableRow
+Was verstehen:
+- Warum die View nicht direkt mit `KennzeichenEntry` arbeitet
+- Wie Service-Antworten in UI-geeignete Modelle umgewandelt werden
+- Welche Logik der Controller bewusst klein haelt
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du den Mehrwert dieser Zwischenschicht benennen kannst
+
+M06.04
+ID: M06.04
+Ziel:
+Den Edit-Dialog als wiederverwendbare Form-Komponente verstehen.
+Dateien:
+- gated/lib/views/kennzeichen/kennzeichen_edit_dialog.dart
+Symbole:
+- KennzeichenEditDialogResult
+- showKennzeichenEditDialog
+- _KennzeichenEditDialog
+- _KennzeichenEditDialogState
+- _submit
+Was verstehen:
+- Warum der Dialog ein Ergebnisobjekt zurueckgibt
+- Wie Validierung und Normalisierung im Dialog stattfinden
+- Warum `teacherName` und `licensePlate` dort bereits aufbereitet werden
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du erklaeren kannst, warum dieser Dialog fuer Create und Update taugt
+
+M06.05
+ID: M06.05
+Ziel:
+Den Aktionsbereich oberhalb der Tabelle verstehen.
+Dateien:
+- gated/lib/views/kennzeichen/kennzeichen_table_actions.dart
+Symbole:
+- KennzeichenTableActions
+Was verstehen:
+- Wie Suchfeld, Add-Button und Refresh-Button zusammenspielen
+- Warum der Add-Button bei aktiver Suche deaktiviert ist
+- Wie Props benutzt werden, um die Komponente zustandsarm zu halten
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du alle Eingabeparameter der Komponente fachlich erklaeren kannst
+
+M06.06
+ID: M06.06
+Ziel:
+Den Tabellencontainer und leere Zustaende verstehen.
+Dateien:
+- gated/lib/views/kennzeichen/kennzeichen_table_section.dart
+Symbole:
+- KennzeichenTableSection
+- _buildContent
+Was verstehen:
+- Wie Loading, Empty State, No-Results State und Datenzustand unterschieden werden
+- Warum die Entscheidung ueber den sichtbaren Inhalt an einer zentralen Stelle liegt
+- Warum die Tabelle nicht direkt in `KennzeichenView` gebaut wird
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du fuer jeden UI-Zustand den ausloesenden State nennen kannst
+
+M06.07
+ID: M06.07
+Ziel:
+Die eigentliche DataTable verstehen.
+Dateien:
+- gated/lib/views/kennzeichen/kennzeichen_data_table.dart
+Symbole:
+- KennzeichenDataTable
+- _headerCell
+- _dataCell
+- _buttonCell
+Was verstehen:
+- Wie Spaltenbreiten berechnet werden
+- Warum horizontal gescrollt werden kann
+- Wie Sortierbarkeit und Aktionen pro Zeile umgesetzt sind
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du die Tabelle visuell und technisch in Teilprobleme zerlegen kannst
+
+M06.08
+ID: M06.08
+Ziel:
+Den API-Service fuer Kennzeichen verstehen.
+Dateien:
+- gated/lib/services/kennzeichen_service.dart
+Symbole:
+- KennzeichenEntry
+- KennzeichenEntry.fromJson
+- KennzeichenService.fetchEntries
+- createEntry
+- updateEntry
+- deleteEntry
+- _parseEntryResponse
+- _messageForStatus
+- KennzeichenException
+Was verstehen:
+- Wie das Frontend mit dem Backend fuer Kennzeichen spricht
+- Wie Statuscodes in Fehlermeldungen umgesetzt werden
+- Wie Session-Probleme erkannt und weitergegeben werden
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du den Unterschied zwischen AuthService und KennzeichenService sauber benennen kannst
+
+====================================================================
+M07 Profil und Einstellungen
+====================================================================
+
+Kapitelziel:
+Profilanzeige, Passwortaenderung, Theme-Wechsel, Logout und App-Info als
+eigene UI- und Zustandsmuster verstehen.
+
+M07.01
+ID: M07.01
+Ziel:
+Profil-Laden und Profilanzeige verstehen.
+Dateien:
+- gated/lib/views/profile_view.dart
+Symbole:
+- ProfileView
+- _ProfileViewState
+- _buildProfileCard
+- _loadProfile
+- _formatCreatedAt
+- _ProfileInfoRow
+Was verstehen:
+- Wie initial ggf. aus dem Cache gelesen und sonst nachgeladen wird
+- Wie Loading, Error und Success-UI unterschieden werden
+- Wie Daten fuer die Anzeige formatiert werden
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du erklaeren kannst, wie die Profilansicht auf frische oder gecachte Daten reagiert
+
+M07.02
+ID: M07.02
+Ziel:
+Das Passwortaenderungsformular verstehen.
+Dateien:
+- gated/lib/views/profile_view.dart
+Symbole:
+- _buildPasswordCard
+- _submitPasswordChange
+- _resetPasswordForm
+- _showPasswordChangedDialog
+- _handleSessionExpired
+Was verstehen:
+- Wie Validierung fuer aktuelles, neues und bestaetigtes Passwort funktioniert
+- Warum Controller nach dem Request neu aufgebaut werden
+- Warum Autofill hier bewusst zuruergesetzt wird
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du den Unterschied zwischen Formular-Reset und State-Reset beschreiben kannst
+
+M07.03
+ID: M07.03
+Ziel:
+Einstellungen und Theme-Umschaltung verstehen.
+Dateien:
+- gated/lib/views/settings_view.dart
+- gated/lib/app/app.dart
+Symbole:
+- SettingsView
+- _showAboutDialog
+- _handleLogout
+- onThemeModeChanged
+- _setThemeMode
+Was verstehen:
+- Wie Theme-Aenderung aus einer Unteransicht bis in die App-Shell gelangt
+- Wie Logout technisch und navigationsseitig funktioniert
+- Warum About-Dialog und Web-App-Hinweis in diese View gehoeren
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du den kompletten Theme-Switch-Fluss von Toggle bis sichtbarer Theme-Aenderung erklaeren kannst
+
+====================================================================
+M08 Backend-Bootstrap
+====================================================================
+
+Kapitelziel:
+Verstehen, wie das Backend startet, Konfiguration liest, Datenbanken oeffnet
+und Requests ueber `shelf` annimmt.
+
+M08.01
+ID: M08.01
+Ziel:
+Den Server-Startpunkt verstehen.
+Dateien:
+- gated/backend/server.dart
+Symbole:
+- main
+- loadJwtEnv
+- DatabaseService.open
+- LicensePlateDatabaseService.open
+- Router
+- Cascade
+- Pipeline
+- serve
+Was verstehen:
+- Wie das Backend beim Start zusammengesetzt wird
+- Wie Health-Route, Auth-Router und Kennzeichen-Router kombiniert werden
+- Warum Auth- und Kennzeichen-Datenbank getrennt liegen
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du den gesamten Aufbau des Request-Handlers ab Startpunkt erklaeren kannst
+
+M08.02
+ID: M08.02
+Ziel:
+Umgebungsvariablen und Defaults verstehen.
+Dateien:
+- gated/backend/server.dart
+- deploy/backend.env.example
+Symbole:
+- _readStringFromEnv
+- _readPortFromEnv
+- PORT
+- AUTH_DB_PATH
+- KENNZEICHEN_DB_PATH
+Was verstehen:
+- Warum Umgebungsvariablen statt harter Konstanten verwendet werden
+- Welche Defaults lokal sinnvoll sind
+- Wie Runtime-Konfiguration und Code getrennt bleiben
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du ohne Hilfe erklaeren kannst, wie das Backend auf dem Pi andere Pfade nutzt als lokal
+
+M08.03
+ID: M08.03
+Ziel:
+Die CORS-Middleware verstehen.
+Dateien:
+- gated/backend/lib/middleware/cors.dart
+Symbole:
+- cors
+- Middleware
+- Handler
+- OPTIONS
+Was verstehen:
+- Warum Browser fuer Web-Requests CORS brauchen
+- Warum `OPTIONS` speziell behandelt wird
+- Welche Header hier gesetzt werden und warum
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du erklaeren kannst, warum das Frontend ohne diese Middleware im Browser scheitern wuerde
+
+====================================================================
+M09 Backend-Auth
+====================================================================
+
+Kapitelziel:
+Die serverseitige Authentifizierung von E-Mail-Whitelist ueber Passwort-Hashing
+bis zur JWT-Pruefung und zu den Auth-Routen verstehen.
+
+M09.01
+ID: M09.01
+Ziel:
+Die Allowlist verstehen.
+Dateien:
+- gated/backend/lib/auth/allowlist.dart
+Symbole:
+- allowedEmails
+- normalizeEmail
+- isEmailAllowed
+Was verstehen:
+- Warum E-Mails normalisiert werden
+- Wie Registrierung auf erlaubte Accounts begrenzt wird
+- Warum diese Logik serverseitig liegen muss
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du die Sicherheitsrolle der Allowlist klar erklaeren kannst
+
+M09.02
+ID: M09.02
+Ziel:
+Passwort-Hashing mit PBKDF2 verstehen.
+Dateien:
+- gated/backend/lib/auth/hashing.dart
+Symbole:
+- PasswordHash
+- hashPassword
+- verifyPassword
+- _constantTimeEquals
+- defaultIterations
+- defaultSaltBytes
+- defaultHashBytes
+Was verstehen:
+- Warum Passwoerter nicht im Klartext gespeichert werden
+- Was Salt, Iterationen und Hash-Laenge bedeuten
+- Warum eine konstante Vergleichsfunktion genutzt wird
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du `hashPassword` und `verifyPassword` fachlich erklaeren kannst, ohne in kryptografischen Details stecken zu bleiben
+
+M09.03
+ID: M09.03
+Ziel:
+JWT-Erzeugung und Secret-Laden verstehen.
+Dateien:
+- gated/backend/lib/auth/jwt_service.dart
+Symbole:
+- loadJwtEnv
+- _loadJwtSecret
+- generateJwt
+- verifyJwt
+- JWT_SECRET
+Was verstehen:
+- Warum das Secret nie im Code stehen darf
+- Wie `.env` und echte Umgebungsvariablen zusammenspielen
+- Was im JWT-Payload steht
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du den Unterschied zwischen Token-Erzeugung und Token-Pruefung sauber benennen kannst
+
+M09.04
+ID: M09.04
+Ziel:
+Request-Authentifizierung verstehen.
+Dateien:
+- gated/backend/lib/auth/request_auth.dart
+- gated/backend/lib/db/database.dart
+Symbole:
+- AuthenticatedRequestContext
+- authenticateRequest
+- RequestAuthenticationException
+- verifyJwt
+- getUserById
+Was verstehen:
+- Wie der Authorization-Header gelesen wird
+- Wie aus dem Token ein Benutzerkontext wird
+- Warum nach JWT-Pruefung trotzdem in der DB nachgeschlagen wird
+- Wie verschiedene Fehler zu verschiedenen 403-Antworten fuehren
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du den kompletten Auth-Pruefpfad serverseitig erklaeren kannst
+
+M09.05
+ID: M09.05
+Ziel:
+Die Auth-Routen fuer Register, Login, Me und Passwortaenderung verstehen.
+Dateien:
+- gated/backend/lib/routes/auth_routes.dart
+Symbole:
+- buildAuthRouter
+- _readJsonObject
+- /auth/register
+- /auth/login
+- /auth/me
+- /auth/change-password
+Was verstehen:
+- Wie JSON gelesen und validiert wird
+- Wie die Allowlist in Register eingebunden ist
+- Wie Login Hash-Pruefung und Token-Erzeugung kombiniert
+- Wie `auth/me` und `change-password` den Benutzerkontext verwenden
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du jede Auth-Route mit Request, Validierung, DB-Zugriff und Response beschreiben kannst
+
+====================================================================
+M10 Backend-Kennzeichen und Datenbanken
+====================================================================
+
+Kapitelziel:
+Die Datenhaltung fuer Benutzer und Kennzeichen sowie die Kennzeichen-API auf
+Backend-Seite verstehen.
+
+M10.01
+ID: M10.01
+Ziel:
+Die Auth-Datenbank und Benutzerzugriffe verstehen.
+Dateien:
+- gated/backend/lib/db/database.dart
+Symbole:
+- DbUser
+- DatabaseService
+- open
+- openInMemory
+- _initSchema
+- createUser
+- getUserByEmail
+- getUserById
+- updateUserPassword
+- close
+Was verstehen:
+- Wie das `users`-Schema aussieht
+- Warum `open` und `openInMemory` getrennt sind
+- Wie SQL Statements vorbereitet und ausgefuehrt werden
+- Warum `close` auch die Singleton-Referenz aufraeumt
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du das Users-Tabellenschema und jede Methode fachlich erklaeren kannst
+
+M10.02
+ID: M10.02
+Ziel:
+Die Kennzeichen-Datenbank verstehen.
+Dateien:
+- gated/backend/lib/db/license_plate_database.dart
+Symbole:
+- DbTeacherLicensePlate
+- toJson
+- LicensePlateDatabaseService
+- open
+- openInMemory
+- _initSchema
+- getAllTeacherLicensePlates
+- createTeacherLicensePlate
+- getTeacherLicensePlateById
+- updateTeacherLicensePlate
+- deleteTeacherLicensePlate
+Was verstehen:
+- Wie das Tabellenmodell fuer Lehrer und Kennzeichen aussieht
+- Warum `license_plate` eindeutig ist
+- Wie `created_at` und `updated_at` gepflegt werden
+- Warum `toJson` direkt am Datenbankmodell liegt
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du jeden CRUD-Fall auf Datenbankebene erklaeren kannst
+
+M10.03
+ID: M10.03
+Ziel:
+Die Kennzeichen-Routen im Backend verstehen.
+Dateien:
+- gated/backend/lib/routes/kennzeichen_routes.dart
+Symbole:
+- buildKennzeichenRouter
+- _readJsonObject
+- _readRequiredString
+- _isUniqueConstraint
+- /kennzeichen
+- /kennzeichen/<id>
+Was verstehen:
+- Wie GET, POST, PUT und DELETE umgesetzt sind
+- Warum Auth-Pruefung vor Datenzugriff stattfindet
+- Wie Unique-Constraint-Fehler in HTTP 409 uebersetzt werden
+- Warum Responses JSON oder Statuscode-only sein koennen
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du jeden Kennzeichen-Endpoint fachlich von Request bis Response nachzeichnen kannst
+
+====================================================================
+M11 End-to-End Traces
+====================================================================
+
+Kapitelziel:
+Nicht nur Einzeldateien verstehen, sondern komplette Ablaufrouten durch das
+gesamte System verfolgen.
+
+M11.01
+ID: M11.01
+Ziel:
+Den Register-Flow Ende-zu-Ende verfolgen.
+Dateien:
+- gated/lib/screens/register_screen.dart
+- gated/lib/services/auth_service.dart
+- gated/backend/lib/routes/auth_routes.dart
+- gated/backend/lib/auth/allowlist.dart
+- gated/backend/lib/db/database.dart
+Symbole:
+- _handleRegister
+- AuthService.register
+- /auth/register
+- isEmailAllowed
+- createUser
+Was verstehen:
+- Frontend-Startpunkt: Register-Button im `RegisterScreen`
+- Service-Methode: `AuthService.register`
+- Backend-Route: `POST /auth/register`
+- Auth-Pruefung: keine bestehende Sitzung noetig, aber Allowlist-Pruefung aktiv
+- DB-Zugriff: `createUser`
+- Response: 200, 400, 403, 409 oder 500
+- UI-Reaktion: Erfolgsdialog oder Snackbar
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du den Register-Flow ohne Nachsehen erklaeren kannst
+
+M11.02
+ID: M11.02
+Ziel:
+Den Login-Flow Ende-zu-Ende verfolgen.
+Dateien:
+- gated/lib/screens/login_screen.dart
+- gated/lib/services/auth_service.dart
+- gated/backend/lib/routes/auth_routes.dart
+- gated/backend/lib/auth/hashing.dart
+- gated/backend/lib/auth/jwt_service.dart
+Symbole:
+- _handleLogin
+- AuthService.login
+- /auth/login
+- verifyPassword
+- generateJwt
+Was verstehen:
+- Frontend-Startpunkt: Login-Button im `LoginScreen`
+- Service-Methode: `AuthService.login`
+- Backend-Route: `POST /auth/login`
+- Auth-Pruefung: Nutzer wird per E-Mail geladen, Passwort wird geprueft
+- DB-Zugriff: `getUserByEmail`
+- Response: JWT oder Fehlermeldung
+- UI-Reaktion: Token speichern, Prefetch starten, Navigation nach `/home`
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du Login als kompletten Frontend-Backend-Kreis beschreiben kannst
+
+M11.03
+ID: M11.03
+Ziel:
+Den `auth/me`-Flow Ende-zu-Ende verfolgen.
+Dateien:
+- gated/lib/app/app.dart
+- gated/lib/services/auth_service.dart
+- gated/backend/lib/routes/auth_routes.dart
+- gated/backend/lib/auth/request_auth.dart
+Symbole:
+- _resolveInitialRoute
+- getCurrentUser
+- _fetchCurrentUser
+- /auth/me
+- authenticateRequest
+Was verstehen:
+- Frontend-Startpunkt: App-Start oder Profil-Laden
+- Service-Methode: `getCurrentUser` oder `refreshCurrentUser`
+- Backend-Route: `GET /auth/me`
+- Auth-Pruefung: JWT lesen, verifizieren, Benutzer laden
+- DB-Zugriff: `getUserById`
+- Response: Benutzerdaten oder Token-Fehler
+- UI-Reaktion: Start auf `/home` oder Rueckleitung zu `/login`
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du erklaeren kannst, warum `auth/me` fuer Session-Validierung zentral ist
+
+M11.04
+ID: M11.04
+Ziel:
+Den Passwortaenderungs-Flow Ende-zu-Ende verfolgen.
+Dateien:
+- gated/lib/views/profile_view.dart
+- gated/lib/services/auth_service.dart
+- gated/backend/lib/routes/auth_routes.dart
+- gated/backend/lib/auth/request_auth.dart
+- gated/backend/lib/auth/hashing.dart
+- gated/backend/lib/db/database.dart
+Symbole:
+- _submitPasswordChange
+- AuthService.changePassword
+- /auth/change-password
+- authenticateRequest
+- verifyPassword
+- updateUserPassword
+Was verstehen:
+- Frontend-Startpunkt: Button in `ProfileView`
+- Service-Methode: `changePassword`
+- Backend-Route: `POST /auth/change-password`
+- Auth-Pruefung: JWT muss gueltig sein
+- DB-Zugriff: `updateUserPassword`
+- Response: 200, 400, 403, 409 oder 500
+- UI-Reaktion: Formular-Reset, Erfolgsdialog oder Session-Dialog
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du den Unterschied zwischen Login und Passwortaenderung sauber benennen kannst
+
+M11.05
+ID: M11.05
+Ziel:
+Den Lade-Flow fuer Kennzeichen Ende-zu-Ende verfolgen.
+Dateien:
+- gated/lib/views/kennzeichen_view.dart
+- gated/lib/views/kennzeichen/kennzeichen_rows_controller.dart
+- gated/lib/services/kennzeichen_service.dart
+- gated/backend/lib/routes/kennzeichen_routes.dart
+- gated/backend/lib/db/license_plate_database.dart
+Symbole:
+- _loadRows
+- loadRows
+- fetchEntries
+- GET /kennzeichen
+- getAllTeacherLicensePlates
+Was verstehen:
+- Frontend-Startpunkt: `initState` oder Refresh-Button
+- Service-Methode: `fetchEntries`
+- Backend-Route: `GET /kennzeichen`
+- Auth-Pruefung: `authenticateRequest`
+- DB-Zugriff: `getAllTeacherLicensePlates`
+- Response: JSON-Liste in `items`
+- UI-Reaktion: Tabelle, Fehler-Snackbar oder Login-Rueckleitung
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du das Laden inkl. UI-Zustaenden und Backend-Pfad erklaeren kannst
+
+M11.06
+ID: M11.06
+Ziel:
+Den Create-Flow fuer Kennzeichen Ende-zu-Ende verfolgen.
+Dateien:
+- gated/lib/views/kennzeichen_view.dart
+- gated/lib/views/kennzeichen/kennzeichen_edit_dialog.dart
+- gated/lib/views/kennzeichen/kennzeichen_rows_controller.dart
+- gated/lib/services/kennzeichen_service.dart
+- gated/backend/lib/routes/kennzeichen_routes.dart
+- gated/backend/lib/db/license_plate_database.dart
+Symbole:
+- _openCreateDialog
+- createRow
+- createEntry
+- POST /kennzeichen
+- createTeacherLicensePlate
+Was verstehen:
+- Frontend-Startpunkt: Add-Button oder Empty-State-Button
+- Service-Methode: `createEntry`
+- Backend-Route: `POST /kennzeichen`
+- Auth-Pruefung: `authenticateRequest`
+- DB-Zugriff: `createTeacherLicensePlate`
+- Response: 201 mit neuem Eintrag
+- UI-Reaktion: Eintrag zur Liste hinzufuegen, Snackbar zeigen
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du den Create-Flow von Dialog bis Tabellenupdate nachzeichnen kannst
+
+M11.07
+ID: M11.07
+Ziel:
+Den Update-Flow fuer Kennzeichen Ende-zu-Ende verfolgen.
+Dateien:
+- gated/lib/views/kennzeichen_view.dart
+- gated/lib/views/kennzeichen/kennzeichen_rows_controller.dart
+- gated/lib/services/kennzeichen_service.dart
+- gated/backend/lib/routes/kennzeichen_routes.dart
+- gated/backend/lib/db/license_plate_database.dart
+Symbole:
+- _editRow
+- updateRow
+- updateEntry
+- PUT /kennzeichen/<id>
+- updateTeacherLicensePlate
+- applyUpdatedEntry
+Was verstehen:
+- Frontend-Startpunkt: Edit-Button einer Tabellenzeile
+- Service-Methode: `updateEntry`
+- Backend-Route: `PUT /kennzeichen/<id>`
+- Auth-Pruefung: `authenticateRequest`
+- DB-Zugriff: `updateTeacherLicensePlate`
+- Response: 200 mit aktualisiertem Eintrag
+- UI-Reaktion: Bestehende Zeile mutieren, Snackbar zeigen
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du erklaeren kannst, warum nach dem Update nicht neu geladen werden muss
+
+M11.08
+ID: M11.08
+Ziel:
+Den Delete-Flow fuer Kennzeichen Ende-zu-Ende verfolgen.
+Dateien:
+- gated/lib/views/kennzeichen_view.dart
+- gated/lib/views/kennzeichen/kennzeichen_rows_controller.dart
+- gated/lib/services/kennzeichen_service.dart
+- gated/backend/lib/routes/kennzeichen_routes.dart
+- gated/backend/lib/db/license_plate_database.dart
+Symbole:
+- _deleteRow
+- deleteRow
+- deleteEntry
+- DELETE /kennzeichen/<id>
+- deleteTeacherLicensePlate
+Was verstehen:
+- Frontend-Startpunkt: Delete-Button einer Tabellenzeile
+- Service-Methode: `deleteEntry`
+- Backend-Route: `DELETE /kennzeichen/<id>`
+- Auth-Pruefung: `authenticateRequest`
+- DB-Zugriff: `deleteTeacherLicensePlate`
+- Response: 204 oder Fehler
+- UI-Reaktion: Zeile lokal entfernen oder Fehler anzeigen
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du Delete als einfachsten, aber fehleranfaelligen Mutationsfall erklaeren kannst
+
+M11.09
+ID: M11.09
+Ziel:
+Den Logout-Flow Ende-zu-Ende verfolgen.
+Dateien:
+- gated/lib/views/settings_view.dart
+- gated/lib/services/auth_service.dart
+- gated/lib/app/app.dart
+Symbole:
+- _handleLogout
+- clearToken
+- Navigator.pushNamedAndRemoveUntil
+Was verstehen:
+- Frontend-Startpunkt: Logout-ListTile in `SettingsView`
+- Service-Methode: `clearToken`
+- Backend-Route: keine, Logout ist aktuell rein clientseitig
+- Auth-Pruefung: entfaellt
+- DB-Zugriff: entfaellt
+- Response: keine Serverantwort
+- UI-Reaktion: Token loeschen und zur Login-Seite wechseln
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du erklaeren kannst, warum dieser Logout anders ist als serverseitig invalidierte Sessions
+
+M11.10
+ID: M11.10
+Ziel:
+Den Theme-Switch-Flow Ende-zu-Ende verfolgen.
+Dateien:
+- gated/lib/views/settings_view.dart
+- gated/lib/screens/home_screen.dart
+- gated/lib/app/app.dart
+- gated/lib/app/theme.dart
+Symbole:
+- SwitchListTile
+- onThemeModeChanged
+- _setThemeMode
+- themeMode
+- buildLightTheme
+- buildDarkTheme
+Was verstehen:
+- Frontend-Startpunkt: Theme-Switch in `SettingsView`
+- Service-Methode: keine, nur UI-State
+- Backend-Route: keine
+- Auth-Pruefung: keine
+- DB-Zugriff: keine
+- Response: keine externe Antwort
+- UI-Reaktion: `MaterialApp` rendert mit anderem Theme neu
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du den reinen UI-Datenfluss ohne Backend beschreiben kannst
+
+====================================================================
+M12 CI/CD und Deploy
+====================================================================
+
+Kapitelziel:
+Verstehen, wie GATED gebaut, paketiert, ausgeliefert und auf dem Raspberry Pi
+aktualisiert wird.
+
+M12.01
+ID: M12.01
+Ziel:
+Den GitHub-Release-Workflow verstehen.
+Dateien:
+- .github/workflows/release.yml
+Symbole:
+- release
+- workflow_dispatch
+- Flutter analyze
+- Flutter tests
+- flutter build web
+- dart analyze
+- Build release package
+- Upload package to GitHub release
+Was verstehen:
+- Wann der Workflow laeuft
+- Welche Schritte Frontend und Backend pruefen
+- Warum Web-Build und Release-Paket getrennte Schritte sind
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du den Workflow von Checkout bis Release-Upload erklaeren kannst
+
+M12.02
+ID: M12.02
+Ziel:
+Die Paketierung des Releases verstehen.
+Dateien:
+- deploy/build_release_package.sh
+Symbole:
+- TAG_NAME
+- BUILD_ROOT
+- DIST_ROOT
+- PACKAGE_NAME
+- rsync
+- tar
+- sha256sum
+Was verstehen:
+- Welche Inhalte ins Release kommen
+- Warum `.env`, `.db`, `.dart_tool` und Build-Artefakte ausgeschlossen werden
+- Warum eine Checksum-Datei erzeugt wird
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du sagen kannst, wie das finale Release-Paket strukturiert ist
+
+M12.03
+ID: M12.03
+Ziel:
+Das Deploy-Skript fuer den Raspberry Pi verstehen.
+Dateien:
+- deploy/deploy_release.sh
+- deploy/deploy.env.example
+- deploy/backend.env.example
+Symbole:
+- GATED_ROOT
+- RELEASES_DIR
+- CURRENT_LINK
+- SHARED_DIR
+- BACKEND_ENV_FILE
+- BACKEND_HEALTH_URL
+- GITHUB_REPO
+- FORCE_DEPLOY
+- healthcheck
+- cleanup_old_releases
+Was verstehen:
+- Wie die neueste GitHub-Release-Version geholt wird
+- Wie ein neuer Release-Ordner entsteht
+- Wie `current` als Symlink fuer den aktiven Stand dient
+- Wie Rollback ueber den vorherigen Release-Ordner funktioniert
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du ein Deploy inklusive Rollback in eigenen Worten erklaeren kannst
+
+M12.04
+ID: M12.04
+Ziel:
+Systemd-Services und Timer verstehen.
+Dateien:
+- deploy/gated-backend.service
+- deploy/gated-deploy.service
+- deploy/gated-deploy.timer
+Symbole:
+- WorkingDirectory
+- EnvironmentFile
+- ExecStart
+- OnBootSec
+- OnUnitActiveSec
+Was verstehen:
+- Wie der Backend-Prozess gestartet wird
+- Wie automatisches Deploy ueber einen Timer ausgeloest wird
+- Warum `backend.env` und `deploy.env` getrennte Aufgaben haben
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du den Unterschied zwischen dauerhaftem Backend-Service und Deploy-Trigger-Service erklaeren kannst
+
+M12.05
+ID: M12.05
+Ziel:
+Nginx und API-Proxying verstehen.
+Dateien:
+- deploy/gated.conf
+- deploy/README.md
+Symbole:
+- root
+- location /api/
+- proxy_pass
+- try_files
+- flutter_service_worker.js
+- manifest.json
+Was verstehen:
+- Warum das Frontend statisch ueber Nginx ausgeliefert wird
+- Warum `/api/` zum Dart-Backend weitergeleitet wird
+- Warum PWA-Dateien eigene Header bekommen
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du den Weg eines Browser-Requests zu `/` und `/api/` unterscheiden kannst
+
+====================================================================
+M13 Abschluss und Transfer
+====================================================================
+
+Kapitelziel:
+Das bisher Gelernte verdichten, in eigene Architektur-Sprache uebersetzen und
+bewusst auf neue Projekte uebertragen.
+
+M13.01
+ID: M13.01
+Ziel:
+Die Gesamtarchitektur von GATED in eigenen Worten formulieren.
+Dateien:
+- Alle bisherigen Kapitel als Rueckgriff
+Symbole:
+- Frontend
+- Backend
+- HTTP
+- JWT
+- SQLite
+- Deploy
+Was verstehen:
+- Wie alle Schichten zusammenarbeiten
+- Wo im Projekt welche Verantwortung lebt
+- Warum die Trennung fuer Wartbarkeit hilfreich ist
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du GATED auf einer halben Seite als Architekturtext zusammenfassen kannst
+
+M13.02
+ID: M13.02
+Ziel:
+Wiederverwendbare Muster fuer neue Projekte sammeln.
+Dateien:
+- Alle bisherigen Kapitel als Rueckgriff
+Symbole:
+- Service-Schicht
+- Widget-Aufteilung
+- Router
+- DB-Service
+- Deploy-Symlink
+Was verstehen:
+- Welche Muster du direkt wiederverwenden kannst
+- Welche Muster projektspezifisch sind
+- Welche Teile du fuer ein neues Projekt vereinfachen oder anders bauen wuerdest
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du fuer ein neues Projekt eine bewusste Copy-vs-Rebuild-Entscheidung treffen kannst
+
+M13.03
+ID: M13.03
+Ziel:
+Offene technische Schulden und Verbesserungsmoeglichkeiten bewusst festhalten.
+Dateien:
+- ToDo.txt
+- Relevante Projektdateien aus M03, M11 und M12
+Symbole:
+- Clientseitiger Logout
+- Testabdeckung
+- CI-Erweiterung
+- Architekturgrenzen
+Was verstehen:
+- Welche Grenzen die aktuelle Loesung hat
+- Wo spaetere Projekte sicherer, testbarer oder flexibler werden koennen
+- Warum technische Schulden dokumentiert werden sollten
+Eigene Notizen:
+- Zweck:
+- Datenfluss:
+- Dart/Flutter-Konzept:
+- Abhaengigkeiten:
+- Offene Frage oder Wiederverwendungs-Idee:
+Erledigt wenn:
+- Du mindestens drei konkrete Verbesserungen mit Begruendung nennen kannst
+
+====================================================================
+Abschluss-Checkliste fuer den ganzen Plan
+====================================================================
+
+Du bist mit dem gesamten Lernplan durch, wenn:
+- Du alle Unterpunkte von M00 bis M13 bearbeitet hast
+- Du zu jeder ID eigene Notizen geschrieben hast
+- Du fuer jeden End-to-End-Trace den Datenfluss frei erklaeren kannst
+- Du Frontend und Backend nicht mehr als getrennte Inseln siehst
+- Du fuer ein neues kleines Flutter-Dart-Projekt bereits einen eigenen
+  Architekturvorschlag machen koenntest
+
+Empfohlene Reihenfolge fuer spaetere Erklaer-Chats:
+- Erst M01 bis M04
+- Dann M03 und M07 enger zusammen
+- Danach M05 und M06 ausfuehrlich
+- Dann M08 bis M10
+- Zum Schluss M11 bis M13
+
+Hinweis fuer spaetere Chats:
+Bitte immer genau eine ID nennen, zum Beispiel:
+- Erklaere M03.04
+- Gehe mit mir M10.03 durch
+- Stelle mir Fragen zu M11.06
+- Hilf mir beim Dokumentieren von M07.02
