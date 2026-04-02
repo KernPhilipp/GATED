@@ -1,6 +1,7 @@
 GATED-Terminplan
 Tagesplan basierend auf GATED-Code-Lernplan
 Tage insgesamt: 67
+Tage übrig: 64
 Noch 70 Tage bis 11. Juni 2026
 ====================================================================
 Benutzung
@@ -12,7 +13,7 @@ Benutzung
 - Die Reihenfolge folgt exakt dem GATED-Code-Lernplan
 
 ====================================================================
-Tag 1
+Tag 1 (erledigt)
 ====================================================================
 Kapitel: M00 Orientierung
 ID: M00.01
@@ -21,7 +22,7 @@ Prompt:
 Erklaere mir bitte die ID M00.01 aus `GATED-Code-Lernplan.txt` Schritt fuer Schritt. Ich moechte heute das Thema "Repo-Aufbau grob verstehen und wichtige Hauptordner benennen koennen." durcharbeiten. Bitte erklaere mir Zweck, Datenfluss, relevante Dateien und Symbole, und hilf mir am Ende dabei, meine eigenen Notizen zu M00.01 auszufuellen.
 
 ====================================================================
-Tag 2
+Tag 2 (erledigt)
 ====================================================================
 Kapitel: M00 Orientierung
 ID: M00.02
@@ -30,7 +31,7 @@ Prompt:
 Erklaere mir bitte die ID M00.02 aus `GATED-Code-Lernplan.txt` Schritt fuer Schritt. Ich moechte heute das Thema "Handgeschriebenen Code von generierten Plattformdateien unterscheiden lernen." durcharbeiten. Bitte erklaere mir Zweck, Datenfluss, relevante Dateien und Symbole, und hilf mir am Ende dabei, meine eigenen Notizen zu M00.02 auszufuellen.
 
 ====================================================================
-Tag 3
+Tag 3 (erledigt)
 ====================================================================
 Kapitel: M00 Orientierung
 ID: M00.03
