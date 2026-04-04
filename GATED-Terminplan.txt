@@ -1,8 +1,7 @@
 GATED-Terminplan
 Tagesplan basierend auf GATED-Code-Lernplan
-Tage insgesamt: 67
-Tage übrig: 64
-Noch 70 Tage bis 11. Juni 2026
+Tage insgesamt: 66
+Noch 68 Tage bis 11. Juni 2026
 ====================================================================
 Benutzung
 ====================================================================
@@ -40,7 +39,7 @@ Prompt:
 Erklaere mir bitte die ID M00.03 aus `GATED-Code-Lernplan.txt` Schritt fuer Schritt. Ich moechte heute das Thema "Flutter- und Backend-Abhaengigkeiten auf einen Blick verstehen." durcharbeiten. Bitte erklaere mir Zweck, Datenfluss, relevante Dateien und Symbole, und hilf mir am Ende dabei, meine eigenen Notizen zu M00.03 auszufuellen.
 
 ====================================================================
-Tag 4
+Tag 4 (erledigt)
 ====================================================================
 Kapitel: M00 Orientierung
 ID: M00.04
