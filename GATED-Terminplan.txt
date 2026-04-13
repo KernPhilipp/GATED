@@ -1,7 +1,7 @@
 GATED-Terminplan
 Tagesplan basierend auf GATED-Code-Lernplan
-Tage insgesamt: 65
-Noch 66 Tage bis 11. Juni 2026
+Tage insgesamt: 62
+Noch 42 Tage bis 25. Mai 2026
 ====================================================================
 Benutzung
 ====================================================================
