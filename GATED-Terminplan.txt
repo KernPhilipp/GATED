@@ -1,7 +1,7 @@
 GATED-Terminplan
 Tagesplan basierend auf GATED-Code-Lernplan
-Tage insgesamt: 60
-Noch 42 Tage bis 25. Mai 2026
+Tage insgesamt: 59
+Noch 40 Tage bis 25. Mai 2026
 ====================================================================
 Benutzung
 ====================================================================
@@ -75,7 +75,7 @@ Prompt:
 Erklaere mir bitte die ID M01.03 aus `GATED-Code-Lernplan.txt` Schritt fuer Schritt. Ich moechte heute das Thema "Theme-Aufbau und visuelle Grundkonfiguration verstehen." durcharbeiten. Bitte erklaere mir Zweck, Datenfluss, relevante Dateien und Symbole, und hilf mir am Ende dabei, meine eigenen Notizen zu M01.03 auszufuellen.
 
 ====================================================================
-Tag 8
+Tag 8 (erledigt)
 ====================================================================
 Kapitel: M01 Flutter-Startpunkt
 ID: M01.04

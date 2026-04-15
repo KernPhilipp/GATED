@@ -1,4 +1,4 @@
-GATED - Raspberry Pi Befehle (naechster Termin)
+GATED - Raspberry Pi Befehle
 
 1) Projekt holen/aktualisieren
 --------------------------------

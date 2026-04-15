@@ -15,14 +15,14 @@ if ($lines.Count -lt 4) {
 }
 
 $today = (Get-Date).Date
-$targetDate = (Get-Date '2026-05-25').Date
+$targetDate = (Get-Date '2026-05-18').Date
 $remainingDays = ($targetDate - $today).Days
 
 if ($remainingDays -lt 0) {
     $remainingDays = 0
 }
 
-$lines[3] = "Noch $remainingDays Tage bis 25. Mai 2026"
+$lines[3] = "Noch $remainingDays Tage bis 18. Mai 2026"
 
 $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
 [System.IO.File]::WriteAllLines($terminplanPath, $lines, $utf8NoBom)

@@ -1,8 +1,6 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
 import '../features/auth/autofill_focus_recovery.dart';
 import '../features/logo_assets.dart';
 import '../services/auth_service.dart';
