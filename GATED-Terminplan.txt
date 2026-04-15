@@ -1,7 +1,7 @@
 GATED-Terminplan
 Tagesplan basierend auf GATED-Code-Lernplan
-Tage insgesamt: 59
-Noch 40 Tage bis 25. Mai 2026
+Tage insgesamt: 58
+Noch 33 Tage bis 18. Mai 2026
 ====================================================================
 Benutzung
 ====================================================================
@@ -84,7 +84,7 @@ Prompt:
 Erklaere mir bitte die ID M01.04 aus `GATED-Code-Lernplan.txt` Schritt fuer Schritt. Ich moechte heute das Thema "Build-Konfiguration und API-Basisadresse verstehen." durcharbeiten. Bitte erklaere mir Zweck, Datenfluss, relevante Dateien und Symbole, und hilf mir am Ende dabei, meine eigenen Notizen zu M01.04 auszufuellen.
 
 ====================================================================
-Tag 9
+Tag 9 (erledigt)
 ====================================================================
 Kapitel: M02 Auth-UI Grundlagen
 ID: M02.01

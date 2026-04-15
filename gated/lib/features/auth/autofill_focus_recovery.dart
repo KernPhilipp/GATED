@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -15,9 +14,7 @@ mixin AutofillFocusRecovery<T extends StatefulWidget> on State<T> {
   @override
   void initState() {
     super.initState();
-    _appLifecycleListener = AppLifecycleListener(
-      onResume: _handleAppResumed,
-    );
+    _appLifecycleListener = AppLifecycleListener(onResume: _handleAppResumed);
   }
 
   @override
