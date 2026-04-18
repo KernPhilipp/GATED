@@ -7,7 +7,7 @@ Future<void> redirectToLoginAfterSessionExpired(
   required AuthService authService,
   required String message,
 }) async {
-  await authService.clearToken();
+  await authService.clearTokens();
 
   if (!context.mounted) {
     return;

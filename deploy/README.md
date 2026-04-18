@@ -15,13 +15,46 @@ This folder is intentionally flat and minimal.
 
 ## CI/CD
 
-Workflow: `.github/workflows/release.yml`
+Workflows:
+
+- `.github/workflows/ci.yml`: runs Flutter + backend analyze/test on every push
+  and pull request
+- `.github/workflows/release.yml`: builds the production web bundle and release
+  package for release publish / manual dispatch
 
 On release publish:
 
 1. Build Flutter web (`API_BASE_URL=/api`)
 2. Build release package
 3. Upload package to GitHub release
+
+GitHub Actions secrets / variables:
+
+- No custom repository secrets or variables are currently required for these
+  workflows.
+- The release upload uses the GitHub-provided `GITHUB_TOKEN`.
+- `deploy.env` on the Raspberry Pi is runtime/deploy configuration on the
+  target machine, not a GitHub Actions secret.
+
+## Environment files
+
+Local development:
+
+- `gated/backend/.env.example` is the template for local backend development.
+- Create `gated/backend/.env` only on your local machine when you run
+  `dart run server.dart` directly.
+- That local file stays inside the repo directory but is ignored by
+  `gated/.gitignore`.
+
+Production / Raspberry Pi:
+
+- `deploy/backend.env.example` and `deploy/deploy.env.example` are templates
+  only.
+- The real production files must live outside the repo at
+  `/home/gated/gated-frontend/shared/backend.env` and
+  `/home/gated/gated-frontend/shared/deploy.env`.
+- Do not store production secrets in `deploy/backend.env` or
+  `deploy/deploy.env` inside the repository checkout.
 
 ## Raspberry Pi setup (manual, minimal)
 
@@ -52,6 +85,9 @@ Create env files:
 sudo cp deploy/backend.env.example /home/gated/gated-frontend/shared/backend.env
 sudo cp deploy/deploy.env.example /home/gated/gated-frontend/shared/deploy.env
 ```
+
+These commands copy the tracked templates into the Pi's shared runtime
+directory. The real runtime files stay outside the repository checkout.
 
 Edit values (important):
 

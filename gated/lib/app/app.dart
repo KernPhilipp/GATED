@@ -22,17 +22,9 @@ class _GatedAppState extends State<GatedApp> {
   }
 
   Future<String> _resolveInitialRoute() async {
-    final token = await _authService.readToken();
-    if (token == null || token.isEmpty) {
-      return '/login';
-    }
-
     try {
-      await _authService.getCurrentUser();
-      return '/home';
-    } on SessionExpiredException {
-      await _authService.clearToken();
-      return '/login';
+      final hasSession = await _authService.restoreSession();
+      return hasSession ? '/home' : '/login';
     } on AuthException {
       return '/home';
     } catch (_) {

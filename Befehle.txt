@@ -18,6 +18,6 @@ dart pub global run rename getBundleId --targets macos
 dart pub global run rename setBundleId --targets macos --value "com.example.gated"
 powershell -ExecutionPolicy Bypass -File .\Update-GatedTerminplan.ps1
 
-Hinweis:
-- .env niemals committen. Stattdessen .env.example nutzen und lokal eine .env anlegen (z.B. gated/backend/.env).
-- gated.db nicht committen (liegt lokal in gated/backend/).
+Hinweise:
+- Environment-Dateien mit deren Secrets niemals committen!
+- Lokale Datenbanken nicht committen!

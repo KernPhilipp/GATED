@@ -7,8 +7,11 @@ import 'package:sqlite3/sqlite3.dart';
 import '../auth/allowlist.dart';
 import '../auth/hashing.dart';
 import '../auth/jwt_service.dart';
+import '../auth/refresh_token_service.dart';
 import '../auth/request_auth.dart';
 import '../db/database.dart';
+
+const _jsonHeaders = {'Content-Type': 'application/json'};
 
 Router buildAuthRouter(DatabaseService db) => Router()
   ..post('/auth/register', (Request request) async {
@@ -77,11 +80,67 @@ Router buildAuthRouter(DatabaseService db) => Router()
       return Response.forbidden('Invalid credentials');
     }
 
-    final token = generateJwt(userId: user.id, email: user.email);
+    final tokens = await _createSessionTokens(db, user);
+
+    return Response.ok(jsonEncode(tokens.toJson()), headers: _jsonHeaders);
+  })
+  ..post('/auth/refresh', (Request request) async {
+    final data = await _readJsonObject(request);
+    if (data == null) {
+      return Response.badRequest(body: 'Invalid JSON body');
+    }
+
+    final refreshToken = _readRequiredString(data, 'refreshToken');
+    if (refreshToken == null) {
+      return Response.badRequest(body: 'Missing refreshToken');
+    }
+
+    final refreshTokenHash = await hashRefreshToken(refreshToken);
+    final session = await db.getAuthSessionByRefreshTokenHash(refreshTokenHash);
+    if (session == null) {
+      return Response.forbidden('Invalid refresh token');
+    }
+
+    if (session.revokedAt != null) {
+      return Response.forbidden('Invalid refresh token');
+    }
+
+    final expiresAt = DateTime.tryParse(session.expiresAt);
+    if (expiresAt == null) {
+      return Response.forbidden('Invalid refresh token');
+    }
+
+    final now = _nowUtc();
+    if (!expiresAt.isAfter(now)) {
+      return Response.forbidden('Refresh token expired');
+    }
+
+    final user = await db.getUserById(session.userId);
+    if (user == null) {
+      return Response.forbidden('User not found');
+    }
+
+    final newRefreshToken = generateRefreshToken();
+    final newRefreshTokenHash = await hashRefreshToken(newRefreshToken);
+    final newExpiresAt = now.add(refreshTokenLifetime);
+    final nowTimestamp = _timestamp(now);
+
+    await db.rotateAuthSessionRefreshToken(
+      sessionId: session.id,
+      refreshTokenHash: newRefreshTokenHash,
+      expiresAt: _timestamp(newExpiresAt),
+      lastUsedAt: nowTimestamp,
+    );
+
+    final accessToken = generateAccessToken(
+      userId: user.id,
+      email: user.email,
+      sessionId: session.id,
+    );
 
     return Response.ok(
-      jsonEncode({'token': token}),
-      headers: {'Content-Type': 'application/json'},
+      jsonEncode({'accessToken': accessToken, 'refreshToken': newRefreshToken}),
+      headers: _jsonHeaders,
     );
   })
   ..get('/auth/me', (Request request) async {
@@ -95,6 +154,25 @@ Router buildAuthRouter(DatabaseService db) => Router()
         }),
         headers: {'Content-Type': 'application/json'},
       );
+    } on RequestAuthenticationException catch (e) {
+      return e.response;
+    } catch (_) {
+      return Response.internalServerError(body: 'Unexpected error');
+    }
+  })
+  ..post('/auth/logout', (Request request) async {
+    try {
+      final verifiedToken = readVerifiedAccessToken(request);
+      final session = await db.getAuthSessionById(verifiedToken.sessionId);
+      if (session != null && session.userId != verifiedToken.userId) {
+        return Response.forbidden('Invalid token');
+      }
+
+      await db.revokeAuthSession(
+        sessionId: verifiedToken.sessionId,
+        revokedAt: _timestamp(_nowUtc()),
+      );
+      return Response.ok('Logged out');
     } on RequestAuthenticationException catch (e) {
       return e.response;
     } catch (_) {
@@ -139,6 +217,10 @@ Router buildAuthRouter(DatabaseService db) => Router()
         passwordHash: hash.hashBase64,
         salt: hash.saltBase64,
       );
+      await db.revokeAllAuthSessionsForUser(
+        userId: authContext.user.id,
+        revokedAt: _timestamp(_nowUtc()),
+      );
 
       return Response.ok('Password updated');
     } on RequestAuthenticationException catch (e) {
@@ -167,4 +249,56 @@ Future<Map<String, dynamic>?> _readJsonObject(Request request) async {
   }
 
   return null;
+}
+
+String? _readRequiredString(Map<String, dynamic> data, String key) {
+  final value = data[key];
+  if (value is! String) {
+    return null;
+  }
+
+  final trimmed = value.trim();
+  return trimmed.isEmpty ? null : trimmed;
+}
+
+Future<_SessionTokens> _createSessionTokens(
+  DatabaseService db,
+  DbUser user,
+) async {
+  final now = _nowUtc();
+  final sessionId = generateSessionId();
+  final refreshToken = generateRefreshToken();
+  final refreshTokenHash = await hashRefreshToken(refreshToken);
+
+  await db.createAuthSession(
+    sessionId: sessionId,
+    userId: user.id,
+    refreshTokenHash: refreshTokenHash,
+    createdAt: _timestamp(now),
+    expiresAt: _timestamp(now.add(refreshTokenLifetime)),
+    lastUsedAt: _timestamp(now),
+  );
+
+  final accessToken = generateAccessToken(
+    userId: user.id,
+    email: user.email,
+    sessionId: sessionId,
+  );
+
+  return _SessionTokens(accessToken: accessToken, refreshToken: refreshToken);
+}
+
+DateTime _nowUtc() => DateTime.now().toUtc();
+
+String _timestamp(DateTime value) => value.toUtc().toIso8601String();
+
+class _SessionTokens {
+  const _SessionTokens({required this.accessToken, required this.refreshToken});
+
+  final String accessToken;
+  final String refreshToken;
+
+  Map<String, String> toJson() {
+    return {'accessToken': accessToken, 'refreshToken': refreshToken};
+  }
 }

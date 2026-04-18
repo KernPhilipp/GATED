@@ -57,10 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
             constraints: BoxConstraints(minHeight: constraints.maxHeight),
             child: SizedBox(
               width: double.infinity,
-              child: IndexedStack(
-                index: _selectedIndex,
-                children: _views,
-              ),
+              child: IndexedStack(index: _selectedIndex, children: _views),
             ),
           ),
         );

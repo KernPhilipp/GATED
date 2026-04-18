@@ -26,6 +26,38 @@ class DbUser {
   }
 }
 
+class DbAuthSession {
+  final String id;
+  final int userId;
+  final String refreshTokenHash;
+  final String createdAt;
+  final String expiresAt;
+  final String? revokedAt;
+  final String? lastUsedAt;
+
+  const DbAuthSession({
+    required this.id,
+    required this.userId,
+    required this.refreshTokenHash,
+    required this.createdAt,
+    required this.expiresAt,
+    required this.revokedAt,
+    required this.lastUsedAt,
+  });
+
+  factory DbAuthSession.fromRow(Row row) {
+    return DbAuthSession(
+      id: row['id'] as String,
+      userId: row['user_id'] as int,
+      refreshTokenHash: row['refresh_token_hash'] as String,
+      createdAt: row['created_at'] as String,
+      expiresAt: row['expires_at'] as String,
+      revokedAt: row['revoked_at'] as String?,
+      lastUsedAt: row['last_used_at'] as String?,
+    );
+  }
+}
+
 class DatabaseService {
   final Database db;
 
@@ -65,6 +97,29 @@ CREATE TABLE IF NOT EXISTS users (
 ''');
 
     db.execute('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);');
+
+    db.execute('''
+CREATE TABLE IF NOT EXISTS auth_sessions (
+  id TEXT PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  refresh_token_hash TEXT NOT NULL UNIQUE,
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  revoked_at TEXT,
+  last_used_at TEXT,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+''');
+
+    db.execute('''
+CREATE INDEX IF NOT EXISTS idx_auth_sessions_user_id
+ON auth_sessions(user_id);
+''');
+
+    db.execute('''
+CREATE INDEX IF NOT EXISTS idx_auth_sessions_expires_at
+ON auth_sessions(expires_at);
+''');
   }
 
   void close() {
@@ -138,6 +193,131 @@ WHERE id = ?;
 ''');
     try {
       stmt.execute([passwordHash, salt, userId]);
+    } finally {
+      stmt.close();
+    }
+  }
+
+  Future<void> createAuthSession({
+    required String sessionId,
+    required int userId,
+    required String refreshTokenHash,
+    required String createdAt,
+    required String expiresAt,
+    String? lastUsedAt,
+  }) async {
+    final stmt = db.prepare('''
+INSERT INTO auth_sessions (
+  id,
+  user_id,
+  refresh_token_hash,
+  created_at,
+  expires_at,
+  last_used_at
+)
+VALUES (?, ?, ?, ?, ?, ?);
+''');
+    try {
+      stmt.execute([
+        sessionId,
+        userId,
+        refreshTokenHash,
+        createdAt,
+        expiresAt,
+        lastUsedAt,
+      ]);
+    } finally {
+      stmt.close();
+    }
+  }
+
+  Future<DbAuthSession?> getAuthSessionById(String sessionId) async {
+    final stmt = db.prepare('''
+SELECT id, user_id, refresh_token_hash, created_at, expires_at, revoked_at,
+       last_used_at
+FROM auth_sessions
+WHERE id = ?
+LIMIT 1;
+''');
+    try {
+      final result = stmt.select([sessionId]);
+      if (result.isEmpty) {
+        return null;
+      }
+      return DbAuthSession.fromRow(result.first);
+    } finally {
+      stmt.close();
+    }
+  }
+
+  Future<DbAuthSession?> getAuthSessionByRefreshTokenHash(
+    String refreshTokenHash,
+  ) async {
+    final stmt = db.prepare('''
+SELECT id, user_id, refresh_token_hash, created_at, expires_at, revoked_at,
+       last_used_at
+FROM auth_sessions
+WHERE refresh_token_hash = ?
+LIMIT 1;
+''');
+    try {
+      final result = stmt.select([refreshTokenHash]);
+      if (result.isEmpty) {
+        return null;
+      }
+      return DbAuthSession.fromRow(result.first);
+    } finally {
+      stmt.close();
+    }
+  }
+
+  Future<void> rotateAuthSessionRefreshToken({
+    required String sessionId,
+    required String refreshTokenHash,
+    required String expiresAt,
+    required String lastUsedAt,
+  }) async {
+    final stmt = db.prepare('''
+UPDATE auth_sessions
+SET refresh_token_hash = ?,
+    expires_at = ?,
+    last_used_at = ?
+WHERE id = ?;
+''');
+    try {
+      stmt.execute([refreshTokenHash, expiresAt, lastUsedAt, sessionId]);
+    } finally {
+      stmt.close();
+    }
+  }
+
+  Future<void> revokeAuthSession({
+    required String sessionId,
+    required String revokedAt,
+  }) async {
+    final stmt = db.prepare('''
+UPDATE auth_sessions
+SET revoked_at = COALESCE(revoked_at, ?)
+WHERE id = ?;
+''');
+    try {
+      stmt.execute([revokedAt, sessionId]);
+    } finally {
+      stmt.close();
+    }
+  }
+
+  Future<void> revokeAllAuthSessionsForUser({
+    required int userId,
+    required String revokedAt,
+  }) async {
+    final stmt = db.prepare('''
+UPDATE auth_sessions
+SET revoked_at = COALESCE(revoked_at, ?)
+WHERE user_id = ?;
+''');
+    try {
+      stmt.execute([revokedAt, userId]);
     } finally {
       stmt.close();
     }

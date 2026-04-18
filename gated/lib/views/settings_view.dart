@@ -93,7 +93,7 @@ class _SettingsViewState extends State<SettingsView> {
 
   Future<void> _handleLogout() async {
     try {
-      await _authService.clearToken();
+      await _authService.logout();
       if (!mounted) return;
       Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
     } catch (_) {

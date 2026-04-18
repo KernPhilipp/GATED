@@ -408,6 +408,8 @@ class _ProfileViewState extends State<ProfileView> {
       if (!mounted) return;
       _resetPasswordForm();
       await _showPasswordChangedDialog();
+      if (!mounted) return;
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
     } on SessionExpiredException catch (e) {
       if (!mounted) return;
       _resetPasswordForm();
@@ -467,7 +469,10 @@ class _ProfileViewState extends State<ProfileView> {
       builder: (context) {
         return AlertDialog(
           title: const Text('Passwort aktualisiert'),
-          content: const Text('Dein Passwort wurde erfolgreich aktualisiert.'),
+          content: const Text(
+            'Dein Passwort wurde erfolgreich aktualisiert. Bitte melde dich '
+            'aus Sicherheitsgruenden erneut an.',
+          ),
           actions: [
             TextButton(
               onPressed: () {

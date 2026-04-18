@@ -28,19 +28,6 @@ jobs:
         working-directory: gated
         run: flutter pub get
 
-      - name: Flutter analyze
-        working-directory: gated
-        run: flutter analyze lib
-
-      - name: Flutter tests
-        working-directory: gated
-        run: |
-          if [ -d "test" ]; then
-            flutter test
-          else
-            echo "No Flutter tests found. Skipping."
-          fi
-
       - name: Build Flutter web release
         working-directory: gated
         run: flutter build web --release --dart-define=API_BASE_URL=/api
@@ -48,19 +35,6 @@ jobs:
       - name: Backend dependencies
         working-directory: gated/backend
         run: dart pub get
-
-      - name: Backend analyze
-        working-directory: gated/backend
-        run: dart analyze
-
-      - name: Backend tests
-        working-directory: gated/backend
-        run: |
-          if [ -d "test" ]; then
-            dart test
-          else
-            echo "No backend tests found. Skipping."
-          fi
 
       - name: Build release package
         run: |

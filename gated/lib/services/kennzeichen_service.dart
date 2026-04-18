@@ -1,7 +1,5 @@
 import 'dart:convert';
 
-import 'package:http/http.dart' as http;
-
 import '../config/app_config.dart';
 import 'auth_service.dart';
 
@@ -32,24 +30,18 @@ class KennzeichenEntry {
 }
 
 class KennzeichenService {
-  const KennzeichenService({
-    this.baseUrl = AppConfig.apiBaseUrl,
-    AuthService authService = const AuthService(),
-  }) : _authService = authService;
+  KennzeichenService({
+    String baseUrl = AppConfig.apiBaseUrl,
+    AuthService? authService,
+  }) : _authService = authService ?? AuthService(baseUrl: baseUrl);
 
-  final String baseUrl;
   final AuthService _authService;
 
   Future<List<KennzeichenEntry>> fetchEntries() async {
-    final response = await http.get(
-      Uri.parse('$_normalizedBaseUrl/kennzeichen'),
-      headers: await _authService.authorizedHeaders(),
+    final response = await _authService.sendAuthorizedRequest(
+      method: 'GET',
+      path: '/kennzeichen',
     );
-
-    if (response.statusCode == 403 && isTokenErrorResponse(response.body)) {
-      await _authService.clearToken();
-      throw const SessionExpiredException();
-    }
 
     if (response.statusCode != 200) {
       throw KennzeichenException(_messageForStatus(response.statusCode));
@@ -79,21 +71,15 @@ class KennzeichenService {
     required String teacherName,
     required String licensePlate,
   }) async {
-    final response = await http.post(
-      Uri.parse('$_normalizedBaseUrl/kennzeichen'),
-      headers: await _authService.authorizedHeaders(
-        includeJsonContentType: true,
-      ),
+    final response = await _authService.sendAuthorizedRequest(
+      method: 'POST',
+      path: '/kennzeichen',
+      includeJsonContentType: true,
       body: jsonEncode({
         'teacherName': teacherName,
         'licensePlate': licensePlate,
       }),
     );
-
-    if (response.statusCode == 403 && isTokenErrorResponse(response.body)) {
-      await _authService.clearToken();
-      throw const SessionExpiredException();
-    }
 
     if (response.statusCode != 201) {
       throw KennzeichenException(_messageForStatus(response.statusCode));
@@ -107,21 +93,15 @@ class KennzeichenService {
     required String teacherName,
     required String licensePlate,
   }) async {
-    final response = await http.put(
-      Uri.parse('$_normalizedBaseUrl/kennzeichen/$id'),
-      headers: await _authService.authorizedHeaders(
-        includeJsonContentType: true,
-      ),
+    final response = await _authService.sendAuthorizedRequest(
+      method: 'PUT',
+      path: '/kennzeichen/$id',
+      includeJsonContentType: true,
       body: jsonEncode({
         'teacherName': teacherName,
         'licensePlate': licensePlate,
       }),
     );
-
-    if (response.statusCode == 403 && isTokenErrorResponse(response.body)) {
-      await _authService.clearToken();
-      throw const SessionExpiredException();
-    }
 
     if (response.statusCode != 200) {
       throw KennzeichenException(_messageForStatus(response.statusCode));
@@ -131,15 +111,10 @@ class KennzeichenService {
   }
 
   Future<void> deleteEntry(int id) async {
-    final response = await http.delete(
-      Uri.parse('$_normalizedBaseUrl/kennzeichen/$id'),
-      headers: await _authService.authorizedHeaders(),
+    final response = await _authService.sendAuthorizedRequest(
+      method: 'DELETE',
+      path: '/kennzeichen/$id',
     );
-
-    if (response.statusCode == 403 && isTokenErrorResponse(response.body)) {
-      await _authService.clearToken();
-      throw const SessionExpiredException();
-    }
 
     if (response.statusCode != 204) {
       throw KennzeichenException(_messageForStatus(response.statusCode));
@@ -171,10 +146,6 @@ class KennzeichenService {
         return 'Server-Fehler. Bitte später versuchen.';
     }
   }
-
-  String get _normalizedBaseUrl => baseUrl.endsWith('/')
-      ? baseUrl.substring(0, baseUrl.length - 1)
-      : baseUrl;
 }
 
 class KennzeichenException implements Exception {

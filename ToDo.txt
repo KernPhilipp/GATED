@@ -1,3 +1,2 @@
-﻿Sicherheit: Serverseitigen Logout ergänzen (z. B. /auth/logout + Refresh-Token widerrufen/Blacklist), damit Tokens nicht nur clientseitig gelöscht werden.
-Optional später: GitHub Secrets/Variables für CI/CD konfigurieren (statt sensibler Werte in lokalen Dateien).
-CI: Separaten GitHub-Workflow für push/pull_request anlegen (Flutter + Backend Analyze/Test), ohne Release-Artefakte hochzuladen.
+- Beim Klicken des "Über GATED"-Buttons wird eine Ansicht geöffnet, wo auch die derzeitige Versionsnummer angezeigt wird.
+Diese stimmt derzeit jedoch nicht mit der tatsächlichen Versionsnummer überein, da die Versionsnummer in dieser Ansicht hardcoded ist.

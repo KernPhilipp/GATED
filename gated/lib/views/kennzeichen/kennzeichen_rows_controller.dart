@@ -3,7 +3,7 @@ import 'editable_kennzeichen_row.dart';
 
 class KennzeichenRowsController {
   KennzeichenRowsController({KennzeichenService? service})
-    : _service = service ?? const KennzeichenService();
+    : _service = service ?? KennzeichenService();
 
   final KennzeichenService _service;
   int _nextLocalRowId = 0;

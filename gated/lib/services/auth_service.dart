@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../config/app_config.dart';
 
 class AuthUser {
@@ -30,39 +32,37 @@ class AuthUser {
 }
 
 class AuthService {
-  const AuthService({this.baseUrl = AppConfig.apiBaseUrl});
+  const AuthService({this.baseUrl = AppConfig.apiBaseUrl, http.Client? client})
+    : _client = client;
 
   final String baseUrl;
+  final http.Client? _client;
+
   static AuthUser? _cachedCurrentUser;
   static Future<AuthUser>? _currentUserRequest;
   static int _currentUserCacheVersion = 0;
+  static Future<bool>? _refreshRequest;
+  static final http.Client _defaultClient = http.Client();
   static final Future<SharedPreferencesWithCache> _prefs =
       SharedPreferencesWithCache.create(
         cacheOptions: const SharedPreferencesWithCacheOptions(
-          allowList: <String>{_tokenKey},
+          allowList: <String>{_accessTokenKey, _refreshTokenKey},
         ),
       );
 
   AuthUser? get cachedCurrentUser => _cachedCurrentUser;
 
-  Future<String> login({
-    required String email,
-    required String password,
-  }) async {
-    final response = await http.post(
+  Future<void> login({required String email, required String password}) async {
+    final response = await _httpClient.post(
       Uri.parse('$_normalizedBaseUrl/auth/login'),
       headers: const {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'password': password}),
     );
 
     if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final token = data['token'];
-      if (token is! String || token.isEmpty) {
-        throw const AuthException('Ungültige Server-Antwort.');
-      }
-      await _saveToken(token);
-      return token;
+      final tokens = _parseTokenPair(response.body);
+      await _saveTokens(tokens);
+      return;
     }
 
     if (response.statusCode == 403) {
@@ -74,17 +74,17 @@ class AuthService {
     }
 
     if (response.statusCode == 500) {
-      throw const AuthException('Serverfehler. Bitte später versuchen.');
+      throw const AuthException('Serverfehler. Bitte spaeter versuchen.');
     }
 
-    throw const AuthException('Server-Fehler. Bitte später versuchen.');
+    throw const AuthException('Server-Fehler. Bitte spaeter versuchen.');
   }
 
   Future<void> register({
     required String email,
     required String password,
   }) async {
-    final response = await http.post(
+    final response = await _httpClient.post(
       Uri.parse('$_normalizedBaseUrl/auth/register'),
       headers: const {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'password': password}),
@@ -107,10 +107,10 @@ class AuthService {
     }
 
     if (response.statusCode == 500) {
-      throw const AuthException('Serverfehler. Bitte später versuchen.');
+      throw const AuthException('Serverfehler. Bitte spaeter versuchen.');
     }
 
-    throw const AuthException('Server-Fehler. Bitte später versuchen.');
+    throw const AuthException('Server-Fehler. Bitte spaeter versuchen.');
   }
 
   Future<AuthUser> getCurrentUser() async {
@@ -150,9 +150,10 @@ class AuthService {
     required String currentPassword,
     required String newPassword,
   }) async {
-    final response = await http.post(
-      Uri.parse('$_normalizedBaseUrl/auth/change-password'),
-      headers: await _authorizedHeaders(includeJsonContentType: true),
+    final response = await sendAuthorizedRequest(
+      method: 'POST',
+      path: '/auth/change-password',
+      includeJsonContentType: true,
       body: jsonEncode({
         'currentPassword': currentPassword,
         'newPassword': newPassword,
@@ -160,6 +161,7 @@ class AuthService {
     );
 
     if (response.statusCode == 200) {
+      await clearTokens();
       return;
     }
 
@@ -168,10 +170,6 @@ class AuthService {
     }
 
     if (response.statusCode == 403) {
-      if (isTokenErrorResponse(response.body)) {
-        await clearToken();
-        throw const SessionExpiredException();
-      }
       throw const AuthException('Aktuelles Passwort ist falsch.');
     }
 
@@ -182,11 +180,109 @@ class AuthService {
     }
 
     if (response.statusCode == 500) {
-      throw const AuthException('Serverfehler. Bitte später versuchen.');
+      throw const AuthException('Serverfehler. Bitte spaeter versuchen.');
     }
 
-    throw const AuthException('Passwort konnte nicht geändert werden.');
+    throw const AuthException('Passwort konnte nicht geaendert werden.');
   }
+
+  Future<bool> restoreSession() async {
+    final accessToken = await readAccessToken();
+    final refreshToken = await readRefreshToken();
+    final hasAccessToken = accessToken != null && accessToken.isNotEmpty;
+    final hasRefreshToken = refreshToken != null && refreshToken.isNotEmpty;
+
+    if (!hasAccessToken && !hasRefreshToken) {
+      return false;
+    }
+
+    if (!hasAccessToken && hasRefreshToken) {
+      final refreshed = await refreshSession();
+      if (!refreshed) {
+        return false;
+      }
+    }
+
+    try {
+      await getCurrentUser();
+      return true;
+    } on SessionExpiredException {
+      await clearTokens();
+      return false;
+    } on AuthException {
+      return true;
+    } catch (_) {
+      return true;
+    }
+  }
+
+  Future<void> logout() async {
+    try {
+      await sendAuthorizedRequest(method: 'POST', path: '/auth/logout');
+    } on SessionExpiredException {
+      // Local cleanup is still required if the backend session already expired.
+    } finally {
+      await clearTokens();
+    }
+  }
+
+  Future<http.Response> sendAuthorizedRequest({
+    required String method,
+    required String path,
+    String? body,
+    bool includeJsonContentType = false,
+  }) {
+    return _sendAuthorizedRequest(
+      method: method,
+      path: path,
+      body: body,
+      includeJsonContentType: includeJsonContentType,
+      allowRefreshRetry: true,
+    );
+  }
+
+  Future<bool> refreshSession() async {
+    final refreshRequest = _refreshRequest;
+    if (refreshRequest != null) {
+      return refreshRequest;
+    }
+
+    final completer = Completer<bool>();
+    _refreshRequest = completer.future;
+
+    () async {
+      try {
+        completer.complete(await _performRefresh());
+      } catch (error, stackTrace) {
+        completer.completeError(error, stackTrace);
+      } finally {
+        _refreshRequest = null;
+      }
+    }();
+
+    return completer.future;
+  }
+
+  Future<String?> readAccessToken() async {
+    final prefs = await _prefs;
+    return prefs.getString(_accessTokenKey);
+  }
+
+  Future<String?> readRefreshToken() async {
+    final prefs = await _prefs;
+    return prefs.getString(_refreshTokenKey);
+  }
+
+  Future<String?> readToken() => readAccessToken();
+
+  Future<void> clearTokens() async {
+    final prefs = await _prefs;
+    _clearCachedCurrentUser();
+    await prefs.remove(_accessTokenKey);
+    await prefs.remove(_refreshTokenKey);
+  }
+
+  Future<void> clearToken() => clearTokens();
 
   Future<AuthUser> _startCurrentUserRequest() {
     final requestVersion = _currentUserCacheVersion;
@@ -208,15 +304,15 @@ class AuthService {
   }
 
   Future<AuthUser> _fetchCurrentUser(int requestVersion) async {
-    final response = await http.get(
-      Uri.parse('$_normalizedBaseUrl/auth/me'),
-      headers: await _authorizedHeaders(),
+    final response = await sendAuthorizedRequest(
+      method: 'GET',
+      path: '/auth/me',
     );
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       if (data is! Map<String, dynamic>) {
-        throw const AuthException('Ungültige Server-Antwort.');
+        throw const AuthException('Ungueltige Server-Antwort.');
       }
 
       final user = AuthUser.fromJson(data);
@@ -226,39 +322,103 @@ class AuthService {
       return user;
     }
 
-    if (response.statusCode == 403 && isTokenErrorResponse(response.body)) {
-      await clearToken();
-      throw const SessionExpiredException();
-    }
-
     if (response.statusCode == 500) {
-      throw const AuthException('Serverfehler. Bitte später versuchen.');
+      throw const AuthException('Serverfehler. Bitte spaeter versuchen.');
     }
 
     throw const AuthException('Profil konnte nicht geladen werden.');
   }
 
-  Future<void> _saveToken(String token) async {
-    final prefs = await _prefs;
-    _clearCachedCurrentUser();
-    await prefs.setString(_tokenKey, token);
-  }
-
-  Future<String?> readToken() async {
-    final prefs = await _prefs;
-    return prefs.getString(_tokenKey);
-  }
-
-  Future<void> clearToken() async {
-    final prefs = await _prefs;
-    _clearCachedCurrentUser();
-    await prefs.remove(_tokenKey);
-  }
-
-  Future<Map<String, String>> authorizedHeaders({
+  Future<http.Response> _sendAuthorizedRequest({
+    required String method,
+    required String path,
+    required bool allowRefreshRetry,
+    String? body,
     bool includeJsonContentType = false,
-  }) {
-    return _authorizedHeaders(includeJsonContentType: includeJsonContentType);
+  }) async {
+    final accessToken = await _requireAccessToken();
+    final response = await _sendRequest(
+      method: method,
+      uri: Uri.parse('$_normalizedBaseUrl$path'),
+      headers: {
+        if (includeJsonContentType) 'Content-Type': 'application/json',
+        'Authorization': 'Bearer $accessToken',
+      },
+      body: body,
+    );
+
+    if (allowRefreshRetry &&
+        response.statusCode == 403 &&
+        isAccessTokenExpiredResponse(response.body)) {
+      final refreshed = await refreshSession();
+      if (!refreshed) {
+        throw const SessionExpiredException();
+      }
+
+      return _sendAuthorizedRequest(
+        method: method,
+        path: path,
+        body: body,
+        includeJsonContentType: includeJsonContentType,
+        allowRefreshRetry: false,
+      );
+    }
+
+    if (response.statusCode == 403 && isSessionFailureResponse(response.body)) {
+      await clearTokens();
+      throw const SessionExpiredException();
+    }
+
+    return response;
+  }
+
+  Future<String> _requireAccessToken() async {
+    final accessToken = await readAccessToken();
+    if (accessToken != null && accessToken.isNotEmpty) {
+      return accessToken;
+    }
+
+    final refreshed = await refreshSession();
+    if (!refreshed) {
+      throw const SessionExpiredException();
+    }
+
+    final refreshedAccessToken = await readAccessToken();
+    if (refreshedAccessToken == null || refreshedAccessToken.isEmpty) {
+      throw const SessionExpiredException();
+    }
+
+    return refreshedAccessToken;
+  }
+
+  Future<bool> _performRefresh() async {
+    final refreshToken = await readRefreshToken();
+    if (refreshToken == null || refreshToken.isEmpty) {
+      await clearTokens();
+      return false;
+    }
+
+    final response = await _httpClient.post(
+      Uri.parse('$_normalizedBaseUrl/auth/refresh'),
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode({'refreshToken': refreshToken}),
+    );
+
+    if (response.statusCode == 200) {
+      final tokens = _parseTokenPair(response.body);
+      await _saveTokens(tokens);
+      return true;
+    }
+
+    await clearTokens();
+    return false;
+  }
+
+  Future<void> _saveTokens(_TokenPair tokens) async {
+    final prefs = await _prefs;
+    _clearCachedCurrentUser();
+    await prefs.setString(_accessTokenKey, tokens.accessToken);
+    await prefs.setString(_refreshTokenKey, tokens.refreshToken);
   }
 
   void _clearCachedCurrentUser() {
@@ -267,23 +427,31 @@ class AuthService {
     _currentUserCacheVersion++;
   }
 
-  Future<Map<String, String>> _authorizedHeaders({
-    bool includeJsonContentType = false,
-  }) async {
-    final token = await readToken();
-    if (token == null || token.isEmpty) {
-      throw const SessionExpiredException();
+  Future<http.Response> _sendRequest({
+    required String method,
+    required Uri uri,
+    required Map<String, String> headers,
+    String? body,
+  }) {
+    switch (method.toUpperCase()) {
+      case 'GET':
+        return _httpClient.get(uri, headers: headers);
+      case 'POST':
+        return _httpClient.post(uri, headers: headers, body: body);
+      case 'PUT':
+        return _httpClient.put(uri, headers: headers, body: body);
+      case 'DELETE':
+        return _httpClient.delete(uri, headers: headers, body: body);
+      default:
+        throw ArgumentError.value(method, 'method', 'Unsupported HTTP method');
     }
-
-    return {
-      if (includeJsonContentType) 'Content-Type': 'application/json',
-      'Authorization': 'Bearer $token',
-    };
   }
 
   String get _normalizedBaseUrl => baseUrl.endsWith('/')
       ? baseUrl.substring(0, baseUrl.length - 1)
       : baseUrl;
+
+  http.Client get _httpClient => _client ?? _defaultClient;
 }
 
 class AuthException implements Exception {
@@ -298,12 +466,44 @@ class SessionExpiredException extends AuthException {
   ]);
 }
 
-bool isTokenErrorResponse(String responseBody) {
-  final normalized = responseBody.trim().toLowerCase();
-  return normalized == 'no token' ||
-      normalized == 'token expired' ||
-      normalized == 'invalid token' ||
-      normalized == 'user not found';
+class _TokenPair {
+  const _TokenPair({required this.accessToken, required this.refreshToken});
+
+  final String accessToken;
+  final String refreshToken;
 }
 
-const _tokenKey = 'auth_token';
+_TokenPair _parseTokenPair(String responseBody) {
+  final decoded = jsonDecode(responseBody);
+  if (decoded is! Map<String, dynamic>) {
+    throw const AuthException('Ungueltige Server-Antwort.');
+  }
+
+  final accessToken = decoded['accessToken'];
+  final refreshToken = decoded['refreshToken'];
+  if (accessToken is! String ||
+      accessToken.isEmpty ||
+      refreshToken is! String ||
+      refreshToken.isEmpty) {
+    throw const AuthException('Ungueltige Server-Antwort.');
+  }
+
+  return _TokenPair(accessToken: accessToken, refreshToken: refreshToken);
+}
+
+bool isAccessTokenExpiredResponse(String responseBody) {
+  return responseBody.trim().toLowerCase() == 'token expired';
+}
+
+bool isSessionFailureResponse(String responseBody) {
+  final normalized = responseBody.trim().toLowerCase();
+  return normalized == 'no token' ||
+      normalized == 'invalid token' ||
+      normalized == 'user not found' ||
+      normalized == 'session not found' ||
+      normalized == 'session revoked' ||
+      normalized == 'session expired';
+}
+
+const _accessTokenKey = 'auth_access_token';
+const _refreshTokenKey = 'auth_refresh_token';

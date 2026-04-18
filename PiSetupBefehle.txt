@@ -33,6 +33,8 @@ sudo rm -f /etc/nginx/sites-enabled/default
 
 4) Env-Dateien anlegen (falls noch nicht da)
 ---------------------------------------------
+# Die Dateien in deploy/*.env.example sind nur Templates im Repo.
+# Die echten Laufzeitdateien liegen ausserhalb des Repo unter /home/gated/gated-frontend/shared/.
 sudo cp -n deploy/backend.env.example /home/gated/gated-frontend/shared/backend.env
 sudo cp -n deploy/deploy.env.example /home/gated/gated-frontend/shared/deploy.env
 
@@ -40,10 +42,12 @@ sudo cp -n deploy/deploy.env.example /home/gated/gated-frontend/shared/deploy.en
 ----------------------------------
 sudo nano /home/gated/gated-frontend/shared/backend.env
 # JWT_SECRET setzen (nicht leer!)
+# Nicht deploy/backend.env im Repo bearbeiten.
 
 sudo nano /home/gated/gated-frontend/shared/deploy.env
 # GITHUB_REPO=KernPhilipp/GATED
 # GITHUB_TOKEN nur noetig, falls Repo wieder privat ist
+# deploy.env auf dem Pi ist Betriebs-Konfiguration, kein GitHub-Actions-Secret.
 
 6) Rechte und Dienste
 ---------------------
