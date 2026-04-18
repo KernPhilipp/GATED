@@ -11,9 +11,7 @@ class DashboardView extends StatelessWidget {
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Dashboard', style: theme.textTheme.headlineMedium),
-        ],
+        children: [Text('Dashboard', style: theme.textTheme.headlineMedium)],
       ),
     );
   }
