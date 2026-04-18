@@ -3,3 +3,6 @@ Diese stimmt derzeit jedoch nicht mit der tatsächlichen Versionsnummer überein
 - Der Wechsel zwischen Dark- und White Mode geschieht derzeit langsam, bzw. laggt es. Woran liegt das? Das müsste man beheben.
 - Derzeit kann ich das Verhalten einer auf einem Smartphone installierten WebApp nicht nachahmen. Wie wäre das möglich?
 Dies beinhaltet auch die Prüfung, wie eigentlich die Splash Screens für WebApps auf Android und iOS aussehen.
+- Die READMEs müssten bei Bedarf aktualisiert werden.
+
+Link zum Shelly: http://192.168.0.102/rpc/Switch.Set?id=0&on=true&toggle_after=5
