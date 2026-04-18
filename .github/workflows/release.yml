@@ -10,6 +10,7 @@ permissions:
 
 env:
   RELEASE_TAG: ${{ github.event.release.tag_name || github.ref_name }}
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   package:
@@ -17,7 +18,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Flutter SDK
         uses: subosito/flutter-action@v2
@@ -41,7 +42,7 @@ jobs:
           bash deploy/build_release_package.sh "${RELEASE_TAG}"
 
       - name: Upload package as workflow artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: gated-release-${{ env.RELEASE_TAG }}
           path: |
