@@ -1,2 +1,3 @@
 - Beim Klicken des "Über GATED"-Buttons wird eine Ansicht geöffnet, wo auch die derzeitige Versionsnummer angezeigt wird.
 Diese stimmt derzeit jedoch nicht mit der tatsächlichen Versionsnummer überein, da die Versionsnummer in dieser Ansicht hardcoded ist.
+- Der Wechsel zwischen Dark- und White Mode geschieht derzeit langsam, bzw. laggt es. Woran liegt das? Das müsste man beheben.
