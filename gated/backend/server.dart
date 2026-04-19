@@ -5,8 +5,10 @@ import 'package:shelf_router/shelf_router.dart';
 import 'lib/auth/jwt_service.dart';
 import 'lib/db/database.dart';
 import 'lib/db/license_plate_database.dart';
+import 'lib/garage_door/garage_door_service.dart';
 import 'lib/middleware/cors.dart';
 import 'lib/routes/auth_routes.dart';
+import 'lib/routes/garage_door_routes.dart';
 import 'lib/routes/kennzeichen_routes.dart';
 
 void main() async {
@@ -27,10 +29,20 @@ void main() async {
   final kennzeichenDb = LicensePlateDatabaseService.open(
     path: kennzeichenDbPath,
   );
+  final garageDoorConfig = GarageDoorConfig.fromEnvironment();
+  final garageDoorService = GarageDoorService(
+    config: garageDoorConfig,
+    shellyClient: HttpShellyRelayClient(
+      baseUrl: garageDoorConfig.shellyBaseUrl,
+      switchId: garageDoorConfig.switchId,
+      timeout: garageDoorConfig.shellyRequestTimeout,
+    ),
+  );
   final healthRouter = Router()..get('/health', (_) => Response.ok('ok'));
   final apiHandler = Cascade()
       .add(healthRouter.call)
       .add(buildAuthRouter(authDb).call)
+      .add(buildGarageDoorRouter(garageDoorService, authDb).call)
       .add(buildKennzeichenRouter(kennzeichenDb, authDb).call)
       .handler;
 

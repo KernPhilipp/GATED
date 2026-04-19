@@ -4,5 +4,8 @@ Diese stimmt derzeit jedoch nicht mit der tatsächlichen Versionsnummer überein
 - Derzeit kann ich das Verhalten einer auf einem Smartphone installierten WebApp nicht nachahmen. Wie wäre das möglich?
 Dies beinhaltet auch die Prüfung, wie eigentlich die Splash Screens für WebApps auf Android und iOS aussehen.
 - Die READMEs müssten bei Bedarf aktualisiert werden.
+- Die Zustandsänderung beim Tor ist noch nicht zu 100% gewiss. Was passiert z.B., wenn zwei gültige Kennzeichen nacheinander erkannt werden?
+Da bräuchten wir die Werte aus dem Kennzeichenerkennungssystem, bzw. müsste man in NodeRed einstellen, dass die GATED-Software darüber informiert wird.
+- Wenn man über einen Button hovered, ist dessen Schatten noch immer eckig, obwohl die Buttons bereits gerundet sind. Dies muss angepasst werden.
 
-Link zum Shelly: http://192.168.0.102/rpc/Switch.Set?id=0&on=true&toggle_after=5
+Link zum Shelly: http://192.168.0.102/rpc/Switch.Set?id=0&on=true&toggle_after=1
