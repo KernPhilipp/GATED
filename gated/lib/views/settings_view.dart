@@ -1,13 +1,19 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../features/logo_assets.dart';
+import '../features/pwa/pwa_install_controller.dart';
 import '../services/auth_service.dart';
 import '../utils/snackbar_utils.dart';
 
 class SettingsView extends StatefulWidget {
-  const SettingsView({super.key, required this.onThemeModeChanged});
+  const SettingsView({
+    super.key,
+    required this.onThemeModeChanged,
+    required this.pwaInstallController,
+  });
 
   final ValueChanged<ThemeMode> onThemeModeChanged;
+  final PwaInstallController pwaInstallController;
 
   @override
   State<SettingsView> createState() => _SettingsViewState();
@@ -60,14 +66,30 @@ class _SettingsViewState extends State<SettingsView> {
           ),
           if (kIsWeb) ...[
             const SizedBox(height: 15),
-            const Card(
-              child: ListTile(
-                leading: Icon(Icons.install_desktop_rounded),
-                title: Text('Als Web-App installieren'),
-                subtitle: Text(
-                  'Die Installation wird im Browser auf localhost oder ueber '
-                  'HTTPS angeboten.',
-                ),
+            Card(
+              child: ListenableBuilder(
+                listenable: widget.pwaInstallController,
+                builder: (context, _) {
+                  final controller = widget.pwaInstallController;
+
+                  return ListTile(
+                    leading: Icon(
+                      controller.isInstalled
+                          ? Icons.check_circle_rounded
+                          : Icons.install_desktop_rounded,
+                    ),
+                    title: Text(
+                      controller.isInstalled
+                          ? 'Web-App bereits installiert'
+                          : 'Als Web-App installieren',
+                    ),
+                    subtitle: Text(
+                      controller.statusMessage ??
+                          'Die Installation wird direkt im Browser angeboten.',
+                    ),
+                    onTap: _handleInstallTap,
+                  );
+                },
               ),
             ),
           ],
@@ -105,5 +127,43 @@ class _SettingsViewState extends State<SettingsView> {
         withCloseAction: true,
       );
     }
+  }
+
+  Future<void> _handleInstallTap() async {
+    final controller = widget.pwaInstallController;
+
+    if (!controller.isSupportedBrowser || controller.isInstalled) {
+      showAppSnackBar(
+        context,
+        message:
+            controller.statusMessage ??
+            'Installations-Flow in diesem Browser nicht unterstuetzt.',
+        withCloseAction: true,
+      );
+      return;
+    }
+
+    if (!controller.canPrompt) {
+      showAppSnackBar(
+        context,
+        message:
+            controller.statusMessage ??
+            'Die Installation ist derzeit noch nicht verfuegbar.',
+        withCloseAction: true,
+      );
+      return;
+    }
+
+    final accepted = await controller.promptInstall();
+    if (!mounted) return;
+
+    showAppSnackBar(
+      context,
+      message: accepted
+          ? 'Installationsdialog gestartet.'
+          : (controller.statusMessage ??
+                'Die Installation wurde nicht durchgefuehrt.'),
+      withCloseAction: true,
+    );
   }
 }

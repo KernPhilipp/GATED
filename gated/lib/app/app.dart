@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../features/pwa/pwa_install_controller.dart';
 import '../services/auth_service.dart';
 import '../screens/home_screen.dart';
 import '../screens/login_screen.dart';
@@ -14,6 +15,7 @@ class GatedApp extends StatefulWidget {
 
 class _GatedAppState extends State<GatedApp> {
   final _authService = const AuthService();
+  final _pwaInstallController = PwaInstallController();
   ThemeMode _themeMode = ThemeMode.system;
   late final Future<String> _initialRoute = _resolveInitialRoute();
 
@@ -33,6 +35,12 @@ class _GatedAppState extends State<GatedApp> {
   }
 
   @override
+  void dispose() {
+    _pwaInstallController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'GATED',
@@ -48,7 +56,10 @@ class _GatedAppState extends State<GatedApp> {
           }
 
           return switch (snapshot.data) {
-            '/home' => HomeScreen(onThemeModeChanged: _setThemeMode),
+            '/home' => HomeScreen(
+              onThemeModeChanged: _setThemeMode,
+              pwaInstallController: _pwaInstallController,
+            ),
             '/register' => const RegisterScreen(),
             _ => const LoginScreen(),
           };
@@ -57,7 +68,10 @@ class _GatedAppState extends State<GatedApp> {
       routes: {
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
-        '/home': (context) => HomeScreen(onThemeModeChanged: _setThemeMode),
+        '/home': (context) => HomeScreen(
+          onThemeModeChanged: _setThemeMode,
+          pwaInstallController: _pwaInstallController,
+        ),
       },
     );
   }
