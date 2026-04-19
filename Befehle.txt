@@ -17,6 +17,8 @@ dart pub global run rename setBundleId --targets windows --value "gated"
 dart pub global run rename getBundleId --targets macos
 dart pub global run rename setBundleId --targets macos --value "com.example.gated"
 powershell -ExecutionPolicy Bypass -File .\Update-GatedTerminplan.ps1
+flutter run -d web-server --web-hostname 0.0.0.0 --web-port 8080
+http://127.0.0.1:8080
 
 Hinweise:
 - Environment-Dateien mit deren Secrets niemals committen!
