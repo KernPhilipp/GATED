@@ -198,6 +198,10 @@ class _ProfileViewState extends State<ProfileView> {
   }
 
   Widget _buildPasswordCard(ThemeData theme) {
+    final newPasswordAutofillHints = _isChangingPassword
+        ? const [AutofillHints.newPassword]
+        : null;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -255,7 +259,7 @@ class _ProfileViewState extends State<ProfileView> {
                   keyboardType: TextInputType.visiblePassword,
                   enableSuggestions: false,
                   autocorrect: false,
-                  autofillHints: const [AutofillHints.newPassword],
+                  autofillHints: newPasswordAutofillHints,
                   decoration: InputDecoration(
                     labelText: 'Neues Passwort',
                     suffixIcon: IconButton(
@@ -291,7 +295,7 @@ class _ProfileViewState extends State<ProfileView> {
                   keyboardType: TextInputType.visiblePassword,
                   enableSuggestions: false,
                   autocorrect: false,
-                  autofillHints: const [AutofillHints.newPassword],
+                  autofillHints: newPasswordAutofillHints,
                   decoration: InputDecoration(
                     labelText: 'Neues Passwort bestätigen',
                     suffixIcon: IconButton(
@@ -371,7 +375,7 @@ class _ProfileViewState extends State<ProfileView> {
     } on SessionExpiredException catch (e) {
       if (!mounted) return;
       setState(() => _isLoadingProfile = false);
-      await _handleSessionExpired(e.message);
+      await _handleSessionExpired(e);
     } on AuthException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -406,14 +410,15 @@ class _ProfileViewState extends State<ProfileView> {
         newPassword: _newPasswordController.text,
       );
       if (!mounted) return;
-      _resetPasswordForm();
+      TextInput.finishAutofillContext(shouldSave: true);
+      _resetPasswordForm(closeAutofillContext: false);
       await _showPasswordChangedDialog();
       if (!mounted) return;
       Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
     } on SessionExpiredException catch (e) {
       if (!mounted) return;
       _resetPasswordForm();
-      await _handleSessionExpired(e.message);
+      await _handleSessionExpired(e);
     } on AuthException catch (e) {
       if (!mounted) return;
       _resetPasswordForm();
@@ -439,9 +444,11 @@ class _ProfileViewState extends State<ProfileView> {
     }
   }
 
-  void _resetPasswordForm() {
+  void _resetPasswordForm({bool closeAutofillContext = true}) {
     FocusManager.instance.primaryFocus?.unfocus();
-    TextInput.finishAutofillContext(shouldSave: false);
+    if (closeAutofillContext) {
+      TextInput.finishAutofillContext(shouldSave: false);
+    }
 
     final oldCurrentPasswordController = _currentPasswordController;
     final oldNewPasswordController = _newPasswordController;
@@ -486,7 +493,7 @@ class _ProfileViewState extends State<ProfileView> {
     );
   }
 
-  Future<void> _handleSessionExpired(String message) async {
+  Future<void> _handleSessionExpired(SessionExpiredException error) async {
     if (_isRedirectingToLogin) {
       return;
     }
@@ -495,7 +502,8 @@ class _ProfileViewState extends State<ProfileView> {
     await redirectToLoginAfterSessionExpired(
       context,
       authService: _authService,
-      message: message,
+      message: error.message,
+      reason: error.reason,
     );
   }
 

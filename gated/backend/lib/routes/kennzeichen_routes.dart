@@ -1,7 +1,11 @@
 import 'dart:convert';
+
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
+import 'package:shelf_web_socket/shelf_web_socket.dart';
 import 'package:sqlite3/sqlite3.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
+
 import '../auth/request_auth.dart';
 import '../db/database.dart';
 import '../db/license_plate_database.dart';
@@ -11,6 +15,7 @@ const _jsonHeaders = {'Content-Type': 'application/json'};
 Router buildKennzeichenRouter(
   LicensePlateDatabaseService db,
   DatabaseService authDb,
+  KennzeichenEventsBroker eventsBroker,
 ) => Router()
   ..get('/kennzeichen', (Request request) async {
     try {
@@ -46,6 +51,7 @@ Router buildKennzeichenRouter(
         teacherName: teacherName,
         licensePlate: licensePlate.toUpperCase(),
       );
+      eventsBroker.publish(type: 'created', id: created.id);
       return Response(
         201,
         body: jsonEncode(created.toJson()),
@@ -91,6 +97,7 @@ Router buildKennzeichenRouter(
       if (updated == null) {
         return Response.notFound('Not found');
       }
+      eventsBroker.publish(type: 'updated', id: updated.id);
       return Response.ok(jsonEncode(updated.toJson()), headers: _jsonHeaders);
     } on SqliteException catch (e) {
       if (_isUniqueConstraint(e)) {
@@ -115,6 +122,7 @@ Router buildKennzeichenRouter(
       if (!deleted) {
         return Response.notFound('Not found');
       }
+      eventsBroker.publish(type: 'deleted', id: parsedId);
       return Response(204);
     } on RequestAuthenticationException catch (e) {
       return e.response;
@@ -158,4 +166,64 @@ String? _readRequiredString(Map<String, dynamic> data, String key) {
 
 bool _isUniqueConstraint(SqliteException error) {
   return error.extendedResultCode == 2067;
+}
+
+class KennzeichenEventsBroker {
+  final Set<WebSocketChannel> _clients = <WebSocketChannel>{};
+
+  Handler handler(DatabaseService authDb) {
+    final webSocket = webSocketHandler((channel, _) {
+      _clients.add(channel);
+      channel.stream.listen(
+        (_) {},
+        onDone: () => _clients.remove(channel),
+        onError: (_, __) => _clients.remove(channel),
+        cancelOnError: true,
+      );
+    });
+
+    return (Request request) async {
+      if (request.url.path != 'kennzeichen/events') {
+        return Response.notFound('Not found');
+      }
+
+      final accessToken = request.url.queryParameters['accessToken'];
+      if (accessToken == null || accessToken.trim().isEmpty) {
+        return Response.forbidden('No token');
+      }
+
+      try {
+        await authenticateRequest(
+          request.change(
+            headers: {
+              ...request.headers,
+              'Authorization': 'Bearer ${accessToken.trim()}',
+            },
+          ),
+          authDb,
+        );
+      } on RequestAuthenticationException catch (error) {
+        return error.response;
+      }
+
+      return webSocket(request);
+    };
+  }
+
+  void publish({required String type, required int id}) {
+    final payload = jsonEncode({
+      'type': type,
+      'id': id,
+      'at': DateTime.now().toUtc().toIso8601String(),
+    });
+
+    for (final client in List<WebSocketChannel>.from(_clients)) {
+      try {
+        client.sink.add(payload);
+      } catch (_) {
+        _clients.remove(client);
+        client.sink.close();
+      }
+    }
+  }
 }

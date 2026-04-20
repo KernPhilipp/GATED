@@ -10,11 +10,13 @@ import '../utils/snackbar_utils.dart';
 class DashboardView extends StatefulWidget {
   const DashboardView({
     super.key,
+    this.isActive = true,
     AuthService? authService,
     GarageDoorController? garageDoorController,
   }) : _authService = authService,
        _garageDoorController = garageDoorController;
 
+  final bool isActive;
   final AuthService? _authService;
   final GarageDoorController? _garageDoorController;
 
@@ -45,16 +47,31 @@ class _DashboardViewState extends State<DashboardView> {
         widget._garageDoorController ??
         GarageDoorService(authService: _authService);
 
-    _refreshStatus();
-    _pollTimer = Timer.periodic(_pollInterval, (_) {
-      unawaited(_refreshStatus(silent: true));
-    });
+    if (widget.isActive) {
+      _activatePolling(initialLoad: true);
+    }
   }
 
   @override
   void dispose() {
     _pollTimer?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant DashboardView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isActive == widget.isActive) {
+      return;
+    }
+
+    if (widget.isActive) {
+      _activatePolling(initialLoad: _status == null);
+      return;
+    }
+
+    _pollTimer?.cancel();
+    _pollTimer = null;
   }
 
   @override
@@ -436,7 +453,7 @@ class _DashboardViewState extends State<DashboardView> {
           _loadError = error.message;
         });
       }
-      await _handleSessionExpired(error.message);
+      await _handleSessionExpired(error);
     } on GarageDoorException catch (error) {
       if (!mounted) {
         return;
@@ -507,7 +524,7 @@ class _DashboardViewState extends State<DashboardView> {
 
       showAppSnackBar(context, message: 'Impuls wurde gesendet.');
     } on SessionExpiredException catch (error) {
-      await _handleSessionExpired(error.message);
+      await _handleSessionExpired(error);
     } on GarageDoorException catch (error) {
       _showErrorSnackBar(error.message);
     } on TimeoutException {
@@ -540,7 +557,7 @@ class _DashboardViewState extends State<DashboardView> {
         message: 'Torstatus auf ${_titleForState(state)} gesetzt.',
       );
     } on SessionExpiredException catch (error) {
-      await _handleSessionExpired(error.message);
+      await _handleSessionExpired(error);
     } on GarageDoorException catch (error) {
       _showErrorSnackBar(error.message);
     } on TimeoutException {
@@ -556,7 +573,7 @@ class _DashboardViewState extends State<DashboardView> {
     }
   }
 
-  Future<void> _handleSessionExpired(String message) async {
+  Future<void> _handleSessionExpired(SessionExpiredException error) async {
     if (_isRedirectingToLogin || !mounted) {
       return;
     }
@@ -565,7 +582,8 @@ class _DashboardViewState extends State<DashboardView> {
     await redirectToLoginAfterSessionExpired(
       context,
       authService: _authService,
-      message: message,
+      message: error.message,
+      reason: error.reason,
     );
   }
 
@@ -703,6 +721,19 @@ class _DashboardViewState extends State<DashboardView> {
     final second = dateTime.second.toString().padLeft(2, '0');
 
     return '$day.$month.$year, $hour:$minute:$second';
+  }
+
+  void _activatePolling({required bool initialLoad}) {
+    _pollTimer?.cancel();
+    if (initialLoad) {
+      unawaited(_refreshStatus());
+    } else {
+      unawaited(_refreshStatus(silent: true));
+    }
+
+    _pollTimer = Timer.periodic(_pollInterval, (_) {
+      unawaited(_refreshStatus(silent: true));
+    });
   }
 }
 

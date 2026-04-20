@@ -13,12 +13,10 @@ class KennzeichenTableSection extends StatelessWidget {
     required this.sortColumnIndex,
     required this.sortAscending,
     required this.isLoading,
-    required this.isRefreshing,
     required this.onSearchChanged,
     required this.onClearSearch,
     required this.onSort,
     required this.onAddRow,
-    required this.onRefresh,
     required this.onEditRow,
     required this.onDeleteRow,
   });
@@ -30,12 +28,10 @@ class KennzeichenTableSection extends StatelessWidget {
   final int? sortColumnIndex;
   final bool sortAscending;
   final bool isLoading;
-  final bool isRefreshing;
   final ValueChanged<String> onSearchChanged;
   final VoidCallback onClearSearch;
   final void Function(int columnIndex, bool ascending) onSort;
   final VoidCallback onAddRow;
-  final VoidCallback onRefresh;
   final ValueChanged<EditableKennzeichenRow> onEditRow;
   final ValueChanged<EditableKennzeichenRow> onDeleteRow;
 
@@ -47,11 +43,9 @@ class KennzeichenTableSection extends StatelessWidget {
         KennzeichenTableActions(
           searchController: searchController,
           searchQuery: searchQuery,
-          isRefreshing: isRefreshing,
           onSearchChanged: onSearchChanged,
           onClearSearch: onClearSearch,
           onAddRow: onAddRow,
-          onRefresh: onRefresh,
         ),
         const SizedBox(height: 20),
         SizedBox(

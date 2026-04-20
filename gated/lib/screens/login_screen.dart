@@ -7,7 +7,10 @@ import '../services/auth_service.dart';
 import '../utils/snackbar_utils.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({super.key, AuthService? authService})
+    : _authService = authService;
+
+  final AuthService? _authService;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -20,20 +23,33 @@ class _LoginScreenState extends State<LoginScreen>
   final _passwordController = TextEditingController();
   final _emailFocusNode = FocusNode();
   final _passwordFocusNode = FocusNode();
-  final _authService = const AuthService();
+  late final AuthService _authService;
 
   bool _isLoading = false;
   bool _obscurePassword = true;
+  Timer? _autofillSubmitTimer;
 
   @override
   void initState() {
     super.initState();
+    _authService = widget._authService ?? const AuthService();
     registerAutofillFocusNode(_emailFocusNode);
     registerAutofillFocusNode(_passwordFocusNode);
+    registerAutofillController(
+      _emailController,
+      focusNode: _emailFocusNode,
+      onAutofillDetected: _handleAutofillCommit,
+    );
+    registerAutofillController(
+      _passwordController,
+      focusNode: _passwordFocusNode,
+      onAutofillDetected: _handleAutofillCommit,
+    );
   }
 
   @override
   void dispose() {
+    _autofillSubmitTimer?.cancel();
     _emailController.dispose();
     _passwordController.dispose();
     _emailFocusNode.dispose();
@@ -261,5 +277,30 @@ class _LoginScreenState extends State<LoginScreen>
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  void _handleAutofillCommit() {
+    if (!mounted) {
+      return;
+    }
+
+    _formKey.currentState?.validate();
+    _scheduleAutofillSubmitIfReady();
+  }
+
+  void _scheduleAutofillSubmitIfReady() {
+    _autofillSubmitTimer?.cancel();
+    _autofillSubmitTimer = Timer(const Duration(milliseconds: 120), () {
+      if (!mounted || _isLoading) {
+        return;
+      }
+
+      if (_emailController.text.trim().isEmpty ||
+          _passwordController.text.isEmpty) {
+        return;
+      }
+
+      _submitLogin();
+    });
   }
 }

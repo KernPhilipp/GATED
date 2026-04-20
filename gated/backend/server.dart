@@ -29,6 +29,7 @@ void main() async {
   final kennzeichenDb = LicensePlateDatabaseService.open(
     path: kennzeichenDbPath,
   );
+  final kennzeichenEventsBroker = KennzeichenEventsBroker();
   final garageDoorConfig = GarageDoorConfig.fromEnvironment();
   final garageDoorService = GarageDoorService(
     config: garageDoorConfig,
@@ -43,7 +44,14 @@ void main() async {
       .add(healthRouter.call)
       .add(buildAuthRouter(authDb).call)
       .add(buildGarageDoorRouter(garageDoorService, authDb).call)
-      .add(buildKennzeichenRouter(kennzeichenDb, authDb).call)
+      .add(kennzeichenEventsBroker.handler(authDb))
+      .add(
+        buildKennzeichenRouter(
+          kennzeichenDb,
+          authDb,
+          kennzeichenEventsBroker,
+        ).call,
+      )
       .handler;
 
   final handler = Pipeline().addMiddleware(cors()).addHandler(apiHandler);

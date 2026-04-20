@@ -29,5 +29,6 @@ class PwaInstallControllerImpl extends PwaInstallController {
   void dismissBanner() {}
 
   @override
-  Future<bool> promptInstall() async => false;
+  Future<PwaInstallPromptResult> promptInstall() async =>
+      PwaInstallPromptResult.unsupported;
 }

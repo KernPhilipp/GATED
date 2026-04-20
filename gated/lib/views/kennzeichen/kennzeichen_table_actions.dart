@@ -5,20 +5,16 @@ class KennzeichenTableActions extends StatelessWidget {
     super.key,
     required this.searchController,
     required this.searchQuery,
-    required this.isRefreshing,
     required this.onSearchChanged,
     required this.onClearSearch,
     required this.onAddRow,
-    required this.onRefresh,
   });
 
   final TextEditingController searchController;
   final String searchQuery;
-  final bool isRefreshing;
   final ValueChanged<String> onSearchChanged;
   final VoidCallback onClearSearch;
   final VoidCallback onAddRow;
-  final VoidCallback onRefresh;
 
   @override
   Widget build(BuildContext context) {
@@ -41,20 +37,6 @@ class KennzeichenTableActions extends StatelessWidget {
                       backgroundColor: Theme.of(context).disabledColor,
                     )
                   : null,
-            ),
-            OutlinedButton.icon(
-              onPressed: isRefreshing ? null : onRefresh,
-              icon: isRefreshing
-                  ? Padding(
-                      padding: const EdgeInsets.only(right: 2, left: 2),
-                      child: const SizedBox(
-                        width: 13,
-                        height: 13,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    )
-                  : const Icon(Icons.refresh_rounded),
-              label: const Text('Aktualisieren'),
             ),
           ],
         ),

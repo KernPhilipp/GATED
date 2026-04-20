@@ -42,6 +42,7 @@ class AuthService {
   static Future<AuthUser>? _currentUserRequest;
   static int _currentUserCacheVersion = 0;
   static Future<bool>? _refreshRequest;
+  static AuthSessionEndReason _sessionEndReason = AuthSessionEndReason.expired;
   static final http.Client _defaultClient = http.Client();
   static final Future<SharedPreferencesWithCache> _prefs =
       SharedPreferencesWithCache.create(
@@ -161,7 +162,7 @@ class AuthService {
     );
 
     if (response.statusCode == 200) {
-      await clearTokens();
+      await clearTokens(reason: AuthSessionEndReason.passwordChanged);
       return;
     }
 
@@ -222,7 +223,7 @@ class AuthService {
     } on SessionExpiredException {
       // Local cleanup is still required if the backend session already expired.
     } finally {
-      await clearTokens();
+      await clearTokens(reason: AuthSessionEndReason.logout);
     }
   }
 
@@ -275,8 +276,11 @@ class AuthService {
 
   Future<String?> readToken() => readAccessToken();
 
-  Future<void> clearTokens() async {
+  Future<void> clearTokens({
+    AuthSessionEndReason reason = AuthSessionEndReason.expired,
+  }) async {
     final prefs = await _prefs;
+    _sessionEndReason = reason;
     _clearCachedCurrentUser();
     await prefs.remove(_accessTokenKey);
     await prefs.remove(_refreshTokenKey);
@@ -352,7 +356,7 @@ class AuthService {
         isAccessTokenExpiredResponse(response.body)) {
       final refreshed = await refreshSession();
       if (!refreshed) {
-        throw const SessionExpiredException();
+        throw SessionExpiredException();
       }
 
       return _sendAuthorizedRequest(
@@ -365,8 +369,8 @@ class AuthService {
     }
 
     if (response.statusCode == 403 && isSessionFailureResponse(response.body)) {
-      await clearTokens();
-      throw const SessionExpiredException();
+      await clearTokens(reason: AuthSessionEndReason.expired);
+      throw SessionExpiredException();
     }
 
     return response;
@@ -380,12 +384,12 @@ class AuthService {
 
     final refreshed = await refreshSession();
     if (!refreshed) {
-      throw const SessionExpiredException();
+      throw _currentSessionEndedException();
     }
 
     final refreshedAccessToken = await readAccessToken();
     if (refreshedAccessToken == null || refreshedAccessToken.isEmpty) {
-      throw const SessionExpiredException();
+      throw _currentSessionEndedException();
     }
 
     return refreshedAccessToken;
@@ -394,7 +398,7 @@ class AuthService {
   Future<bool> _performRefresh() async {
     final refreshToken = await readRefreshToken();
     if (refreshToken == null || refreshToken.isEmpty) {
-      await clearTokens();
+      await clearTokens(reason: AuthSessionEndReason.expired);
       return false;
     }
 
@@ -410,12 +414,13 @@ class AuthService {
       return true;
     }
 
-    await clearTokens();
+    await clearTokens(reason: AuthSessionEndReason.expired);
     return false;
   }
 
   Future<void> _saveTokens(_TokenPair tokens) async {
     final prefs = await _prefs;
+    _sessionEndReason = AuthSessionEndReason.expired;
     _clearCachedCurrentUser();
     await prefs.setString(_accessTokenKey, tokens.accessToken);
     await prefs.setString(_refreshTokenKey, tokens.refreshToken);
@@ -452,6 +457,10 @@ class AuthService {
       : baseUrl;
 
   http.Client get _httpClient => _client ?? _defaultClient;
+
+  SessionExpiredException _currentSessionEndedException() {
+    return SessionExpiredException(reason: _sessionEndReason);
+  }
 }
 
 class AuthException implements Exception {
@@ -461,10 +470,15 @@ class AuthException implements Exception {
 }
 
 class SessionExpiredException extends AuthException {
-  const SessionExpiredException([
-    super.message = 'Sitzung abgelaufen. Bitte erneut anmelden.',
-  ]);
+  SessionExpiredException({
+    this.reason = AuthSessionEndReason.expired,
+    String? message,
+  }) : super(message ?? _defaultMessageForSessionEndReason(reason));
+
+  final AuthSessionEndReason reason;
 }
+
+enum AuthSessionEndReason { expired, logout, passwordChanged }
 
 class _TokenPair {
   const _TokenPair({required this.accessToken, required this.refreshToken});
@@ -507,3 +521,13 @@ bool isSessionFailureResponse(String responseBody) {
 
 const _accessTokenKey = 'auth_access_token';
 const _refreshTokenKey = 'auth_refresh_token';
+
+String _defaultMessageForSessionEndReason(AuthSessionEndReason reason) {
+  return switch (reason) {
+    AuthSessionEndReason.expired =>
+      'Sitzung abgelaufen. Bitte erneut anmelden.',
+    AuthSessionEndReason.logout => 'Du wurdest abgemeldet.',
+    AuthSessionEndReason.passwordChanged =>
+      'Passwort aktualisiert. Bitte erneut anmelden.',
+  };
+}

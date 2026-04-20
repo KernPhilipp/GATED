@@ -5,6 +5,14 @@ import 'pwa_install_controller_stub.dart'
     if (dart.library.html) 'pwa_install_controller_web.dart'
     as impl;
 
+enum PwaInstallPromptResult {
+  installed,
+  dismissed,
+  unavailable,
+  unsupported,
+  error,
+}
+
 abstract class PwaInstallController extends ChangeNotifier {
   PwaInstallController.internal();
 
@@ -18,6 +26,6 @@ abstract class PwaInstallController extends ChangeNotifier {
   bool get shouldShowBanner;
   String? get statusMessage;
 
-  Future<bool> promptInstall();
+  Future<PwaInstallPromptResult> promptInstall();
   void dismissBanner();
 }

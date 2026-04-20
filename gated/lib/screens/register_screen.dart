@@ -7,7 +7,10 @@ import '../services/auth_service.dart';
 import '../utils/snackbar_utils.dart';
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key});
+  const RegisterScreen({super.key, AuthService? authService})
+    : _authService = authService;
+
+  final AuthService? _authService;
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -20,7 +23,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   final _passwordController = TextEditingController();
   final _emailFocusNode = FocusNode();
   final _passwordFocusNode = FocusNode();
-  final _authService = const AuthService();
+  late final AuthService _authService;
 
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -28,8 +31,19 @@ class _RegisterScreenState extends State<RegisterScreen>
   @override
   void initState() {
     super.initState();
+    _authService = widget._authService ?? const AuthService();
     registerAutofillFocusNode(_emailFocusNode);
     registerAutofillFocusNode(_passwordFocusNode);
+    registerAutofillController(
+      _emailController,
+      focusNode: _emailFocusNode,
+      onAutofillDetected: _handleAutofillCommit,
+    );
+    registerAutofillController(
+      _passwordController,
+      focusNode: _passwordFocusNode,
+      onAutofillDetected: _handleAutofillCommit,
+    );
   }
 
   @override
@@ -258,5 +272,13 @@ class _RegisterScreenState extends State<RegisterScreen>
         );
       },
     );
+  }
+
+  void _handleAutofillCommit() {
+    if (!mounted) {
+      return;
+    }
+
+    _formKey.currentState?.validate();
   }
 }

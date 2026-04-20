@@ -6,31 +6,34 @@ Future<void> redirectToLoginAfterSessionExpired(
   BuildContext context, {
   required AuthService authService,
   required String message,
+  AuthSessionEndReason reason = AuthSessionEndReason.expired,
 }) async {
-  await authService.clearTokens();
+  await authService.clearTokens(reason: reason);
 
   if (!context.mounted) {
     return;
   }
 
-  await showDialog<void>(
-    context: context,
-    barrierDismissible: false,
-    builder: (dialogContext) {
-      return AlertDialog(
-        title: const Text('Sitzung abgelaufen'),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(dialogContext).pop();
-            },
-            child: const Text('Zum Login'),
-          ),
-        ],
-      );
-    },
-  );
+  if (reason == AuthSessionEndReason.expired) {
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Sitzung abgelaufen'),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+              },
+              child: const Text('Zum Login'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   if (!context.mounted) {
     return;

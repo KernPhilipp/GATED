@@ -1,10 +1,15 @@
 import 'dart:async';
 import 'dart:js_interop';
+import 'dart:js_interop_unsafe';
 
 import 'package:web/web.dart' as web;
 
 import 'pwa_install_controller.dart';
 import 'pwa_install_state.dart';
+
+const _persistedInstallKey = 'gated_pwa_installed';
+const _manifestId = './';
+const _manifestPathSuffix = '/manifest.json';
 
 extension type BeforeInstallPromptEvent._(JSObject _)
     implements web.Event, JSObject {
@@ -16,6 +21,16 @@ extension type PromptChoiceResult._(JSObject _) implements JSObject {
   external JSString get outcome;
 }
 
+extension type RelatedApplication._(JSObject _) implements JSObject {
+  external JSString? get platform;
+  external JSString? get id;
+  external JSString? get url;
+}
+
+extension NavigatorInstallRelatedAppsExtension on web.Navigator {
+  external JSPromise<JSArray<RelatedApplication>> getInstalledRelatedApps();
+}
+
 class PwaInstallControllerImpl extends PwaInstallController {
   PwaInstallControllerImpl() : super.internal() {
     _isSupportedBrowser = _detectSupportedBrowser();
@@ -25,6 +40,7 @@ class PwaInstallControllerImpl extends PwaInstallController {
 
     web.window.addEventListener('beforeinstallprompt', _beforeInstallListener);
     web.window.addEventListener('appinstalled', _appInstalledListener);
+    unawaited(_refreshInstalledState());
   }
 
   late final bool _isSupportedBrowser;
@@ -79,14 +95,22 @@ class PwaInstallControllerImpl extends PwaInstallController {
   }
 
   @override
-  Future<bool> promptInstall() async {
+  Future<PwaInstallPromptResult> promptInstall() async {
+    if (!_isSupportedBrowser) {
+      return PwaInstallPromptResult.unsupported;
+    }
+
+    if (isInstalled) {
+      return PwaInstallPromptResult.installed;
+    }
+
     if (!canPrompt) {
-      return false;
+      return PwaInstallPromptResult.unavailable;
     }
 
     final promptEvent = _deferredPromptEvent;
     if (promptEvent == null) {
-      return false;
+      return PwaInstallPromptResult.unavailable;
     }
 
     try {
@@ -94,10 +118,12 @@ class PwaInstallControllerImpl extends PwaInstallController {
       final choice = await promptEvent.userChoice.toDart;
       final outcome = choice.outcome.toDart;
       _clearPromptAvailability();
-      return outcome == 'accepted';
+      return outcome == 'accepted'
+          ? PwaInstallPromptResult.installed
+          : PwaInstallPromptResult.dismissed;
     } catch (_) {
       _clearPromptAvailability();
-      return false;
+      return PwaInstallPromptResult.error;
     }
   }
 
@@ -146,7 +172,7 @@ class PwaInstallControllerImpl extends PwaInstallController {
       return PwaInstallState.unsupported;
     }
 
-    if (_isRunningInstalled()) {
+    if (_isRunningInstalled() || _readPersistedInstallFlag()) {
       _bannerDismissed = true;
       return PwaInstallState.installed;
     }
@@ -169,12 +195,14 @@ class PwaInstallControllerImpl extends PwaInstallController {
   void _handleBeforeInstallPrompt(web.Event event) {
     event.preventDefault();
     _deferredPromptEvent = event as BeforeInstallPromptEvent;
+    _clearPersistedInstallFlag();
     _updateState(PwaInstallState.available);
   }
 
   void _handleAppInstalled(web.Event _) {
     _deferredPromptEvent = null;
     _bannerDismissed = true;
+    _persistInstalledFlag();
     _updateState(PwaInstallState.installed);
   }
 
@@ -185,6 +213,68 @@ class PwaInstallControllerImpl extends PwaInstallController {
     }
 
     _updateState(PwaInstallState.unavailableYet);
+  }
+
+  Future<void> _refreshInstalledState() async {
+    if (!_isSupportedBrowser || _isRunningInstalled()) {
+      return;
+    }
+
+    final relatedAppInstalled = await _isRelatedAppInstalled();
+    if (!relatedAppInstalled) {
+      return;
+    }
+
+    _bannerDismissed = true;
+    _persistInstalledFlag();
+    _updateState(PwaInstallState.installed);
+  }
+
+  Future<bool> _isRelatedAppInstalled() async {
+    final navigator = web.window.navigator;
+    if (!(navigator as JSObject).has('getInstalledRelatedApps')) {
+      return false;
+    }
+
+    try {
+      final installedApps = await navigator.getInstalledRelatedApps().toDart;
+      for (final app in installedApps.toDart) {
+        final platform = app.platform?.toDart.toLowerCase() ?? '';
+        final id = app.id?.toDart ?? '';
+        final url = app.url?.toDart ?? '';
+        if (platform == 'webapp' &&
+            (id == _manifestId || url.endsWith(_manifestPathSuffix))) {
+          return true;
+        }
+      }
+    } catch (_) {
+      return false;
+    }
+    return false;
+  }
+
+  bool _readPersistedInstallFlag() {
+    try {
+      return web.window.localStorage.getItem(_persistedInstallKey) == 'true';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  void _persistInstalledFlag() {
+    try {
+      web.window.localStorage.setItem(_persistedInstallKey, 'true');
+    } catch (_) {
+      // localStorage may be unavailable in private or restricted contexts.
+    }
+  }
+
+  void _clearPersistedInstallFlag() {
+    try {
+      web.window.localStorage.removeItem(_persistedInstallKey);
+    } catch (_) {
+      // localStorage may be unavailable in private or restricted contexts.
+    }
   }
 
   void _updateState(PwaInstallState nextState) {

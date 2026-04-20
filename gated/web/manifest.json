@@ -20,6 +20,13 @@
         "utilities",
         "security"
     ],
+    "related_applications": [
+        {
+            "platform": "webapp",
+            "url": "/manifest.json",
+            "id": "./"
+        }
+    ],
     "prefer_related_applications": false,
     "icons": [
         {

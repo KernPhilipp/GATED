@@ -28,7 +28,6 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _authService = const AuthService();
   int _selectedIndex = 0;
-  late final List<Widget> _views;
 
   final List<({String label, IconData icon})> _navItems = [
     (label: 'Dashboard', icon: Icons.dashboard_rounded),
@@ -41,16 +40,6 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     unawaited(_authService.prefetchCurrentUser());
-    _views = [
-      const DashboardView(key: ValueKey('dashboard-view')),
-      const KennzeichenView(key: ValueKey('kennzeichen-view')),
-      const ProfileView(key: ValueKey('profile-view')),
-      SettingsView(
-        key: const ValueKey('settings-view'),
-        onThemeModeChanged: widget.onThemeModeChanged,
-        pwaInstallController: widget.pwaInstallController,
-      ),
-    ];
   }
 
   @override
@@ -59,18 +48,24 @@ class _HomeScreenState extends State<HomeScreen> {
     final isPhone = width < 500;
     final banner = _buildInstallBanner(context);
 
-    final content = LayoutBuilder(
-      builder: (context, constraints) {
-        return SingleChildScrollView(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: SizedBox(
-              width: double.infinity,
-              child: IndexedStack(index: _selectedIndex, children: _views),
-            ),
-          ),
-        );
-      },
+    final content = _HomeContent(
+      selectedIndex: _selectedIndex,
+      children: [
+        DashboardView(
+          key: const ValueKey('dashboard-view'),
+          isActive: _selectedIndex == 0,
+        ),
+        KennzeichenView(
+          key: const ValueKey('kennzeichen-view'),
+          isActive: _selectedIndex == 1,
+        ),
+        const ProfileView(key: ValueKey('profile-view')),
+        SettingsView(
+          key: const ValueKey('settings-view'),
+          onThemeModeChanged: widget.onThemeModeChanged,
+          pwaInstallController: widget.pwaInstallController,
+        ),
+      ],
     );
 
     return Scaffold(
@@ -239,18 +234,70 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _handleInstallPrompt() async {
-    final accepted = await widget.pwaInstallController.promptInstall();
+    final result = await widget.pwaInstallController.promptInstall();
     if (!mounted) {
       return;
     }
 
     showAppSnackBar(
       context,
-      message: accepted
-          ? 'Installationsdialog gestartet.'
-          : (widget.pwaInstallController.statusMessage ??
-                'Installation derzeit nicht verfuegbar.'),
+      message: switch (result) {
+        PwaInstallPromptResult.installed => 'Installationsdialog gestartet.',
+        PwaInstallPromptResult.dismissed =>
+          'Die Installation wurde abgebrochen.',
+        PwaInstallPromptResult.unavailable =>
+          (widget.pwaInstallController.statusMessage ??
+              'Installation derzeit nicht verfuegbar.'),
+        PwaInstallPromptResult.unsupported =>
+          'Installations-Flow in diesem Browser nicht unterstuetzt.',
+        PwaInstallPromptResult.error =>
+          'Die Installation konnte nicht gestartet werden.',
+      },
       withCloseAction: true,
+    );
+  }
+}
+
+class _HomeContent extends StatelessWidget {
+  const _HomeContent({required this.selectedIndex, required this.children});
+
+  final int selectedIndex;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        for (var index = 0; index < children.length; index++)
+          Offstage(
+            offstage: selectedIndex != index,
+            child: TickerMode(
+              enabled: selectedIndex == index,
+              child: _ScrollableHomeView(child: children[index]),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _ScrollableHomeView extends StatelessWidget {
+  const _ScrollableHomeView({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: SizedBox(width: double.infinity, child: child),
+          ),
+        );
+      },
     );
   }
 }

@@ -154,15 +154,23 @@ class _SettingsViewState extends State<SettingsView> {
       return;
     }
 
-    final accepted = await controller.promptInstall();
+    final result = await controller.promptInstall();
     if (!mounted) return;
 
     showAppSnackBar(
       context,
-      message: accepted
-          ? 'Installationsdialog gestartet.'
-          : (controller.statusMessage ??
-                'Die Installation wurde nicht durchgefuehrt.'),
+      message: switch (result) {
+        PwaInstallPromptResult.installed => 'Installationsdialog gestartet.',
+        PwaInstallPromptResult.dismissed =>
+          'Die Installation wurde abgebrochen.',
+        PwaInstallPromptResult.unavailable =>
+          (controller.statusMessage ??
+              'Die Installation ist derzeit noch nicht verfuegbar.'),
+        PwaInstallPromptResult.unsupported =>
+          'Installations-Flow in diesem Browser nicht unterstuetzt.',
+        PwaInstallPromptResult.error =>
+          'Die Installation konnte nicht gestartet werden.',
+      },
       withCloseAction: true,
     );
   }
