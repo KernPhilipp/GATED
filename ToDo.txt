@@ -20,7 +20,7 @@ Technische Referenz
 Link zum Shelly:
 http://192.168.0.102/rpc/Switch.Set?id=0&on=true&toggle_after=1
 
-Ablauf GATED WebApp nach Problemen:
+Ablauf GATED WebApp nach Problemen (Bereits umgesetzt):
 
 - Es fängt schon beim Login an. Wenn ich das erste Mal in das E-Mail-Feld hineinklicke, passiert nichts.
 Erst wenn ich das zweite Mal in das Feld hineinklicke, obwohl ich mich schon in diesem befinde, taucht ein Popup mit den gespeicherten Daten auf.
@@ -51,3 +51,11 @@ Die Fehlermeldung dort besagt nämlich, dass GATED noch nicht als Installation z
 Falls man beim Install-Popup auf "Install" klickt, laufen all diese Prozesse wie gewünscht ab. Es steht dann auch in der Einstellungen-Ansicht (sowohl im Web als auch in der WebApp), dass GATED bereits als WebApp installiert ist.
 Wenn man jedoch Chrome schließt (samt dem Tab wo GATED offen ist), wird beim späteren Öffnen von GATED in einem neuen Tab in Chrome diese Information, dass GATED als WebApp bereits installiert ist, nicht mehr angezeigt.
 Stattdessen wird wieder die Fehlermeldung gezeigt, die besagt, dass GATED noch nicht als Installation zur Verfügung steht, was aber in diesem Fall wieder falsch ist.
+
+2. Ablauf GATED WebApp nach Problemen (Noch nicht umgesetzt):
+
+- Es existiert noch immer ein Problem bei der Registrierung bzw. bei der Anmeldung. Das kann doch wohl nicht so ein großes Problem sein; die Anmelde- bzw. Registrierungsfelder sind ja ein grundlegender Bestandteil von Flutter, und sind somit sicher so einfach wie möglich gestaltet worden. Hier noch einmal der Problemablauf:
+Es fängt schon beim Login an. Wenn ich das erste Mal in das E-Mail-Feld hineinklicke, passiert nichts.
+Erst wenn ich das zweite Mal in das Feld hineinklicke, obwohl ich mich schon in diesem befinde, taucht ein Popup mit den gespeicherten Daten auf.
+Auf Android taucht in Chrome noch zusätzlich im Popup ein Anmelden-Button auf, mit dem man eigentlich sofort angemeldet wäre und zum Home Screen weitergeleitet wird.
+Wenn man dann jedoch auf den Anmelden-Button klickt, passiert nichts. Weder die Felder werden befüllt, noch wird man weitergeleitet.
