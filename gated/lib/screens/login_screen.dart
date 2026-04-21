@@ -38,11 +38,13 @@ class _LoginScreenState extends State<LoginScreen>
     registerAutofillController(
       _emailController,
       focusNode: _emailFocusNode,
+      browserAutofillHints: const ['username'],
       onAutofillDetected: _handleAutofillCommit,
     );
     registerAutofillController(
       _passwordController,
       focusNode: _passwordFocusNode,
+      browserAutofillHints: const ['current-password'],
       onAutofillDetected: _handleAutofillCommit,
     );
   }

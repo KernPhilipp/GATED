@@ -3,10 +3,13 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import 'autofill_focus_events.dart';
+
 mixin AutofillFocusRecovery<T extends StatefulWidget> on State<T> {
-  static const Duration _focusRecoveryDelay = Duration(milliseconds: 180);
-  static const Duration _focusRecoveryWindow = Duration(milliseconds: 1500);
-  static const Duration _autofillDetectionWindow = Duration(milliseconds: 900);
+  static const Duration _focusRecoveryWindow = Duration(seconds: 60);
+  static const Duration _autofillDetectionWindow = Duration(seconds: 5);
+  static const Duration _domSyncInterval = Duration(milliseconds: 150);
+  static const Duration _domSyncWindow = Duration(seconds: 3);
 
   final Set<FocusNode> _registeredFocusNodes = <FocusNode>{};
   final Map<TextEditingController, String> _controllerValues =
@@ -15,14 +18,30 @@ mixin AutofillFocusRecovery<T extends StatefulWidget> on State<T> {
       <TextEditingController, FocusNode?>{};
   final Map<TextEditingController, VoidCallback?> _autofillCallbacks =
       <TextEditingController, VoidCallback?>{};
+  final Map<TextEditingController, List<String>> _controllerBrowserHints =
+      <TextEditingController, List<String>>{};
 
   FocusNode? _lastInteractedFocusNode;
   DateTime? _lastInteractionAt;
-  Timer? _restoreTimer;
+  FocusNode? _pendingRecoveryFocusNode;
+  VoidCallback? _disposePageReturnListener;
+  Timer? _domSyncTimer;
+  DateTime? _domSyncUntil;
+
+  @override
+  void initState() {
+    super.initState();
+    if (kIsWeb) {
+      _disposePageReturnListener = listenForAutofillPageReturn(
+        _handlePageReturn,
+      );
+    }
+  }
 
   @override
   void dispose() {
-    _restoreTimer?.cancel();
+    _domSyncTimer?.cancel();
+    _disposePageReturnListener?.call();
     super.dispose();
   }
 
@@ -35,10 +54,7 @@ mixin AutofillFocusRecovery<T extends StatefulWidget> on State<T> {
     focusNode.addListener(() {
       if (focusNode.hasFocus) {
         markAutofillInteraction(focusNode);
-        return;
       }
-
-      _scheduleFocusRecovery(focusNode);
     });
   }
 
@@ -46,11 +62,13 @@ mixin AutofillFocusRecovery<T extends StatefulWidget> on State<T> {
   void registerAutofillController(
     TextEditingController controller, {
     FocusNode? focusNode,
+    List<String> browserAutofillHints = const [],
     VoidCallback? onAutofillDetected,
   }) {
     _controllerValues[controller] = controller.text;
     _controllerFocusNodes[controller] = focusNode;
     _autofillCallbacks[controller] = onAutofillDetected;
+    _controllerBrowserHints[controller] = browserAutofillHints;
 
     controller.addListener(() {
       final previousValue = _controllerValues[controller] ?? '';
@@ -80,7 +98,8 @@ mixin AutofillFocusRecovery<T extends StatefulWidget> on State<T> {
 
     _lastInteractedFocusNode = focusNode;
     _lastInteractionAt = DateTime.now();
-    _restoreTimer?.cancel();
+    _pendingRecoveryFocusNode = focusNode;
+    _startDomAutofillSync(_focusRecoveryWindow);
   }
 
   bool _isLikelyAutofillChange({
@@ -110,29 +129,53 @@ mixin AutofillFocusRecovery<T extends StatefulWidget> on State<T> {
     return DateTime.now().difference(interactionAt) <= window;
   }
 
-  void _scheduleFocusRecovery(FocusNode focusNode) {
-    if (!kIsWeb ||
-        !mounted ||
-        _lastInteractedFocusNode != focusNode ||
-        focusNode.hasFocus ||
+  void _handlePageReturn() {
+    if (!kIsWeb || !mounted) {
+      return;
+    }
+
+    final focusNode = _pendingRecoveryFocusNode ?? _lastInteractedFocusNode;
+    if (focusNode == null ||
         !_isWithinInteractionWindow(_focusRecoveryWindow)) {
       return;
     }
 
-    _restoreTimer?.cancel();
-    _restoreTimer = Timer(_focusRecoveryDelay, () {
-      if (!mounted || focusNode.hasFocus || !focusNode.canRequestFocus) {
+    _lastInteractionAt = DateTime.now();
+    _pendingRecoveryFocusNode = focusNode;
+    _startDomAutofillSync(_domSyncWindow);
+  }
+
+  void _startDomAutofillSync(Duration duration) {
+    _domSyncUntil = DateTime.now().add(duration);
+    _syncDomAutofillValues();
+    _domSyncTimer ??= Timer.periodic(_domSyncInterval, (_) {
+      final syncUntil = _domSyncUntil;
+      if (syncUntil == null || DateTime.now().isAfter(syncUntil)) {
+        _domSyncTimer?.cancel();
+        _domSyncTimer = null;
         return;
       }
 
-      final hasTrackedFocus = _registeredFocusNodes.any(
-        (node) => node.hasFocus,
-      );
-      if (hasTrackedFocus) {
-        return;
-      }
-
-      FocusScope.of(context).requestFocus(focusNode);
+      _syncDomAutofillValues();
     });
+  }
+
+  void _syncDomAutofillValues() {
+    if (!kIsWeb || !mounted) {
+      return;
+    }
+
+    for (final entry in _controllerBrowserHints.entries) {
+      final controller = entry.key;
+      final domValue = readAutofillDomValue(entry.value);
+      if (domValue == null || domValue.isEmpty || domValue == controller.text) {
+        continue;
+      }
+
+      controller.value = TextEditingValue(
+        text: domValue,
+        selection: TextSelection.collapsed(offset: domValue.length),
+      );
+    }
   }
 }

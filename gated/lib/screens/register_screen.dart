@@ -37,11 +37,13 @@ class _RegisterScreenState extends State<RegisterScreen>
     registerAutofillController(
       _emailController,
       focusNode: _emailFocusNode,
+      browserAutofillHints: const ['username'],
       onAutofillDetected: _handleAutofillCommit,
     );
     registerAutofillController(
       _passwordController,
       focusNode: _passwordFocusNode,
+      browserAutofillHints: const ['new-password'],
       onAutofillDetected: _handleAutofillCommit,
     );
   }
