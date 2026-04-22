@@ -69,7 +69,24 @@ bool _matchesAutofillHint(
   final autocomplete = input.autocomplete.toLowerCase();
   final name = input.name.toLowerCase();
   final id = input.id.toLowerCase();
-  return browserHints.contains(autocomplete) ||
+  final type = input.type.toLowerCase();
+  final autocompleteTokens = autocomplete.split(RegExp(r'\s+'));
+  return autocompleteTokens.any(browserHints.contains) ||
+      _matchesInputType(type, browserHints) ||
       browserHints.contains(name) ||
       browserHints.contains(id);
+}
+
+bool _matchesInputType(String inputType, Set<String> browserHints) {
+  if (inputType == 'email' && browserHints.contains('email')) {
+    return true;
+  }
+
+  if (inputType == 'password') {
+    return browserHints.contains('password') ||
+        browserHints.contains('current-password') ||
+        browserHints.contains('new-password');
+  }
+
+  return false;
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../features/auth/autofill_focus_recovery.dart';
+import '../features/auth/browser_autofill_text_field.dart';
 import '../features/logo_assets.dart';
 import '../services/auth_service.dart';
 import '../utils/snackbar_utils.dart';
@@ -37,13 +38,13 @@ class _RegisterScreenState extends State<RegisterScreen>
     registerAutofillController(
       _emailController,
       focusNode: _emailFocusNode,
-      browserAutofillHints: const ['username'],
+      browserAutofillHints: const ['email', 'username'],
       onAutofillDetected: _handleAutofillCommit,
     );
     registerAutofillController(
       _passwordController,
       focusNode: _passwordFocusNode,
-      browserAutofillHints: const ['new-password'],
+      browserAutofillHints: const ['new-password', 'password'],
       onAutofillDetected: _handleAutofillCommit,
     );
   }
@@ -91,19 +92,21 @@ class _RegisterScreenState extends State<RegisterScreen>
                               height: 200,
                               child: Image.asset(logoAsset),
                             ),
-                            TextFormField(
+                            BrowserAutofillTextField(
                               controller: _emailController,
                               focusNode: _emailFocusNode,
+                              autocomplete: 'email',
+                              inputType: 'email',
                               keyboardType: TextInputType.emailAddress,
                               textInputAction: TextInputAction.next,
                               autofillHints: const [
-                                AutofillHints.username,
                                 AutofillHints.email,
+                                AutofillHints.username,
                               ],
                               decoration: const InputDecoration(
                                 labelText: 'E-Mail',
                               ),
-                              onTap: () {
+                              onInteraction: () {
                                 markAutofillInteraction(_emailFocusNode);
                               },
                               onFieldSubmitted: (_) => _focusPasswordField(),
@@ -122,9 +125,11 @@ class _RegisterScreenState extends State<RegisterScreen>
                               },
                             ),
                             const SizedBox(height: 20),
-                            TextFormField(
+                            BrowserAutofillTextField(
                               controller: _passwordController,
                               focusNode: _passwordFocusNode,
+                              autocomplete: 'new-password',
+                              inputType: 'password',
                               obscureText: _obscurePassword,
                               keyboardType: TextInputType.visiblePassword,
                               enableSuggestions: false,
@@ -149,7 +154,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                                   ),
                                 ),
                               ),
-                              onTap: () {
+                              onInteraction: () {
                                 markAutofillInteraction(_passwordFocusNode);
                               },
                               onFieldSubmitted: (_) => _submitRegister(),
@@ -224,7 +229,7 @@ class _RegisterScreenState extends State<RegisterScreen>
 
     try {
       await _authService.register(email: email, password: password);
-      TextInput.finishAutofillContext();
+      TextInput.finishAutofillContext(shouldSave: true);
       if (!mounted) return;
       if (_isLoading) {
         setState(() => _isLoading = false);
