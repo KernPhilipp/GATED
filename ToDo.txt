@@ -2,20 +2,39 @@ ToDo
 
 UI und UX
 
-- Die Versionsnummer in "Ueber GATED" wird aktuell hart codiert angezeigt und stimmt nicht immer mit der tatsaechlichen App-Version ueberein. Die Anzeige sollte direkt aus der echten Versionsinformation kommen.
-- Der Wechsel zwischen Dark Mode und Light Mode wirkt noch langsam bzw. ruckelig. Die Ursache sollte analysiert und behoben werden.
-- Der Hover-Schatten von Buttons ist noch eckig, obwohl die Buttons selbst bereits abgerundet sind. Der Schatten sollte an die Button-Form angepasst werden.
+Anzeige und Versionierung
 
-Backend und Logik
+- Die Versionsnummer in "Ueber GATED" wird aktuell hart codiert angezeigt und kann von der tatsaechlichen App-Version abweichen.
+  Die Anzeige soll direkt aus der echten Versionsinformation der App geladen werden.
 
-- Die Zustandsaenderung beim Tor ist noch nicht vollstaendig abgesichert. Es sollte geklaert werden, was passiert, wenn zwei gueltige Kennzeichen kurz hintereinander erkannt werden.
-Dafuer werden vermutlich genauere Rueckmeldungen aus dem Kennzeichenerkennungssystem benoetigt. Gegebenenfalls muss Node-RED so erweitert werden, dass GATED ueber relevante Statusaenderungen informiert wird.
-- Derzeit ist es so, dass die Anmeldedaten nur jede paar Tage eingegeben werden müssen. Dies führt dazu, dass der Login geskipped wird. Dies passiert derzeit unabhängig davon, ob das Backend läuft oder nicht.
-Es soll aber so implementiert werden, dass bei nicht rennendem Backend der Login-Screen gezeigt wird, unabhängig davon ob man sich eigentlich erst wieder nach ein paar Tagen anmelden müsste.
-- Es könnte trotz nicht rennendem Backend der Fall eintreten, dass man sich im Home Screen befindet, obwohl man eigentlich nur auf den Loginscreen Zugriff haben dürfte.
-In solchen Fällen wird in der Dashboardansicht anstatt des Torstatuses eine Fehlermeldung angezeigt, dass der Torstatus nicht geladen werden konnte.
-Statt aber dafür zu sorgen, dass die UI gleicht bleibt, während im Hintergrund nach einem rennenden Backend gesucht wird, wird diese Fehlermeldung jede paar Sekunden neu geladen, inklusive eines loading icons.
-Eine UI-Änderung muss erst eintreten, wenn das Backend tatsächlich erreichbar ist.
+Button-Design
+
+- Der Hover-Schatten von Buttons ist noch eckig, obwohl die Buttons selbst bereits abgerundet sind.
+  Der Schatten soll an die abgerundete Button-Form angepasst werden.
+
+Anmeldung und Backend-Erreichbarkeit
+
+Login-Verhalten bei nicht erreichbarem Backend
+
+- Gespeicherte Anmeldedaten koennen aktuell dazu fuehren, dass der Login-Screen uebersprungen wird, auch wenn das Backend nicht laeuft.
+  Wenn das Backend nicht erreichbar ist, soll immer der Login-Screen angezeigt werden, unabhaengig davon, ob eine erneute Anmeldung eigentlich erst nach einigen Tagen erforderlich waere.
+
+Dashboard-Verhalten bei Verbindungsverlust
+
+- Es kann vorkommen, dass man sich trotz nicht erreichbarem Backend im Home Screen befindet, obwohl nur der Login-Screen zugaenglich sein sollte.
+  In der Dashboardansicht wird dann statt des Torstatus eine Fehlermeldung angezeigt.
+  Diese Fehlermeldung wird aktuell alle paar Sekunden inklusive Loading-Icon neu aufgebaut.
+  Die UI soll in diesem Zustand stabil bleiben, waehrend im Hintergrund weiter nach einem erreichbaren Backend gesucht wird.
+  Eine sichtbare UI-Aenderung soll erst erfolgen, wenn das Backend tatsaechlich wieder erreichbar ist.
+
+Torsteuerung und Kennzeichenerkennung
+
+Zustandswechsel beim Tor
+
+- Die Zustandsaenderung beim Tor ist noch nicht vollstaendig gegen schnelle Folgeereignisse abgesichert.
+  Es muss geklaert werden, was passieren soll, wenn zwei gueltige Kennzeichen kurz hintereinander erkannt werden.
+  Dafuer werden vermutlich genauere Rueckmeldungen aus dem Kennzeichenerkennungssystem benoetigt.
+  Gegebenenfalls muss Node-RED erweitert werden, damit GATED ueber relevante Statusaenderungen informiert wird.
 
 Dokumentation
 
@@ -23,45 +42,5 @@ Dokumentation
 
 Technische Referenz
 
-Link zum Shelly:
+Shelly-Schaltbefehl:
 http://192.168.0.102/rpc/Switch.Set?id=0&on=true&toggle_after=1
-
-Ablauf GATED WebApp nach Problemen (Bereits umgesetzt):
-
-- Es fängt schon beim Login an. Wenn ich das erste Mal in das E-Mail-Feld hineinklicke, passiert nichts.
-Erst wenn ich das zweite Mal in das Feld hineinklicke, obwohl ich mich schon in diesem befinde, taucht ein Popup mit den gespeicherten Daten auf.
-Auf Android taucht in Chrome noch zusätzlich im Popup ein Anmelden-Button auf, mit dem man eigentlich sofort angemeldet wäre und zum Home Screen weitergeleitet wird.
-Wenn man dann jedoch auf den Anmelden-Button klickt, passiert nichts. Weder die Felder werden befüllt, noch wird man weitergeleitet.
-Das gleiche gilt auch für Chrome auf dem Desktop, nur dass halt hier kein Anmelden-Button als Popup erscheint, sondern ein Hinweis im Feld, ob man sich dieses denn nicht ausfüllen lassen möchte.
-Hier werden die Felder jedoch ebenfalls nicht befüllt.
-Diese Probleme treten in der gleichen Form auch beim Registrieren auf, z.B. wenn man ein von Chrome vorgeschlagenes Passwort ausfüllen lässt.
-- Nach dem Login gibt es auch einige Probleme, und zwar bei den Ansichten. Derzeit ist es laut meinen Vermutungen so, dass die Höhe der jeweiligen Ansichten immer gleich der höchsten Ansicht ist, heißt der Ansicht, die am meisten Platz in der Höhe verbraucht.
-Dies führt dazu, dass die Höhe in der Dashboard-Ansicht perfekt ist (dies wäre bis dato die höchste Sicht), jedoch in den anderen Sichten für ungenützte leere Flächen sorgt.
-Wenn man dann z.B. auf einem Smartphone in den kleineren Ansichten nach unten scrollt, ist auf einmal die ganze Ansicht leer, es wird nichts angezeigt (außer der Menüleiste unten).
-Man kann natürlich wieder nach oben scrollen, jedoch kann dieses unnötige Scrollen für Verwirrrung sorgen.
-- In der Kennzeichen Ansicht ist es derzeit so, dass die Ansicht nur bei dem Client automatisch aktualisiert wird, der die Werte in der Kennzeichentabelle geändert, hinzugefügt,... hat.
-Falls wer auf einem anderen Client eingeloggt ist, und sich in dieser Ansicht befindet, werden ihm die Änderungen an der Kennzeichentabelle nicht automatisch angezeigt.
-Stattdessen müsste er die Tabelle manuell aktualisieren, was aber unpraktisch ist. Wenn man das automatische Aktualisieren implementieren würde, kann das manuelle Aktualisieren wieder entfernt werden.
-- In der Profilansicht gibt es auch ein Problem. Während man noch die erforderlichen Daten für die Passwortänderung eintippt, schlägt einem der Google Passwortmanager vor, ob man sein Passwort im Manager aktualisieren möchte.
-Diese Frage sollte erst nach der tatsächlichen Passwortaktualisierung aufpoppen, heißt wenn man bereits auf den "Passwort aktualisieren"-Button geklickt hat.
-- Wenn man dann auf den "Passwort aktualisieren"-Button geklickt hat, taucht dann eine Meldung auf, dass das Passwort erfolgreich aktualisiert wurde, und dass man sich bitte wieder anmelden soll.
-Diese Meldung wird aber von einer anderen Meldung überblendet, und zwar der Meldung "Sitzung abgelaufen".
-Normalerweise wäre ja diese "Sitzung abgelaufen"-Meldung auch korrekt, außer in diesem Fall bei der Passwortänderung. Hier soll diese Meldung nicht erscheinen.
-- Fehler gibt es auch in der Einstellungen-Ansicht. Hier kann man sich ja von GATED abmelden. Nach der Abmeldung wird auch korrekterweise der Login Screen wieder angezeigt.
-Jedoch taucht dann auf diesem Login-Screen eine "Sitzung abgelaufen"-Meldung auf. Es ist zwar korrekt, dass die Sitzung somit beendet wurde, jedoch ist diese nicht abgelaufen.
-Diese Meldung ist somit in diesem Fall unnötig und muss entfernt werden.
-- Es gibt einen weiteren Fehler in der Einstellungen-Ansicht und allgemein. Bei jedem WebApp-Start wird der User, falls die WebApp noch nicht installiert wurde, durch ein fettes Banner oben gefragt, ob er diese installieren möchte, oder dies später machen möchte.
-Falls man auf Später klickt, kann man dies ja noch immer in der Einstellungen-Ansicht nachholen. In dieser gibt es nämlich einen Installationsbutton.
-Wenn man diesen anklickt, taucht ein Install-Popup auf. Falls man da auf "Cancel" klickt, wird unten eine Snackbar angezeigt, die aber die falsche Fehlermeldung liefert.
-Die Fehlermeldung dort besagt nämlich, dass GATED noch nicht als Installation zur Verfügung steht, was aber in diesem Fall falsch ist. Hier müsste man eine neue Fehlermeldung implementieren.
-Falls man beim Install-Popup auf "Install" klickt, laufen all diese Prozesse wie gewünscht ab. Es steht dann auch in der Einstellungen-Ansicht (sowohl im Web als auch in der WebApp), dass GATED bereits als WebApp installiert ist.
-Wenn man jedoch Chrome schließt (samt dem Tab wo GATED offen ist), wird beim späteren Öffnen von GATED in einem neuen Tab in Chrome diese Information, dass GATED als WebApp bereits installiert ist, nicht mehr angezeigt.
-Stattdessen wird wieder die Fehlermeldung gezeigt, die besagt, dass GATED noch nicht als Installation zur Verfügung steht, was aber in diesem Fall wieder falsch ist.
-
-2. Ablauf GATED WebApp nach Problemen (Noch nicht umgesetzt):
-
-- Es existiert noch immer ein Problem bei der Registrierung bzw. bei der Anmeldung. Das kann doch wohl nicht so ein großes Problem sein; die Anmelde- bzw. Registrierungsfelder sind ja ein grundlegender Bestandteil von Flutter, und sind somit sicher so einfach wie möglich gestaltet worden. Hier noch einmal der Problemablauf:
-Es fängt schon beim Login an. Wenn ich das erste Mal in das E-Mail-Feld hineinklicke, passiert nichts.
-Erst wenn ich das zweite Mal in das Feld hineinklicke, obwohl ich mich schon in diesem befinde, taucht ein Popup mit den gespeicherten Daten auf.
-Auf Android taucht in Chrome noch zusätzlich im Popup ein Anmelden-Button auf, mit dem man eigentlich sofort angemeldet wäre und zum Home Screen weitergeleitet wird.
-Wenn man dann jedoch auf den Anmelden-Button klickt, passiert nichts. Weder die Felder werden befüllt, noch wird man weitergeleitet.
