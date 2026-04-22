@@ -10,6 +10,12 @@ Backend und Logik
 
 - Die Zustandsaenderung beim Tor ist noch nicht vollstaendig abgesichert. Es sollte geklaert werden, was passiert, wenn zwei gueltige Kennzeichen kurz hintereinander erkannt werden.
 Dafuer werden vermutlich genauere Rueckmeldungen aus dem Kennzeichenerkennungssystem benoetigt. Gegebenenfalls muss Node-RED so erweitert werden, dass GATED ueber relevante Statusaenderungen informiert wird.
+- Derzeit ist es so, dass die Anmeldedaten nur jede paar Tage eingegeben werden müssen. Dies führt dazu, dass der Login geskipped wird. Dies passiert derzeit unabhängig davon, ob das Backend läuft oder nicht.
+Es soll aber so implementiert werden, dass bei nicht rennendem Backend der Login-Screen gezeigt wird, unabhängig davon ob man sich eigentlich erst wieder nach ein paar Tagen anmelden müsste.
+- Es könnte trotz nicht rennendem Backend der Fall eintreten, dass man sich im Home Screen befindet, obwohl man eigentlich nur auf den Loginscreen Zugriff haben dürfte.
+In solchen Fällen wird in der Dashboardansicht anstatt des Torstatuses eine Fehlermeldung angezeigt, dass der Torstatus nicht geladen werden konnte.
+Statt aber dafür zu sorgen, dass die UI gleicht bleibt, während im Hintergrund nach einem rennenden Backend gesucht wird, wird diese Fehlermeldung jede paar Sekunden neu geladen, inklusive eines loading icons.
+Eine UI-Änderung muss erst eintreten, wenn das Backend tatsächlich erreichbar ist.
 
 Dokumentation
 
