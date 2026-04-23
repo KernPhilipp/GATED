@@ -28,7 +28,6 @@ class _LoginScreenState extends State<LoginScreen>
 
   bool _isLoading = false;
   bool _obscurePassword = true;
-  Timer? _autofillSubmitTimer;
 
   @override
   void initState() {
@@ -52,7 +51,6 @@ class _LoginScreenState extends State<LoginScreen>
 
   @override
   void dispose() {
-    _autofillSubmitTimer?.cancel();
     _emailController.dispose();
     _passwordController.dispose();
     _emailFocusNode.dispose();
@@ -292,22 +290,5 @@ class _LoginScreenState extends State<LoginScreen>
     }
 
     _formKey.currentState?.validate();
-    _scheduleAutofillSubmitIfReady();
-  }
-
-  void _scheduleAutofillSubmitIfReady() {
-    _autofillSubmitTimer?.cancel();
-    _autofillSubmitTimer = Timer(const Duration(milliseconds: 120), () {
-      if (!mounted || _isLoading) {
-        return;
-      }
-
-      if (_emailController.text.trim().isEmpty ||
-          _passwordController.text.isEmpty) {
-        return;
-      }
-
-      _submitLogin();
-    });
   }
 }
