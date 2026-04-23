@@ -69,3 +69,8 @@ Version Control
 
 Zusätzlich
 - Anmeldung Desktop auch mit Enter (auch im Email-Feld, wenn alles ausgefüllt)
+- Rote Warnungen unter den Eingabefeldern wie "Bitte Email eingeben" sollen nur dann sichtbar sein, wenn man bereits in das Feld hineingeklickt hat. Heißt: Wenn man schon was mit dem Feld getätigt hat.
+
+GATED ausführen mit "flutter run -d web-server --web-hostname 0.0.0.0 --web-port 8080 --release":
+- The --pwa-strategy option is deprecated and will be removed in a future Flutter release.
+For more information, see: https://github.com/flutter/flutter/issues/156910
