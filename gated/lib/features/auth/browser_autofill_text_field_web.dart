@@ -103,7 +103,14 @@ class _BrowserAutofillTextFieldState extends State<BrowserAutofillTextField> {
         _fieldState = field;
         final decoration = widget.decoration
             .applyDefaults(theme.inputDecorationTheme)
-            .copyWith(errorText: field.errorText);
+            .copyWith(
+              errorText: field.errorText,
+              // Browser password managers can fill the DOM input before the
+              // Flutter controller is synced, so keep labels out of the input.
+              floatingLabelBehavior:
+                  widget.decoration.floatingLabelBehavior ??
+                  FloatingLabelBehavior.always,
+            );
 
         return InputDecorator(
           decoration: decoration,

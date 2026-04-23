@@ -44,3 +44,28 @@ Technische Referenz
 
 Shelly-Schaltbefehl:
 http://192.168.0.102/rpc/Switch.Set?id=0&on=true&toggle_after=1
+
+Passwort vergessen
+
+- Falls das Passwort des Benutzers vergessen wird, kann man derzeit auf den Button "Passwort vergessen?" klicken.
+Dort wird aber lediglich der Hinweis gezeigt, dass man sich bitte an Philipp Kern, Tobias Halwax und Felix Haader wenden sollte.
+Dies würde ich durch etwas einfacheres ersetzen. Stattdessen sollte eine Option angezeigt werden, mit der sofort eine vorgefertigte Email an "philipp.kern.student@htl-hallein.at" gesendet werden kann.
+Wichtig: Dabei soll der User angewiesen werden, diese vorgefertigte Email mit der Email, die mit dem Account verknüpft ist, zu schicken.
+Diese vorgefertigte Email kann mit dem Email-Client der Wahl vom Benutzer geöffnet werden; dieser muss lediglich seine Email-Adresse, mit der er in GATED eingeloggt wird, in der Email manuell hinzufügen.
+- Darüber hinaus wäre eine zusätzliche Admin-Ansicht in GATED von Vorteil. Am besten wäre es, wenn die zugelassenen Admins alle in einer .txt File aufgelistet werden und von dieser auch ausgelesen werden.
+Diese Admin-Ansicht kann dann eben nur durch Admins aufgerufen werden. In dieser kann dann hauptsächlich alles, was die User betrifft, verwaltet werden.
+Dazu gehört die zugelassenen Email-Adressen zu verwalten. Diese zugelassenen Email-Adressen sind derzeit noch hardcoded, was eben durch diese Ansicht ersetzt werden soll.
+Falls eine Email-Adresse aus den zugelassenen Email-Adressen entfernt wird, wird auch der mit der Email verknüpfte Account gelöscht. Unabsichtliches Löschen könnte hier durch einen Dialog verhindert werden.
+Diese Admin-Ansicht soll so ähnlich wie die "kennzeichen_view.dart" aufgebaut sein. Heißt: Es wird ebenfalls eine Tabelle angezeigt, nur halt mit den Benutzer- statt den Kennzeichendaten.
+Admins können dabei nicht gelöscht oder bearbeitet werden, auch nicht durch andere Admins. Admins werden nur dann automatisch gelöscht, wenn deren Email-Adressen nicht mehr in der vorher erwähnten .txt-File auftauchen.
+Da diese .txt-File so wichtig ist, würde ich diese in die .gitignore packen. Zusätzlich würde ich wie bei den .env-Files Example-Dateien zur Verfügung stellen.
+Wie ich vorher erwähnt habe, sendet der User bei Vergessen seines Passworts eine vorgefertigte Email an "philipp.kern.student@htl-hallein.at".
+Alle Admins sollen daher die Option haben, in der Tabelle durch zusätzliche Buttons eine vorgefertigte Email mit der Email und dem Passwort des Users an die jeweiligen User (heißt deren Email-Adresse) zu schicken.
+Für die allgemeine Admin-Umsetzung wird es sicher notwendig sein, in der Benutzerdatenbank einen Wert "Rolle" einzuführen. Zur Auswahl stehen dann die Werte "User" oder "Admin".
+
+Version Control
+
+- Ist gerade sichergestellt, dass alte Versionen auf den Geräten (in unserem Fall der Raspberry Pi) komplett gelöscht werden und durch die neuen ersetzt werden?
+
+Zusätzlich
+- Anmeldung Desktop auch mit Enter (auch im Email-Feld, wenn alles ausgefüllt)
