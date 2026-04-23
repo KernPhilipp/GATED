@@ -2,9 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/app_config.dart';
+import 'auth_token_store.dart';
 
 class AuthUser {
   const AuthUser({
@@ -44,12 +44,7 @@ class AuthService {
   static Future<bool>? _refreshRequest;
   static AuthSessionEndReason _sessionEndReason = AuthSessionEndReason.expired;
   static final http.Client _defaultClient = http.Client();
-  static final Future<SharedPreferencesWithCache> _prefs =
-      SharedPreferencesWithCache.create(
-        cacheOptions: const SharedPreferencesWithCacheOptions(
-          allowList: <String>{_accessTokenKey, _refreshTokenKey},
-        ),
-      );
+  static final AuthTokenStore _tokenStore = createAuthTokenStore();
 
   AuthUser? get cachedCurrentUser => _cachedCurrentUser;
 
@@ -265,13 +260,11 @@ class AuthService {
   }
 
   Future<String?> readAccessToken() async {
-    final prefs = await _prefs;
-    return prefs.getString(_accessTokenKey);
+    return _tokenStore.read(authAccessTokenKey);
   }
 
   Future<String?> readRefreshToken() async {
-    final prefs = await _prefs;
-    return prefs.getString(_refreshTokenKey);
+    return _tokenStore.read(authRefreshTokenKey);
   }
 
   Future<String?> readToken() => readAccessToken();
@@ -279,11 +272,10 @@ class AuthService {
   Future<void> clearTokens({
     AuthSessionEndReason reason = AuthSessionEndReason.expired,
   }) async {
-    final prefs = await _prefs;
     _sessionEndReason = reason;
     _clearCachedCurrentUser();
-    await prefs.remove(_accessTokenKey);
-    await prefs.remove(_refreshTokenKey);
+    await _tokenStore.remove(authAccessTokenKey);
+    await _tokenStore.remove(authRefreshTokenKey);
   }
 
   Future<void> clearToken() => clearTokens();
@@ -419,11 +411,10 @@ class AuthService {
   }
 
   Future<void> _saveTokens(_TokenPair tokens) async {
-    final prefs = await _prefs;
     _sessionEndReason = AuthSessionEndReason.expired;
     _clearCachedCurrentUser();
-    await prefs.setString(_accessTokenKey, tokens.accessToken);
-    await prefs.setString(_refreshTokenKey, tokens.refreshToken);
+    await _tokenStore.write(authAccessTokenKey, tokens.accessToken);
+    await _tokenStore.write(authRefreshTokenKey, tokens.refreshToken);
   }
 
   void _clearCachedCurrentUser() {
@@ -518,9 +509,6 @@ bool isSessionFailureResponse(String responseBody) {
       normalized == 'session revoked' ||
       normalized == 'session expired';
 }
-
-const _accessTokenKey = 'auth_access_token';
-const _refreshTokenKey = 'auth_refresh_token';
 
 String _defaultMessageForSessionEndReason(AuthSessionEndReason reason) {
   return switch (reason) {
