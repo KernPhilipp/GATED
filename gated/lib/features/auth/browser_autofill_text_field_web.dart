@@ -24,6 +24,8 @@ class BrowserAutofillTextField extends StatefulWidget {
     this.autocorrect = true,
     this.enabled = true,
     this.preferFlutterField = false,
+    this.browserFormId,
+    this.onBrowserSubmit,
     this.onInteraction,
     this.onFieldSubmitted,
     this.validator,
@@ -42,6 +44,8 @@ class BrowserAutofillTextField extends StatefulWidget {
   final bool autocorrect;
   final bool enabled;
   final bool preferFlutterField;
+  final String? browserFormId;
+  final VoidCallback? onBrowserSubmit;
   final VoidCallback? onInteraction;
   final ValueChanged<String>? onFieldSubmitted;
   final FormFieldValidator<String>? validator;
@@ -66,6 +70,7 @@ class _BrowserAutofillTextFieldState extends State<BrowserAutofillTextField> {
   void initState() {
     super.initState();
     _ensureAutofillStyles();
+    _syncBrowserFormRegistration();
     _inputListener = ((web.Event _) => _syncFromInput()).toJS;
     _changeListener = ((web.Event _) {
       _syncFromInput(collapseSelection: true);
@@ -79,6 +84,14 @@ class _BrowserAutofillTextFieldState extends State<BrowserAutofillTextField> {
   @override
   void didUpdateWidget(BrowserAutofillTextField oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.browserFormId != widget.browserFormId ||
+        oldWidget.onBrowserSubmit != widget.onBrowserSubmit) {
+      _disposeBrowserSubmitForm(
+        formId: oldWidget.browserFormId,
+        onSubmit: oldWidget.onBrowserSubmit,
+      );
+      _syncBrowserFormRegistration();
+    }
     if (oldWidget.controller != widget.controller) {
       oldWidget.controller.removeListener(_syncToInput);
       widget.controller.addListener(_syncToInput);
@@ -90,6 +103,10 @@ class _BrowserAutofillTextFieldState extends State<BrowserAutofillTextField> {
   @override
   void dispose() {
     widget.controller.removeListener(_syncToInput);
+    _disposeBrowserSubmitForm(
+      formId: widget.browserFormId,
+      onSubmit: widget.onBrowserSubmit,
+    );
     _removeInputListeners();
     super.dispose();
   }
@@ -121,8 +138,6 @@ class _BrowserAutofillTextFieldState extends State<BrowserAutofillTextField> {
                 .applyDefaults(theme.inputDecorationTheme)
                 .copyWith(
                   errorText: field.errorText,
-                  // Browser password managers can fill the DOM input before the
-                  // Flutter controller is synced, so keep labels out of the input.
                   floatingLabelBehavior:
                       widget.decoration.floatingLabelBehavior ??
                       FloatingLabelBehavior.always,
@@ -165,6 +180,13 @@ class _BrowserAutofillTextFieldState extends State<BrowserAutofillTextField> {
     );
   }
 
+  void _syncBrowserFormRegistration() {
+    _ensureBrowserSubmitForm(
+      formId: widget.browserFormId,
+      onSubmit: widget.onBrowserSubmit,
+    );
+  }
+
   void _handleElementCreated(Object element) {
     final input = element as web.HTMLInputElement;
     _removeInputListeners();
@@ -192,6 +214,11 @@ class _BrowserAutofillTextFieldState extends State<BrowserAutofillTextField> {
     input.spellcheck = false;
     input.setAttribute('autocapitalize', 'none');
     input.setAttribute('autocorrect', widget.autocorrect ? 'on' : 'off');
+    if (widget.browserFormId != null && widget.browserFormId!.isNotEmpty) {
+      input.setAttribute('form', widget.browserFormId!);
+    } else {
+      input.removeAttribute('form');
+    }
 
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -307,6 +334,7 @@ class _BrowserAutofillTextFieldState extends State<BrowserAutofillTextField> {
       return;
     }
 
+    keyboardEvent.preventDefault();
     widget.onFieldSubmitted?.call(widget.controller.text);
   }
 
@@ -337,6 +365,97 @@ class _BrowserAutofillTextFieldState extends State<BrowserAutofillTextField> {
     input.removeEventListener('keydown', _keyDownListener);
     _input = null;
   }
+}
+
+final Map<String, _BrowserSubmitFormBridge> _browserSubmitForms =
+    <String, _BrowserSubmitFormBridge>{};
+
+class _BrowserSubmitFormBridge {
+  _BrowserSubmitFormBridge({
+    required this.form,
+    required this.submitListener,
+    required this.onSubmit,
+  });
+
+  final web.HTMLFormElement form;
+  final web.EventListener submitListener;
+  VoidCallback onSubmit;
+  int refCount = 0;
+}
+
+void _ensureBrowserSubmitForm({
+  required String? formId,
+  required VoidCallback? onSubmit,
+}) {
+  if (formId == null || formId.isEmpty || onSubmit == null) {
+    return;
+  }
+
+  final existingBridge = _browserSubmitForms[formId];
+  if (existingBridge != null) {
+    existingBridge.refCount++;
+    existingBridge.onSubmit = onSubmit;
+    return;
+  }
+
+  final form = web.document.createElement('form') as web.HTMLFormElement;
+  form.id = formId;
+  form.noValidate = true;
+  final style = form.style;
+  style.position = 'fixed';
+  style.width = '0';
+  style.height = '0';
+  style.opacity = '0';
+  style.pointerEvents = 'none';
+  style.overflow = 'hidden';
+  style.inset = '0';
+
+  final submitButton =
+      web.document.createElement('button') as web.HTMLButtonElement;
+  submitButton.type = 'submit';
+  submitButton.tabIndex = -1;
+  submitButton.textContent = 'submit';
+  submitButton.setAttribute('aria-hidden', 'true');
+  form.appendChild(submitButton);
+
+  late final _BrowserSubmitFormBridge bridge;
+  final submitListener = ((web.Event event) {
+    event.preventDefault();
+    bridge.onSubmit();
+  }).toJS;
+
+  bridge = _BrowserSubmitFormBridge(
+    form: form,
+    submitListener: submitListener,
+    onSubmit: onSubmit,
+  )..refCount = 1;
+
+  form.addEventListener('submit', submitListener);
+  web.document.body?.appendChild(form);
+  _browserSubmitForms[formId] = bridge;
+}
+
+void _disposeBrowserSubmitForm({
+  required String? formId,
+  required VoidCallback? onSubmit,
+}) {
+  if (formId == null || formId.isEmpty || onSubmit == null) {
+    return;
+  }
+
+  final bridge = _browserSubmitForms[formId];
+  if (bridge == null) {
+    return;
+  }
+
+  bridge.refCount--;
+  if (bridge.refCount > 0) {
+    return;
+  }
+
+  bridge.form.removeEventListener('submit', bridge.submitListener);
+  bridge.form.remove();
+  _browserSubmitForms.remove(formId);
 }
 
 void _ensureAutofillStyles() {

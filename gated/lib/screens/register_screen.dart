@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:gated/features/auth/autofill_focus_recovery.dart';
+import 'package:gated/features/auth/browser_autofill_text_field.dart';
 
-import '../features/auth/autofill_focus_recovery.dart';
-import '../features/auth/browser_autofill_text_field.dart';
 import '../features/logo_assets.dart';
 import '../services/auth_service.dart';
 import '../utils/snackbar_utils.dart';
@@ -19,6 +19,8 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen>
     with AutofillFocusRecovery<RegisterScreen> {
+  static final RegExp _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -30,11 +32,15 @@ class _RegisterScreenState extends State<RegisterScreen>
   bool _obscurePassword = true;
   bool _preferFlutterEmailField = false;
   bool _preferFlutterPasswordField = false;
+  bool _isEmailTouched = false;
+  bool _isPasswordTouched = false;
 
   @override
   void initState() {
     super.initState();
     _authService = widget._authService ?? const AuthService();
+    _emailFocusNode.addListener(_handleEmailFocusChange);
+    _passwordFocusNode.addListener(_handlePasswordFocusChange);
     registerAutofillFocusNode(_emailFocusNode);
     registerAutofillFocusNode(_passwordFocusNode);
     registerAutofillController(
@@ -42,17 +48,21 @@ class _RegisterScreenState extends State<RegisterScreen>
       focusNode: _emailFocusNode,
       browserAutofillHints: const ['email', 'username'],
       onAutofillDetected: _handleEmailAutofill,
+      onUserInputDetected: _handleEmailManualInput,
     );
     registerAutofillController(
       _passwordController,
       focusNode: _passwordFocusNode,
       browserAutofillHints: const ['new-password', 'password'],
       onAutofillDetected: _handlePasswordAutofill,
+      onUserInputDetected: _handlePasswordManualInput,
     );
   }
 
   @override
   void dispose() {
+    _emailFocusNode.removeListener(_handleEmailFocusChange);
+    _passwordFocusNode.removeListener(_handlePasswordFocusChange);
     _emailController.dispose();
     _passwordController.dispose();
     _emailFocusNode.dispose();
@@ -79,7 +89,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                     child: AutofillGroup(
                       child: Form(
                         key: _formKey,
-                        autovalidateMode: AutovalidateMode.onUserInteraction,
+                        autovalidateMode: AutovalidateMode.always,
                         child: Column(
                           children: [
                             const Text(
@@ -110,22 +120,11 @@ class _RegisterScreenState extends State<RegisterScreen>
                                 labelText: 'E-Mail',
                               ),
                               onInteraction: () {
+                                _markEmailTouched();
                                 markAutofillInteraction(_emailFocusNode);
                               },
                               onFieldSubmitted: (_) => _focusPasswordField(),
-                              validator: (value) {
-                                final email = (value ?? '').trim();
-                                if (email.isEmpty) {
-                                  return 'Bitte E-Mail eingeben.';
-                                }
-                                final isValidEmail = RegExp(
-                                  r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
-                                ).hasMatch(email);
-                                if (!isValidEmail) {
-                                  return 'Bitte eine gültige E-Mail eingeben.';
-                                }
-                                return null;
-                              },
+                              validator: _validateEmailField,
                             ),
                             const SizedBox(height: 20),
                             BrowserAutofillTextField(
@@ -159,15 +158,11 @@ class _RegisterScreenState extends State<RegisterScreen>
                                 ),
                               ),
                               onInteraction: () {
+                                _markPasswordTouched();
                                 markAutofillInteraction(_passwordFocusNode);
                               },
                               onFieldSubmitted: (_) => _submitRegister(),
-                              validator: (value) {
-                                if ((value ?? '').isEmpty) {
-                                  return 'Bitte Passwort eingeben.';
-                                }
-                                return null;
-                              },
+                              validator: _validatePasswordField,
                             ),
                             const SizedBox(height: 40),
                             SizedBox(
@@ -220,6 +215,7 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   void _submitRegister() {
     if (_isLoading) return;
+    _markAllFieldsTouched();
     if (_formKey.currentState?.validate() == false) return;
     FocusScope.of(context).unfocus();
     _handleRegister();
@@ -294,6 +290,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   }
 
   void _handleEmailAutofill() {
+    _markEmailTouched();
     _handoffAutofilledField(
       controller: _emailController,
       focusNode: _emailFocusNode,
@@ -305,6 +302,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   }
 
   void _handlePasswordAutofill() {
+    _markPasswordTouched();
     _handoffAutofilledField(
       controller: _passwordController,
       focusNode: _passwordFocusNode,
@@ -313,6 +311,14 @@ class _RegisterScreenState extends State<RegisterScreen>
         _preferFlutterPasswordField = true;
       },
     );
+  }
+
+  void _handleEmailManualInput() {
+    _markEmailTouched();
+  }
+
+  void _handlePasswordManualInput() {
+    _markPasswordTouched();
   }
 
   void _handoffAutofilledField({
@@ -353,5 +359,85 @@ class _RegisterScreenState extends State<RegisterScreen>
       selection: TextSelection.collapsed(offset: offset),
       composing: TextRange.empty,
     );
+  }
+
+  void _handleEmailFocusChange() {
+    if (_emailFocusNode.hasFocus) {
+      _markEmailTouched();
+    }
+  }
+
+  void _handlePasswordFocusChange() {
+    if (_passwordFocusNode.hasFocus) {
+      _markPasswordTouched();
+    }
+  }
+
+  void _markEmailTouched() {
+    if (_isEmailTouched) {
+      return;
+    }
+
+    setState(() {
+      _isEmailTouched = true;
+    });
+  }
+
+  void _markPasswordTouched() {
+    if (_isPasswordTouched) {
+      return;
+    }
+
+    setState(() {
+      _isPasswordTouched = true;
+    });
+  }
+
+  void _markAllFieldsTouched() {
+    if (_isEmailTouched && _isPasswordTouched) {
+      return;
+    }
+
+    setState(() {
+      _isEmailTouched = true;
+      _isPasswordTouched = true;
+    });
+  }
+
+  String? _validateEmailField(String? value) {
+    if (!_isEmailTouched) {
+      return null;
+    }
+
+    return _rawEmailValidationMessage(value);
+  }
+
+  String? _validatePasswordField(String? value) {
+    if (!_isPasswordTouched) {
+      return null;
+    }
+
+    return _rawPasswordValidationMessage(value);
+  }
+
+  String? _rawEmailValidationMessage(String? value) {
+    final email = (value ?? '').trim();
+    if (email.isEmpty) {
+      return 'Bitte E-Mail eingeben.';
+    }
+
+    if (!_emailPattern.hasMatch(email)) {
+      return 'Bitte eine gueltige E-Mail eingeben.';
+    }
+
+    return null;
+  }
+
+  String? _rawPasswordValidationMessage(String? value) {
+    if ((value ?? '').isEmpty) {
+      return 'Bitte Passwort eingeben.';
+    }
+
+    return null;
   }
 }

@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 
 import 'autofill_focus_events.dart';
 
+@visibleForTesting
+bool debugTreatAutofillAsWeb = false;
+
 mixin AutofillFocusRecovery<T extends StatefulWidget> on State<T> {
   static const Duration _focusRecoveryWindow = Duration(seconds: 60);
   static const Duration _autofillDetectionWindow = Duration(seconds: 5);
@@ -31,7 +34,7 @@ mixin AutofillFocusRecovery<T extends StatefulWidget> on State<T> {
   @override
   void initState() {
     super.initState();
-    if (kIsWeb) {
+    if (_autofillWebBehaviorEnabled) {
       _disposePageReturnListener = listenForAutofillPageReturn(
         _handlePageReturn,
       );
@@ -64,6 +67,7 @@ mixin AutofillFocusRecovery<T extends StatefulWidget> on State<T> {
     FocusNode? focusNode,
     List<String> browserAutofillHints = const [],
     VoidCallback? onAutofillDetected,
+    VoidCallback? onUserInputDetected,
   }) {
     _controllerValues[controller] = controller.text;
     _controllerFocusNodes[controller] = focusNode;
@@ -83,6 +87,7 @@ mixin AutofillFocusRecovery<T extends StatefulWidget> on State<T> {
         previousValue: previousValue,
         currentValue: currentValue,
       )) {
+        onUserInputDetected?.call();
         return;
       }
 
@@ -92,7 +97,7 @@ mixin AutofillFocusRecovery<T extends StatefulWidget> on State<T> {
 
   @protected
   void markAutofillInteraction(FocusNode focusNode) {
-    if (!kIsWeb) {
+    if (!_autofillWebBehaviorEnabled) {
       return;
     }
 
@@ -107,7 +112,8 @@ mixin AutofillFocusRecovery<T extends StatefulWidget> on State<T> {
     required String previousValue,
     required String currentValue,
   }) {
-    if (!kIsWeb || !_isWithinInteractionWindow(_autofillDetectionWindow)) {
+    if (!_autofillWebBehaviorEnabled ||
+        !_isWithinInteractionWindow(_autofillDetectionWindow)) {
       return false;
     }
 
@@ -130,7 +136,7 @@ mixin AutofillFocusRecovery<T extends StatefulWidget> on State<T> {
   }
 
   void _handlePageReturn() {
-    if (!kIsWeb || !mounted) {
+    if (!_autofillWebBehaviorEnabled || !mounted) {
       return;
     }
 
@@ -161,7 +167,7 @@ mixin AutofillFocusRecovery<T extends StatefulWidget> on State<T> {
   }
 
   void _syncDomAutofillValues() {
-    if (!kIsWeb || !mounted) {
+    if (!_autofillWebBehaviorEnabled || !mounted) {
       return;
     }
 
@@ -177,5 +183,12 @@ mixin AutofillFocusRecovery<T extends StatefulWidget> on State<T> {
         selection: TextSelection.collapsed(offset: domValue.length),
       );
     }
+  }
+
+  bool get _autofillWebBehaviorEnabled => kIsWeb || debugTreatAutofillAsWeb;
+
+  @protected
+  void syncDomAutofillValuesNow() {
+    _syncDomAutofillValues();
   }
 }

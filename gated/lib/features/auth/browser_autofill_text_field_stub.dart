@@ -18,6 +18,8 @@ class BrowserAutofillTextField extends StatelessWidget {
     this.autocorrect = true,
     this.enabled = true,
     this.preferFlutterField = false,
+    this.browserFormId,
+    this.onBrowserSubmit,
     this.onInteraction,
     this.onFieldSubmitted,
     this.validator,
@@ -36,6 +38,8 @@ class BrowserAutofillTextField extends StatelessWidget {
   final bool autocorrect;
   final bool enabled;
   final bool preferFlutterField;
+  final String? browserFormId;
+  final VoidCallback? onBrowserSubmit;
   final VoidCallback? onInteraction;
   final ValueChanged<String>? onFieldSubmitted;
   final FormFieldValidator<String>? validator;
