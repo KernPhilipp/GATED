@@ -1,0 +1,8 @@
+ToDo Future
+
+Torsteuerung und Kennzeichenerkennung
+
+- Der Zustandswechsel beim Tor muss besser gegen schnelle Folgeereignisse abgesichert werden.
+- Es muss geklaert werden, wie sich das System verhalten soll, wenn zwei gueltige Kennzeichen kurz hintereinander erkannt werden.
+- Dafuer werden vermutlich genauere Rueckmeldungen aus dem Kennzeichenerkennungssystem benoetigt.
+- Falls noetig, soll Node-RED erweitert werden, damit GATED relevante Statusaenderungen direkt mitgeteilt bekommt.
