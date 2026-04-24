@@ -1,0 +1,6 @@
+Informationen
+
+Technische Hinweise
+
+Shelly-Schaltbefehl:
+http://192.168.0.102/rpc/Switch.Set?id=0&on=true&toggle_after=1

@@ -1,8 +1,18 @@
 ToDo Future
 
+Systemlogik und Schnittstellen
+
 Torsteuerung und Kennzeichenerkennung
 
-- Der Zustandswechsel beim Tor muss besser gegen schnelle Folgeereignisse abgesichert werden.
-- Es muss geklaert werden, wie sich das System verhalten soll, wenn zwei gueltige Kennzeichen kurz hintereinander erkannt werden.
-- Dafuer werden vermutlich genauere Rueckmeldungen aus dem Kennzeichenerkennungssystem benoetigt.
-- Falls noetig, soll Node-RED erweitert werden, damit GATED relevante Statusaenderungen direkt mitgeteilt bekommt.
+- Den Zustandswechsel des Tors robuster gegen schnelle Folgeereignisse absichern.
+- Festlegen, wie sich das System verhalten soll, wenn zwei gueltige Kennzeichen kurz hintereinander erkannt werden.
+- Pruefen, welche zusaetzlichen Rueckmeldungen aus der Kennzeichenerkennung dafuer benoetigt werden.
+- Falls erforderlich, Node-RED so erweitern, dass relevante Statusaenderungen direkt an GATED uebermittelt werden.
+
+App-Funktionen und Komfort
+
+Autofill
+
+- Die Entwicklung rund um die aktuellen Autofill-Probleme in Flutter beobachten:
+  https://github.com/flutter/flutter/issues/185327
+- Sobald diese Probleme behoben sind, eine saubere Autofill-Implementierung fuer GATED umsetzen.

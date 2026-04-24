@@ -32,11 +32,6 @@ Dokumentation und Betrieb
 - Die vorhandenen README-Dateien sollen bei Bedarf aktualisiert werden.
 - Es soll geprueft werden, ob alte Versionen auf den Geraeten, zum Beispiel auf dem Raspberry Pi, beim Update vollstaendig entfernt und durch neue Versionen ersetzt werden.
 
-Technische Hinweise
-
-Shelly-Schaltbefehl:
-http://192.168.0.102/rpc/Switch.Set?id=0&on=true&toggle_after=1
-
 Hinweis bei Ausfuehrung mit
 "flutter run -d web-server --web-hostname 0.0.0.0 --web-port 8080 --release":
 - The --pwa-strategy option is deprecated and will be removed in a future Flutter release.
