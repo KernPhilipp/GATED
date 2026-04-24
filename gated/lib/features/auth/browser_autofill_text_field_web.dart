@@ -3,6 +3,8 @@ import 'dart:js_interop';
 import 'package:flutter/material.dart';
 import 'package:web/web.dart' as web;
 
+import 'browser_autofill_text_field_keys.dart';
+
 const _authInputClassName = 'gated-auth-browser-input';
 const _authInputStyleElementId = 'gated-auth-browser-input-style';
 
@@ -21,6 +23,7 @@ class BrowserAutofillTextField extends StatefulWidget {
     this.enableSuggestions = true,
     this.autocorrect = true,
     this.enabled = true,
+    this.preferFlutterField = false,
     this.onInteraction,
     this.onFieldSubmitted,
     this.validator,
@@ -38,6 +41,7 @@ class BrowserAutofillTextField extends StatefulWidget {
   final bool enableSuggestions;
   final bool autocorrect;
   final bool enabled;
+  final bool preferFlutterField;
   final VoidCallback? onInteraction;
   final ValueChanged<String>? onFieldSubmitted;
   final FormFieldValidator<String>? validator;
@@ -92,39 +96,72 @@ class _BrowserAutofillTextFieldState extends State<BrowserAutofillTextField> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.preferFlutterField) {
+      _removeInputListeners();
+      return KeyedSubtree(
+        key: browserAutofillFlutterFieldKey,
+        child: _buildFlutterTextFormField(),
+      );
+    }
+
     final theme = Theme.of(context);
     _applyInputAttributes();
 
-    return FormField<String>(
-      initialValue: widget.controller.text,
-      validator: widget.validator,
-      enabled: widget.enabled,
-      builder: (field) {
-        _fieldState = field;
-        final decoration = widget.decoration
-            .applyDefaults(theme.inputDecorationTheme)
-            .copyWith(
-              errorText: field.errorText,
-              // Browser password managers can fill the DOM input before the
-              // Flutter controller is synced, so keep labels out of the input.
-              floatingLabelBehavior:
-                  widget.decoration.floatingLabelBehavior ??
-                  FloatingLabelBehavior.always,
-            );
+    return KeyedSubtree(
+      key: browserAutofillBrowserFieldKey,
+      child: Focus(
+        focusNode: widget.focusNode,
+        child: FormField<String>(
+          initialValue: widget.controller.text,
+          validator: widget.validator,
+          enabled: widget.enabled,
+          builder: (field) {
+            _fieldState = field;
+            final decoration = widget.decoration
+                .applyDefaults(theme.inputDecorationTheme)
+                .copyWith(
+                  errorText: field.errorText,
+                  // Browser password managers can fill the DOM input before the
+                  // Flutter controller is synced, so keep labels out of the input.
+                  floatingLabelBehavior:
+                      widget.decoration.floatingLabelBehavior ??
+                      FloatingLabelBehavior.always,
+                );
 
-        return InputDecorator(
-          decoration: decoration,
-          isFocused: _isFocused,
-          isEmpty: widget.controller.text.isEmpty,
-          child: SizedBox(
-            height: 24,
-            child: HtmlElementView.fromTagName(
-              tagName: 'input',
-              onElementCreated: _handleElementCreated,
-            ),
-          ),
-        );
-      },
+            return InputDecorator(
+              decoration: decoration,
+              isFocused: _isFocused,
+              isEmpty: widget.controller.text.isEmpty,
+              child: SizedBox(
+                height: 24,
+                child: HtmlElementView.fromTagName(
+                  tagName: 'input',
+                  onElementCreated: _handleElementCreated,
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFlutterTextFormField() {
+    return TextFormField(
+      controller: widget.controller,
+      focusNode: widget.focusNode,
+      selectAllOnFocus: false,
+      keyboardType: widget.keyboardType,
+      textInputAction: widget.textInputAction,
+      autofillHints: widget.autofillHints,
+      obscureText: widget.obscureText,
+      enableSuggestions: widget.enableSuggestions,
+      autocorrect: widget.autocorrect,
+      enabled: widget.enabled,
+      decoration: widget.decoration,
+      onTap: widget.onInteraction,
+      onFieldSubmitted: widget.onFieldSubmitted,
+      validator: widget.validator,
     );
   }
 
@@ -248,6 +285,11 @@ class _BrowserAutofillTextFieldState extends State<BrowserAutofillTextField> {
 
   void _handleFocusChange(bool isFocused) {
     widget.onInteraction?.call();
+    if (isFocused) {
+      widget.focusNode.requestFocus();
+    } else if (widget.focusNode.hasFocus) {
+      widget.focusNode.unfocus();
+    }
     if (_isFocused == isFocused) {
       return;
     }
@@ -312,9 +354,7 @@ input.$_authInputClassName:-webkit-autofill:focus,
 input.$_authInputClassName:-webkit-autofill:active {
   -webkit-text-fill-color: var(--gated-auth-input-color) !important;
   caret-color: var(--gated-auth-input-caret-color) !important;
-  -webkit-box-shadow: 0 0 0 1000px var(--gated-auth-input-background) inset !important;
-  box-shadow: 0 0 0 1000px var(--gated-auth-input-background) inset !important;
-  transition: background-color 999999s ease-in-out 0s !important;
+  background-color: transparent !important;
 }
 
 input.$_authInputClassName::selection {

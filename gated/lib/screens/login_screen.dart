@@ -28,6 +28,8 @@ class _LoginScreenState extends State<LoginScreen>
 
   bool _isLoading = false;
   bool _obscurePassword = true;
+  bool _preferFlutterEmailField = false;
+  bool _preferFlutterPasswordField = false;
 
   @override
   void initState() {
@@ -39,13 +41,13 @@ class _LoginScreenState extends State<LoginScreen>
       _emailController,
       focusNode: _emailFocusNode,
       browserAutofillHints: const ['email', 'username'],
-      onAutofillDetected: _handleAutofillCommit,
+      onAutofillDetected: _handleEmailAutofill,
     );
     registerAutofillController(
       _passwordController,
       focusNode: _passwordFocusNode,
       browserAutofillHints: const ['current-password', 'password'],
-      onAutofillDetected: _handleAutofillCommit,
+      onAutofillDetected: _handlePasswordAutofill,
     );
   }
 
@@ -95,6 +97,7 @@ class _LoginScreenState extends State<LoginScreen>
                             BrowserAutofillTextField(
                               controller: _emailController,
                               focusNode: _emailFocusNode,
+                              preferFlutterField: _preferFlutterEmailField,
                               autocomplete: 'email',
                               inputType: 'email',
                               keyboardType: TextInputType.emailAddress,
@@ -128,6 +131,7 @@ class _LoginScreenState extends State<LoginScreen>
                             BrowserAutofillTextField(
                               controller: _passwordController,
                               focusNode: _passwordFocusNode,
+                              preferFlutterField: _preferFlutterPasswordField,
                               autocomplete: 'current-password',
                               inputType: 'password',
                               obscureText: _obscurePassword,
@@ -290,5 +294,67 @@ class _LoginScreenState extends State<LoginScreen>
     }
 
     _formKey.currentState?.validate();
+  }
+
+  void _handleEmailAutofill() {
+    _handoffAutofilledField(
+      controller: _emailController,
+      focusNode: _emailFocusNode,
+      alreadyUsingFlutterField: _preferFlutterEmailField,
+      enableFlutterField: () {
+        _preferFlutterEmailField = true;
+      },
+    );
+  }
+
+  void _handlePasswordAutofill() {
+    _handoffAutofilledField(
+      controller: _passwordController,
+      focusNode: _passwordFocusNode,
+      alreadyUsingFlutterField: _preferFlutterPasswordField,
+      enableFlutterField: () {
+        _preferFlutterPasswordField = true;
+      },
+    );
+  }
+
+  void _handoffAutofilledField({
+    required TextEditingController controller,
+    required FocusNode focusNode,
+    required bool alreadyUsingFlutterField,
+    required VoidCallback enableFlutterField,
+  }) {
+    if (!mounted) {
+      return;
+    }
+
+    final shouldRestoreFocus = focusNode.hasFocus;
+    _collapseSelectionAtEnd(controller);
+    if (!alreadyUsingFlutterField) {
+      if (shouldRestoreFocus) {
+        focusNode.unfocus();
+      }
+      setState(enableFlutterField);
+      if (shouldRestoreFocus) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) {
+            return;
+          }
+          _collapseSelectionAtEnd(controller);
+          FocusScope.of(context).requestFocus(focusNode);
+        });
+      }
+    }
+
+    _handleAutofillCommit();
+  }
+
+  void _collapseSelectionAtEnd(TextEditingController controller) {
+    final value = controller.value;
+    final offset = value.text.length;
+    controller.value = value.copyWith(
+      selection: TextSelection.collapsed(offset: offset),
+      composing: TextRange.empty,
+    );
   }
 }
