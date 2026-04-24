@@ -2,8 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:gated/features/auth/autofill_focus_recovery.dart';
-import 'package:gated/features/auth/browser_autofill_text_field.dart';
 
 import '../features/logo_assets.dart';
 import '../services/auth_service.dart';
@@ -19,9 +17,7 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen>
-    with AutofillFocusRecovery<LoginScreen> {
-  static const String _browserLoginFormId = 'gated-login-browser-form';
+class _LoginScreenState extends State<LoginScreen> {
   static final RegExp _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
 
   final _formKey = GlobalKey<FormState>();
@@ -33,11 +29,8 @@ class _LoginScreenState extends State<LoginScreen>
 
   bool _isLoading = false;
   bool _obscurePassword = true;
-  bool _preferFlutterEmailField = false;
-  bool _preferFlutterPasswordField = false;
   bool _isEmailTouched = false;
   bool _isPasswordTouched = false;
-  bool _initialAutofillAutoSubmitAvailable = true;
 
   @override
   void initState() {
@@ -45,22 +38,6 @@ class _LoginScreenState extends State<LoginScreen>
     _authService = widget._authService ?? const AuthService();
     _emailFocusNode.addListener(_handleEmailFocusChange);
     _passwordFocusNode.addListener(_handlePasswordFocusChange);
-    registerAutofillFocusNode(_emailFocusNode);
-    registerAutofillFocusNode(_passwordFocusNode);
-    registerAutofillController(
-      _emailController,
-      focusNode: _emailFocusNode,
-      browserAutofillHints: const ['email', 'username'],
-      onAutofillDetected: _handleEmailAutofill,
-      onUserInputDetected: _handleEmailManualInput,
-    );
-    registerAutofillController(
-      _passwordController,
-      focusNode: _passwordFocusNode,
-      browserAutofillHints: const ['current-password', 'password'],
-      onAutofillDetected: _handlePasswordAutofill,
-      onUserInputDetected: _handlePasswordManualInput,
-    );
   }
 
   @override
@@ -108,14 +85,9 @@ class _LoginScreenState extends State<LoginScreen>
                               height: 200,
                               child: Image.asset(logoAsset),
                             ),
-                            BrowserAutofillTextField(
+                            TextFormField(
                               controller: _emailController,
                               focusNode: _emailFocusNode,
-                              preferFlutterField: _preferFlutterEmailField,
-                              browserFormId: _browserLoginFormId,
-                              onBrowserSubmit: _handleBrowserAutofillSubmit,
-                              autocomplete: 'email',
-                              inputType: 'email',
                               keyboardType: TextInputType.emailAddress,
                               textInputAction: TextInputAction.next,
                               autofillHints: const [
@@ -125,22 +97,16 @@ class _LoginScreenState extends State<LoginScreen>
                               decoration: const InputDecoration(
                                 labelText: 'E-Mail',
                               ),
-                              onInteraction: () {
+                              onTap: () {
                                 _markEmailTouched();
-                                markAutofillInteraction(_emailFocusNode);
                               },
                               onFieldSubmitted: (_) => _focusPasswordField(),
                               validator: _validateEmailField,
                             ),
                             const SizedBox(height: 20),
-                            BrowserAutofillTextField(
+                            TextFormField(
                               controller: _passwordController,
                               focusNode: _passwordFocusNode,
-                              preferFlutterField: _preferFlutterPasswordField,
-                              browserFormId: _browserLoginFormId,
-                              onBrowserSubmit: _handleBrowserAutofillSubmit,
-                              autocomplete: 'current-password',
-                              inputType: 'password',
                               obscureText: _obscurePassword,
                               keyboardType: TextInputType.visiblePassword,
                               enableSuggestions: false,
@@ -165,9 +131,8 @@ class _LoginScreenState extends State<LoginScreen>
                                   ),
                                 ),
                               ),
-                              onInteraction: () {
+                              onTap: () {
                                 _markPasswordTouched();
-                                markAutofillInteraction(_passwordFocusNode);
                               },
                               onFieldSubmitted: (_) => _submitLogin(),
                               validator: _validatePasswordField,
@@ -253,7 +218,6 @@ class _LoginScreenState extends State<LoginScreen>
 
   void _submitLogin() {
     if (_isLoading) return;
-    _initialAutofillAutoSubmitAvailable = false;
     _markAllFieldsTouched();
     if (_formKey.currentState?.validate() == false) return;
     FocusScope.of(context).unfocus();
@@ -291,89 +255,6 @@ class _LoginScreenState extends State<LoginScreen>
         setState(() => _isLoading = false);
       }
     }
-  }
-
-  void _handleAutofillCommit() {
-    if (!mounted) {
-      return;
-    }
-
-    _formKey.currentState?.validate();
-    _tryInitialAutofillAutoSubmit();
-  }
-
-  void _handleEmailAutofill() {
-    _markEmailTouched();
-    _handoffAutofilledField(
-      controller: _emailController,
-      focusNode: _emailFocusNode,
-      alreadyUsingFlutterField: _preferFlutterEmailField,
-      enableFlutterField: () {
-        _preferFlutterEmailField = true;
-      },
-    );
-  }
-
-  void _handlePasswordAutofill() {
-    _markPasswordTouched();
-    _handoffAutofilledField(
-      controller: _passwordController,
-      focusNode: _passwordFocusNode,
-      alreadyUsingFlutterField: _preferFlutterPasswordField,
-      enableFlutterField: () {
-        _preferFlutterPasswordField = true;
-      },
-    );
-  }
-
-  void _handleEmailManualInput() {
-    _markEmailTouched();
-    _initialAutofillAutoSubmitAvailable = false;
-  }
-
-  void _handlePasswordManualInput() {
-    _markPasswordTouched();
-    _initialAutofillAutoSubmitAvailable = false;
-  }
-
-  void _handoffAutofilledField({
-    required TextEditingController controller,
-    required FocusNode focusNode,
-    required bool alreadyUsingFlutterField,
-    required VoidCallback enableFlutterField,
-  }) {
-    if (!mounted) {
-      return;
-    }
-
-    final shouldRestoreFocus = focusNode.hasFocus;
-    _collapseSelectionAtEnd(controller);
-    if (!alreadyUsingFlutterField) {
-      if (shouldRestoreFocus) {
-        focusNode.unfocus();
-      }
-      setState(enableFlutterField);
-      if (shouldRestoreFocus) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) {
-            return;
-          }
-          _collapseSelectionAtEnd(controller);
-          FocusScope.of(context).requestFocus(focusNode);
-        });
-      }
-    }
-
-    _handleAutofillCommit();
-  }
-
-  void _collapseSelectionAtEnd(TextEditingController controller) {
-    final value = controller.value;
-    final offset = value.text.length;
-    controller.value = value.copyWith(
-      selection: TextSelection.collapsed(offset: offset),
-      composing: TextRange.empty,
-    );
   }
 
   void _handleEmailFocusChange() {
@@ -454,42 +335,5 @@ class _LoginScreenState extends State<LoginScreen>
     }
 
     return null;
-  }
-
-  void _tryInitialAutofillAutoSubmit() {
-    if (!_initialAutofillAutoSubmitAvailable || _isLoading) {
-      return;
-    }
-
-    if (_rawEmailValidationMessage(_emailController.text) != null ||
-        _rawPasswordValidationMessage(_passwordController.text) != null) {
-      return;
-    }
-
-    _initialAutofillAutoSubmitAvailable = false;
-    _submitLogin();
-  }
-
-  void _handleBrowserAutofillSubmit() {
-    if (!_initialAutofillAutoSubmitAvailable || _isLoading) {
-      return;
-    }
-
-    syncDomAutofillValuesNow();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_initialAutofillAutoSubmitAvailable || _isLoading) {
-        return;
-      }
-
-      syncDomAutofillValuesNow();
-      if (_rawEmailValidationMessage(_emailController.text) != null ||
-          _rawPasswordValidationMessage(_passwordController.text) != null) {
-        return;
-      }
-
-      _markEmailTouched();
-      _markPasswordTouched();
-      _submitLogin();
-    });
   }
 }

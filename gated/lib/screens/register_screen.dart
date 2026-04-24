@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:gated/features/auth/autofill_focus_recovery.dart';
-import 'package:gated/features/auth/browser_autofill_text_field.dart';
 
 import '../features/logo_assets.dart';
 import '../services/auth_service.dart';
@@ -17,8 +15,7 @@ class RegisterScreen extends StatefulWidget {
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen>
-    with AutofillFocusRecovery<RegisterScreen> {
+class _RegisterScreenState extends State<RegisterScreen> {
   static final RegExp _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
 
   final _formKey = GlobalKey<FormState>();
@@ -30,8 +27,6 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   bool _isLoading = false;
   bool _obscurePassword = true;
-  bool _preferFlutterEmailField = false;
-  bool _preferFlutterPasswordField = false;
   bool _isEmailTouched = false;
   bool _isPasswordTouched = false;
 
@@ -41,22 +36,6 @@ class _RegisterScreenState extends State<RegisterScreen>
     _authService = widget._authService ?? const AuthService();
     _emailFocusNode.addListener(_handleEmailFocusChange);
     _passwordFocusNode.addListener(_handlePasswordFocusChange);
-    registerAutofillFocusNode(_emailFocusNode);
-    registerAutofillFocusNode(_passwordFocusNode);
-    registerAutofillController(
-      _emailController,
-      focusNode: _emailFocusNode,
-      browserAutofillHints: const ['email', 'username'],
-      onAutofillDetected: _handleEmailAutofill,
-      onUserInputDetected: _handleEmailManualInput,
-    );
-    registerAutofillController(
-      _passwordController,
-      focusNode: _passwordFocusNode,
-      browserAutofillHints: const ['new-password', 'password'],
-      onAutofillDetected: _handlePasswordAutofill,
-      onUserInputDetected: _handlePasswordManualInput,
-    );
   }
 
   @override
@@ -104,12 +83,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                               height: 200,
                               child: Image.asset(logoAsset),
                             ),
-                            BrowserAutofillTextField(
+                            TextFormField(
                               controller: _emailController,
                               focusNode: _emailFocusNode,
-                              preferFlutterField: _preferFlutterEmailField,
-                              autocomplete: 'email',
-                              inputType: 'email',
                               keyboardType: TextInputType.emailAddress,
                               textInputAction: TextInputAction.next,
                               autofillHints: const [
@@ -119,20 +95,16 @@ class _RegisterScreenState extends State<RegisterScreen>
                               decoration: const InputDecoration(
                                 labelText: 'E-Mail',
                               ),
-                              onInteraction: () {
+                              onTap: () {
                                 _markEmailTouched();
-                                markAutofillInteraction(_emailFocusNode);
                               },
                               onFieldSubmitted: (_) => _focusPasswordField(),
                               validator: _validateEmailField,
                             ),
                             const SizedBox(height: 20),
-                            BrowserAutofillTextField(
+                            TextFormField(
                               controller: _passwordController,
                               focusNode: _passwordFocusNode,
-                              preferFlutterField: _preferFlutterPasswordField,
-                              autocomplete: 'new-password',
-                              inputType: 'password',
                               obscureText: _obscurePassword,
                               keyboardType: TextInputType.visiblePassword,
                               enableSuggestions: false,
@@ -157,9 +129,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                                   ),
                                 ),
                               ),
-                              onInteraction: () {
+                              onTap: () {
                                 _markPasswordTouched();
-                                markAutofillInteraction(_passwordFocusNode);
                               },
                               onFieldSubmitted: (_) => _submitRegister(),
                               validator: _validatePasswordField,
@@ -278,86 +249,6 @@ class _RegisterScreenState extends State<RegisterScreen>
           ],
         );
       },
-    );
-  }
-
-  void _handleAutofillCommit() {
-    if (!mounted) {
-      return;
-    }
-
-    _formKey.currentState?.validate();
-  }
-
-  void _handleEmailAutofill() {
-    _markEmailTouched();
-    _handoffAutofilledField(
-      controller: _emailController,
-      focusNode: _emailFocusNode,
-      alreadyUsingFlutterField: _preferFlutterEmailField,
-      enableFlutterField: () {
-        _preferFlutterEmailField = true;
-      },
-    );
-  }
-
-  void _handlePasswordAutofill() {
-    _markPasswordTouched();
-    _handoffAutofilledField(
-      controller: _passwordController,
-      focusNode: _passwordFocusNode,
-      alreadyUsingFlutterField: _preferFlutterPasswordField,
-      enableFlutterField: () {
-        _preferFlutterPasswordField = true;
-      },
-    );
-  }
-
-  void _handleEmailManualInput() {
-    _markEmailTouched();
-  }
-
-  void _handlePasswordManualInput() {
-    _markPasswordTouched();
-  }
-
-  void _handoffAutofilledField({
-    required TextEditingController controller,
-    required FocusNode focusNode,
-    required bool alreadyUsingFlutterField,
-    required VoidCallback enableFlutterField,
-  }) {
-    if (!mounted) {
-      return;
-    }
-
-    final shouldRestoreFocus = focusNode.hasFocus;
-    _collapseSelectionAtEnd(controller);
-    if (!alreadyUsingFlutterField) {
-      if (shouldRestoreFocus) {
-        focusNode.unfocus();
-      }
-      setState(enableFlutterField);
-      if (shouldRestoreFocus) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) {
-            return;
-          }
-          _collapseSelectionAtEnd(controller);
-          FocusScope.of(context).requestFocus(focusNode);
-        });
-      }
-    }
-
-    _handleAutofillCommit();
-  }
-
-  void _collapseSelectionAtEnd(TextEditingController controller) {
-    final value = controller.value;
-    final offset = value.text.length;
-    controller.value = value.copyWith(
-      selection: TextSelection.collapsed(offset: offset),
-      composing: TextRange.empty,
     );
   }
 
