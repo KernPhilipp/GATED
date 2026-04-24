@@ -7,17 +7,34 @@ import '../screens/register_screen.dart';
 import 'theme.dart';
 
 class GatedApp extends StatefulWidget {
-  const GatedApp({super.key});
+  const GatedApp({
+    super.key,
+    AuthService? authService,
+    PwaInstallController? pwaInstallController,
+  }) : _authService = authService,
+       _pwaInstallController = pwaInstallController;
+
+  final AuthService? _authService;
+  final PwaInstallController? _pwaInstallController;
 
   @override
   State<GatedApp> createState() => _GatedAppState();
 }
 
 class _GatedAppState extends State<GatedApp> {
-  final _authService = const AuthService();
-  final _pwaInstallController = PwaInstallController();
+  late final AuthService _authService;
+  late final PwaInstallController _pwaInstallController;
   ThemeMode _themeMode = ThemeMode.system;
-  late final Future<String> _initialRoute = _resolveInitialRoute();
+  late final Future<String> _initialRoute;
+
+  @override
+  void initState() {
+    super.initState();
+    _authService = widget._authService ?? const AuthService();
+    _pwaInstallController =
+        widget._pwaInstallController ?? PwaInstallController();
+    _initialRoute = _resolveInitialRoute();
+  }
 
   void _setThemeMode(ThemeMode mode) {
     setState(() => _themeMode = mode);
@@ -28,9 +45,9 @@ class _GatedAppState extends State<GatedApp> {
       final hasSession = await _authService.restoreSession();
       return hasSession ? '/home' : '/login';
     } on AuthException {
-      return '/home';
+      return '/login';
     } catch (_) {
-      return '/home';
+      return '/login';
     }
   }
 

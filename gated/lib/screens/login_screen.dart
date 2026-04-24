@@ -5,13 +5,19 @@ import 'package:flutter/services.dart';
 
 import '../features/logo_assets.dart';
 import '../services/auth_service.dart';
+import '../services/email_draft_service.dart';
 import '../utils/snackbar_utils.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key, AuthService? authService})
-    : _authService = authService;
+  const LoginScreen({
+    super.key,
+    AuthService? authService,
+    EmailDraftService? emailDraftService,
+  }) : _authService = authService,
+       _emailDraftService = emailDraftService;
 
   final AuthService? _authService;
+  final EmailDraftService? _emailDraftService;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -26,6 +32,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailFocusNode = FocusNode();
   final _passwordFocusNode = FocusNode();
   late final AuthService _authService;
+  late final EmailDraftService _emailDraftService;
 
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -36,6 +43,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void initState() {
     super.initState();
     _authService = widget._authService ?? const AuthService();
+    _emailDraftService = widget._emailDraftService ?? const EmailDraftService();
     _emailFocusNode.addListener(_handleEmailFocusChange);
     _passwordFocusNode.addListener(_handlePasswordFocusChange);
   }
@@ -194,26 +202,67 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _showForgotPasswordDialog() async {
-    await showDialog<void>(
+    final shouldOpenMail = await showDialog<bool>(
       context: context,
-      barrierDismissible: false,
+      barrierDismissible: true,
       builder: (context) {
         return AlertDialog(
           title: const Text('Passwort vergessen'),
           content: const Text(
-            'Bitte wende dich an Felix Haader, Philipp Kern oder Tobias Halwax.',
+            'Wenn du dein Passwort zuruecksetzen lassen moechtest, wird eine '
+            'vorbereitete E-Mail an philipp.kern.student@htl-hallein.at '
+            'geoeffnet.\n\nWichtig: Diese E-Mail muss von derselben '
+            'E-Mail-Adresse gesendet werden, die mit deinem GATED-Account '
+            'verknuepft ist.',
           ),
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop();
+                Navigator.of(context).pop(false);
               },
-              child: const Text('OK'),
+              child: const Text('Abbrechen'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.of(context).pop(true);
+              },
+              child: const Text('E-Mail oeffnen'),
             ),
           ],
         );
       },
     );
+
+    if (shouldOpenMail != true || !mounted) {
+      return;
+    }
+
+    final opened = await _emailDraftService.openDraft(
+      EmailDraft(
+        to: 'philipp.kern.student@htl-hallein.at',
+        subject: 'GATED Passwort vergessen',
+        body:
+            'Hallo,\n\n'
+            'ich habe mein GATED-Passwort vergessen und bitte um einen Reset.\n'
+            'Diese E-Mail wird von der mit meinem GATED-Account verknuepften '
+            'Adresse gesendet.\n\n'
+            'GATED-E-Mail-Adresse: ${_emailController.text.trim()}\n\n'
+            'Vielen Dank.',
+      ),
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    if (!opened) {
+      showAppSnackBar(
+        context,
+        message: 'Die E-Mail-App konnte nicht geoeffnet werden.',
+        isError: true,
+        withCloseAction: true,
+      );
+    }
   }
 
   void _submitLogin() {

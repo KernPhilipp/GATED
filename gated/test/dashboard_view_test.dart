@@ -105,6 +105,52 @@ void main() {
     expect(find.text('Heuristisch erkannt'), findsWidgets);
     expect(find.textContaining('Heuristisch extern erkannt:'), findsOneWidget);
   });
+
+  testWidgets('dashboard keeps last known status during backend outages', (
+    tester,
+  ) async {
+    final controller = _SequenceGarageDoorController(
+      fetchResults: [
+        _status(
+          state: GarageDoorState.closed,
+          stateConfidence: GarageDoorStateConfidence.modeled,
+        ),
+        const GarageDoorException('Backend offline.'),
+        _status(
+          state: GarageDoorState.open,
+          stateConfidence: GarageDoorStateConfidence.modeled,
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: DashboardView(garageDoorController: controller),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Tor geschlossen'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump();
+
+    expect(find.text('Tor geschlossen'), findsOneWidget);
+    expect(find.text('Backend derzeit nicht erreichbar'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump();
+
+    expect(find.text('Tor offen'), findsOneWidget);
+    expect(find.text('Backend derzeit nicht erreichbar'), findsNothing);
+
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 }
 
 class _FakeGarageDoorController implements GarageDoorController {
@@ -134,6 +180,37 @@ class _FakeGarageDoorController implements GarageDoorController {
   Future<GarageDoorStatus> triggerPulse() async {
     triggerCalls++;
     return _triggerStatus;
+  }
+}
+
+class _SequenceGarageDoorController implements GarageDoorController {
+  _SequenceGarageDoorController({required List<Object> fetchResults})
+    : _fetchResults = List<Object>.from(fetchResults),
+      _lastResult = fetchResults.last;
+
+  final List<Object> _fetchResults;
+  final Object _lastResult;
+
+  @override
+  Future<GarageDoorStatus> fetchStatus() async {
+    final next = _fetchResults.isEmpty
+        ? _lastResult
+        : _fetchResults.removeAt(0);
+    if (next is GarageDoorStatus) {
+      return next;
+    }
+
+    throw next as Exception;
+  }
+
+  @override
+  Future<GarageDoorStatus> setManualState(GarageDoorState state) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<GarageDoorStatus> triggerPulse() async {
+    throw UnimplementedError();
   }
 }
 

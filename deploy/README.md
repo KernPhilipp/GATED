@@ -45,6 +45,8 @@ Local development:
   `dart run server.dart` directly.
 - That local file stays inside the repo directory but is ignored by
   `gated/.gitignore`.
+- `gated/backend/allowed_emails.txt` and `gated/backend/admin_emails.txt` are
+  also ignored. Use the tracked `.example.txt` files as templates.
 
 Production / Raspberry Pi:
 
@@ -53,6 +55,9 @@ Production / Raspberry Pi:
 - The real production files must live outside the repo at
   `/home/gated/gated-frontend/shared/backend.env` and
   `/home/gated/gated-frontend/shared/deploy.env`.
+- The backend email lists should also live outside the repo at
+  `/home/gated/gated-frontend/shared/allowed_emails.txt` and
+  `/home/gated/gated-frontend/shared/admin_emails.txt`.
 - Do not store production secrets in `deploy/backend.env` or
   `deploy/deploy.env` inside the repository checkout.
 
@@ -84,6 +89,8 @@ Create env files:
 ```bash
 sudo cp deploy/backend.env.example /home/gated/gated-frontend/shared/backend.env
 sudo cp deploy/deploy.env.example /home/gated/gated-frontend/shared/deploy.env
+sudo cp gated/backend/allowed_emails.example.txt /home/gated/gated-frontend/shared/allowed_emails.txt
+sudo cp gated/backend/admin_emails.example.txt /home/gated/gated-frontend/shared/admin_emails.txt
 ```
 
 These commands copy the tracked templates into the Pi's shared runtime
@@ -92,6 +99,8 @@ directory. The real runtime files stay outside the repository checkout.
 Edit values (important):
 
 - `/home/gated/gated-frontend/shared/backend.env` -> set `JWT_SECRET`
+- `/home/gated/gated-frontend/shared/allowed_emails.txt` -> maintain allowed users
+- `/home/gated/gated-frontend/shared/admin_emails.txt` -> maintain admins
 - `/home/gated/gated-frontend/shared/deploy.env` -> check `GITHUB_REPO`
 - optional in `deploy.env`: `APP_USER` / `APP_GROUP` if the service should not run as `gated`
 
@@ -108,6 +117,14 @@ sudo nginx -t && sudo systemctl restart nginx
 Frontend URL:
 
 - `http://<pi-ip>:8090`
+
+## Release replacement behavior
+
+- The deploy script extracts every release into a timestamped directory under
+  `releases/`.
+- `current` is then switched to the new directory atomically.
+- Older releases are kept only as a rollback window and cleaned up through
+  `KEEP_RELEASES`.
 
 ## Installierbare Web-App im LAN
 

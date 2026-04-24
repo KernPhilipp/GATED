@@ -1,6 +1,7 @@
 import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 import 'package:shelf/shelf.dart';
 
+import 'email_access_control.dart';
 import '../db/database.dart';
 import 'jwt_service.dart';
 
@@ -51,8 +52,13 @@ VerifiedAccessToken readVerifiedAccessToken(Request request) {
 
 Future<AuthenticatedRequestContext> authenticateRequest(
   Request request,
-  DatabaseService db,
-) async {
+  DatabaseService db, [
+  EmailAccessControlService? accessControlService,
+]) async {
+  if (accessControlService != null) {
+    await accessControlService.sync();
+  }
+
   final verifiedToken = readVerifiedAccessToken(request);
   final session = await db.getAuthSessionById(verifiedToken.sessionId);
   if (session == null) {
@@ -84,6 +90,25 @@ Future<AuthenticatedRequestContext> authenticateRequest(
   }
 
   return AuthenticatedRequestContext(user: user, sessionId: session.id);
+}
+
+Future<AuthenticatedRequestContext> authenticateAdminRequest(
+  Request request,
+  DatabaseService db,
+  EmailAccessControlService accessControlService,
+) async {
+  final authContext = await authenticateRequest(
+    request,
+    db,
+    accessControlService,
+  );
+  if (authContext.user.role != DbUserRole.admin) {
+    throw RequestAuthenticationException(
+      Response.forbidden('Admin access required'),
+    );
+  }
+
+  return authContext;
 }
 
 class RequestAuthenticationException implements Exception {

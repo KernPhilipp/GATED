@@ -4,7 +4,7 @@ import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 import 'package:sqlite3/sqlite3.dart';
 
-import '../auth/allowlist.dart';
+import '../auth/email_access_control.dart';
 import '../auth/hashing.dart';
 import '../auth/jwt_service.dart';
 import '../auth/refresh_token_service.dart';
@@ -13,8 +13,12 @@ import '../db/database.dart';
 
 const _jsonHeaders = {'Content-Type': 'application/json'};
 
-Router buildAuthRouter(DatabaseService db) => Router()
+Router buildAuthRouter(
+  DatabaseService db,
+  EmailAccessControlService accessControlService,
+) => Router()
   ..post('/auth/register', (Request request) async {
+    await accessControlService.sync();
     final data = await _readJsonObject(request);
     if (data == null) {
       return Response.badRequest(body: 'Invalid JSON body');
@@ -31,7 +35,8 @@ Router buildAuthRouter(DatabaseService db) => Router()
 
     final normalizedEmail = normalizeEmail(email);
 
-    if (!isEmailAllowed(normalizedEmail)) {
+    final role = await accessControlService.roleForEmail(normalizedEmail);
+    if (role == null) {
       return Response.forbidden('Email not allowed');
     }
 
@@ -40,6 +45,7 @@ Router buildAuthRouter(DatabaseService db) => Router()
     try {
       await db.createUser(
         email: normalizedEmail,
+        role: role,
         passwordHash: hash.hashBase64,
         salt: hash.saltBase64,
       );
@@ -54,6 +60,7 @@ Router buildAuthRouter(DatabaseService db) => Router()
     return Response.ok('Registered');
   })
   ..post('/auth/login', (Request request) async {
+    await accessControlService.sync();
     final data = await _readJsonObject(request);
     if (data == null) {
       return Response.badRequest(body: 'Invalid JSON body');
@@ -85,6 +92,7 @@ Router buildAuthRouter(DatabaseService db) => Router()
     return Response.ok(jsonEncode(tokens.toJson()), headers: _jsonHeaders);
   })
   ..post('/auth/refresh', (Request request) async {
+    await accessControlService.sync();
     final data = await _readJsonObject(request);
     if (data == null) {
       return Response.badRequest(body: 'Invalid JSON body');
@@ -145,11 +153,16 @@ Router buildAuthRouter(DatabaseService db) => Router()
   })
   ..get('/auth/me', (Request request) async {
     try {
-      final authContext = await authenticateRequest(request, db);
+      final authContext = await authenticateRequest(
+        request,
+        db,
+        accessControlService,
+      );
       return Response.ok(
         jsonEncode({
           'uid': authContext.user.id,
           'email': authContext.user.email,
+          'role': authContext.user.role.wireName,
           'createdAt': authContext.user.createdAt,
         }),
         headers: {'Content-Type': 'application/json'},
@@ -162,6 +175,7 @@ Router buildAuthRouter(DatabaseService db) => Router()
   })
   ..post('/auth/logout', (Request request) async {
     try {
+      await accessControlService.sync();
       final verifiedToken = readVerifiedAccessToken(request);
       final session = await db.getAuthSessionById(verifiedToken.sessionId);
       if (session != null && session.userId != verifiedToken.userId) {
@@ -181,7 +195,11 @@ Router buildAuthRouter(DatabaseService db) => Router()
   })
   ..post('/auth/change-password', (Request request) async {
     try {
-      final authContext = await authenticateRequest(request, db);
+      final authContext = await authenticateRequest(
+        request,
+        db,
+        accessControlService,
+      );
       final data = await _readJsonObject(request);
       if (data == null) {
         return Response.badRequest(body: 'Invalid JSON body');

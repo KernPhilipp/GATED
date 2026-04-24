@@ -38,6 +38,7 @@ class _DashboardViewState extends State<DashboardView> {
   bool _isTriggering = false;
   bool _isUpdatingState = false;
   bool _isRedirectingToLogin = false;
+  bool _isBackendUnavailable = false;
 
   @override
   void initState() {
@@ -92,6 +93,10 @@ class _DashboardViewState extends State<DashboardView> {
             style: theme.textTheme.bodyMedium,
           ),
           const SizedBox(height: 24),
+          if (_isBackendUnavailable && _status != null) ...[
+            _buildConnectionBanner(theme),
+            const SizedBox(height: 20),
+          ],
           if (_isLoading && _status == null)
             const Card(
               child: Padding(
@@ -139,6 +144,48 @@ class _DashboardViewState extends State<DashboardView> {
     );
   }
 
+  Widget _buildConnectionBanner(ThemeData theme) {
+    return Card(
+      color: theme.colorScheme.errorContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.cloud_off_rounded,
+              color: theme.colorScheme.onErrorContainer,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Backend derzeit nicht erreichbar',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: theme.colorScheme.onErrorContainer,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Der letzte erfolgreiche Torstatus bleibt sichtbar. '
+                    'Im Hintergrund wird weiter versucht, die Verbindung '
+                    'wiederherzustellen.',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onErrorContainer,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildLoadErrorCard(ThemeData theme) {
     return Card(
       child: Padding(
@@ -147,15 +194,18 @@ class _DashboardViewState extends State<DashboardView> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(
                   Icons.error_outline_rounded,
                   color: theme.colorScheme.error,
                 ),
                 const SizedBox(width: 12),
-                Text(
-                  'Torstatus konnte nicht geladen werden',
-                  style: theme.textTheme.titleLarge,
+                Expanded(
+                  child: Text(
+                    'Torstatus konnte nicht geladen werden',
+                    style: theme.textTheme.titleLarge,
+                  ),
                 ),
               ],
             ),
@@ -441,11 +491,21 @@ class _DashboardViewState extends State<DashboardView> {
         return;
       }
 
+      final recoveredFromOutage = _isBackendUnavailable;
       setState(() {
         _status = status;
         _loadError = null;
         _isLoading = false;
+        _isBackendUnavailable = false;
       });
+
+      if (recoveredFromOutage) {
+        showAppSnackBar(
+          context,
+          message: 'Verbindung zum Backend wiederhergestellt.',
+          withCloseAction: true,
+        );
+      }
     } on SessionExpiredException catch (error) {
       if (mounted) {
         setState(() {
@@ -463,10 +523,14 @@ class _DashboardViewState extends State<DashboardView> {
         _isLoading = false;
         if (_status == null) {
           _loadError = error.message;
+        } else {
+          _isBackendUnavailable = true;
         }
       });
 
-      if (!silent || showLoadErrorSnackBar) {
+      if (_status != null) {
+        _showBackendUnavailableOnce(error.message);
+      } else if (!silent || showLoadErrorSnackBar) {
         _showErrorSnackBar(error.message);
       }
     } on TimeoutException {
@@ -479,10 +543,14 @@ class _DashboardViewState extends State<DashboardView> {
         _isLoading = false;
         if (_status == null) {
           _loadError = message;
+        } else {
+          _isBackendUnavailable = true;
         }
       });
 
-      if (!silent || showLoadErrorSnackBar) {
+      if (_status != null) {
+        _showBackendUnavailableOnce(message);
+      } else if (!silent || showLoadErrorSnackBar) {
         _showErrorSnackBar(message);
       }
     } catch (_) {
@@ -495,10 +563,14 @@ class _DashboardViewState extends State<DashboardView> {
         _isLoading = false;
         if (_status == null) {
           _loadError = message;
+        } else {
+          _isBackendUnavailable = true;
         }
       });
 
-      if (!silent || showLoadErrorSnackBar) {
+      if (_status != null) {
+        _showBackendUnavailableOnce(message);
+      } else if (!silent || showLoadErrorSnackBar) {
         _showErrorSnackBar(message);
       }
     } finally {
@@ -595,6 +667,26 @@ class _DashboardViewState extends State<DashboardView> {
     showAppSnackBar(
       context,
       message: message,
+      isError: true,
+      withCloseAction: true,
+    );
+  }
+
+  void _showBackendUnavailableOnce(String message) {
+    if (!mounted || _isBackendUnavailable == false) {
+      return;
+    }
+
+    final wasAlreadyUnavailable = _loadError == message;
+    _loadError = message;
+    if (wasAlreadyUnavailable) {
+      return;
+    }
+
+    showAppSnackBar(
+      context,
+      message:
+          '$message Letzter bekannter Stand bleibt sichtbar, waehrend im Hintergrund neu verbunden wird.',
       isError: true,
       withCloseAction: true,
     );

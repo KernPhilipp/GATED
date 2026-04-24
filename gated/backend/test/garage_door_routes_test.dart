@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:gated_backend/auth/email_access_control.dart';
 import 'package:gated_backend/auth/jwt_service.dart';
 import 'package:gated_backend/db/database.dart';
 import 'package:gated_backend/garage_door/garage_door_service.dart';
@@ -18,6 +20,8 @@ void main() {
   late _FakeShellyRelayClient shellyClient;
   late GarageDoorService garageDoorService;
   late Handler handler;
+  late Directory tempDir;
+  late EmailAccessControlService accessControlService;
 
   void rebuildHandler({
     Duration startupDeterminationDuration = const Duration(milliseconds: 200),
@@ -40,14 +44,28 @@ void main() {
     );
 
     handler = Cascade()
-        .add(buildAuthRouter(db).call)
-        .add(buildGarageDoorRouter(garageDoorService, db).call)
+        .add(buildAuthRouter(db, accessControlService).call)
+        .add(
+          buildGarageDoorRouter(
+            garageDoorService,
+            db,
+            accessControlService,
+          ).call,
+        )
         .handler;
   }
 
   setUp(() {
     loadJwtEnv(overrideSecret: 'test-jwt-secret');
     db = DatabaseService.openInMemory();
+    tempDir = Directory.systemTemp.createTempSync('gated-garage-test-');
+    File('${tempDir.path}/allowed_emails.txt').writeAsStringSync('$email\n');
+    File('${tempDir.path}/admin_emails.txt').writeAsStringSync('');
+    accessControlService = EmailAccessControlService(
+      db: db,
+      allowedEmailsFilePath: '${tempDir.path}/allowed_emails.txt',
+      adminEmailsFilePath: '${tempDir.path}/admin_emails.txt',
+    );
     shellyClient = _FakeShellyRelayClient();
     rebuildHandler();
   });
@@ -56,6 +74,7 @@ void main() {
     garageDoorService.dispose();
     shellyClient.dispose();
     db.close();
+    tempDir.deleteSync(recursive: true);
   });
 
   test('initial state starts as determining and becomes closed', () async {

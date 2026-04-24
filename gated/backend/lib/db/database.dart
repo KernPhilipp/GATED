@@ -1,8 +1,27 @@
 import 'package:sqlite3/sqlite3.dart';
 
+enum DbUserRole { user, admin }
+
+extension DbUserRoleX on DbUserRole {
+  static DbUserRole fromWireName(String? value) {
+    return switch (value) {
+      'Admin' => DbUserRole.admin,
+      _ => DbUserRole.user,
+    };
+  }
+
+  String get wireName {
+    return switch (this) {
+      DbUserRole.user => 'User',
+      DbUserRole.admin => 'Admin',
+    };
+  }
+}
+
 class DbUser {
   final int id;
   final String email;
+  final DbUserRole role;
   final String passwordHash;
   final String salt;
   final String createdAt;
@@ -10,6 +29,7 @@ class DbUser {
   const DbUser({
     required this.id,
     required this.email,
+    required this.role,
     required this.passwordHash,
     required this.salt,
     required this.createdAt,
@@ -19,6 +39,7 @@ class DbUser {
     return DbUser(
       id: row['id'] as int,
       email: row['email'] as String,
+      role: DbUserRoleX.fromWireName(row['role'] as String?),
       passwordHash: row['password_hash'] as String,
       salt: row['password_salt'] as String,
       createdAt: row['created_at'] as String,
@@ -90,11 +111,14 @@ class DatabaseService {
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   email TEXT NOT NULL UNIQUE,
+  role TEXT NOT NULL DEFAULT 'User',
   password_hash TEXT NOT NULL,
   password_salt TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
 );
 ''');
+
+    _ensureUsersRoleColumn(db);
 
     db.execute('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);');
 
@@ -122,6 +146,18 @@ ON auth_sessions(expires_at);
 ''');
   }
 
+  static void _ensureUsersRoleColumn(Database db) {
+    final columns = db.select("PRAGMA table_info(users);");
+    final hasRoleColumn = columns.any((row) => row['name'] == 'role');
+    if (hasRoleColumn) {
+      return;
+    }
+
+    db.execute(
+      "ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'User';",
+    );
+  }
+
   void close() {
     db.close();
     if (identical(_instance, this)) {
@@ -131,15 +167,16 @@ ON auth_sessions(expires_at);
 
   Future<void> createUser({
     required String email,
+    required DbUserRole role,
     required String passwordHash,
     required String salt,
   }) async {
     final stmt = db.prepare('''
-INSERT INTO users (email, password_hash, password_salt)
-VALUES (?, ?, ?);
+INSERT INTO users (email, role, password_hash, password_salt)
+VALUES (?, ?, ?, ?);
 ''');
     try {
-      stmt.execute([email, passwordHash, salt]);
+      stmt.execute([email, role.wireName, passwordHash, salt]);
     } finally {
       stmt.close();
     }
@@ -147,7 +184,7 @@ VALUES (?, ?, ?);
 
   Future<DbUser?> getUserByEmail(String email) async {
     final stmt = db.prepare('''
-SELECT id, email, password_hash, password_salt, created_at
+SELECT id, email, role, password_hash, password_salt, created_at
 FROM users
 WHERE email = ?
 LIMIT 1;
@@ -165,7 +202,7 @@ LIMIT 1;
 
   Future<DbUser?> getUserById(int id) async {
     final stmt = db.prepare('''
-SELECT id, email, password_hash, password_salt, created_at
+SELECT id, email, role, password_hash, password_salt, created_at
 FROM users
 WHERE id = ?
 LIMIT 1;
@@ -176,6 +213,19 @@ LIMIT 1;
         return null;
       }
       return DbUser.fromRow(result.first);
+    } finally {
+      stmt.close();
+    }
+  }
+
+  Future<List<DbUser>> getAllUsers() async {
+    final stmt = db.prepare('''
+SELECT id, email, role, password_hash, password_salt, created_at
+FROM users
+ORDER BY email COLLATE NOCASE ASC;
+''');
+    try {
+      return stmt.select().map(DbUser.fromRow).toList();
     } finally {
       stmt.close();
     }
@@ -193,6 +243,35 @@ WHERE id = ?;
 ''');
     try {
       stmt.execute([passwordHash, salt, userId]);
+    } finally {
+      stmt.close();
+    }
+  }
+
+  Future<void> updateUserRole({
+    required int userId,
+    required DbUserRole role,
+  }) async {
+    final stmt = db.prepare('''
+UPDATE users
+SET role = ?
+WHERE id = ?;
+''');
+    try {
+      stmt.execute([role.wireName, userId]);
+    } finally {
+      stmt.close();
+    }
+  }
+
+  Future<bool> deleteUserById(int userId) async {
+    final stmt = db.prepare('''
+DELETE FROM users
+WHERE id = ?;
+''');
+    try {
+      stmt.execute([userId]);
+      return db.getUpdatedRows() > 0;
     } finally {
       stmt.close();
     }

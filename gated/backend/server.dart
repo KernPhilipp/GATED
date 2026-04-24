@@ -2,11 +2,13 @@ import 'dart:io';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart';
 import 'package:shelf_router/shelf_router.dart';
+import 'lib/auth/email_access_control.dart';
 import 'lib/auth/jwt_service.dart';
 import 'lib/db/database.dart';
 import 'lib/db/license_plate_database.dart';
 import 'lib/garage_door/garage_door_service.dart';
 import 'lib/middleware/cors.dart';
+import 'lib/routes/admin_routes.dart';
 import 'lib/routes/auth_routes.dart';
 import 'lib/routes/garage_door_routes.dart';
 import 'lib/routes/kennzeichen_routes.dart';
@@ -22,6 +24,14 @@ void main() async {
     'KENNZEICHEN_DB_PATH',
     defaultValue: 'kennzeichen.db',
   );
+  final allowedEmailsFilePath = _readStringFromEnv(
+    'ALLOWED_EMAILS_FILE',
+    defaultValue: 'allowed_emails.txt',
+  );
+  final adminEmailsFilePath = _readStringFromEnv(
+    'ADMIN_EMAILS_FILE',
+    defaultValue: 'admin_emails.txt',
+  );
 
   // For testing, you can use an in-memory database:
   // final db = DatabaseService.openInMemory();
@@ -29,6 +39,12 @@ void main() async {
   final kennzeichenDb = LicensePlateDatabaseService.open(
     path: kennzeichenDbPath,
   );
+  final accessControlService = EmailAccessControlService(
+    db: authDb,
+    allowedEmailsFilePath: allowedEmailsFilePath,
+    adminEmailsFilePath: adminEmailsFilePath,
+  );
+  await accessControlService.sync();
   final kennzeichenEventsBroker = KennzeichenEventsBroker();
   final garageDoorConfig = GarageDoorConfig.fromEnvironment();
   final garageDoorService = GarageDoorService(
@@ -42,14 +58,22 @@ void main() async {
   final healthRouter = Router()..get('/health', (_) => Response.ok('ok'));
   final apiHandler = Cascade()
       .add(healthRouter.call)
-      .add(buildAuthRouter(authDb).call)
-      .add(buildGarageDoorRouter(garageDoorService, authDb).call)
-      .add(kennzeichenEventsBroker.handler(authDb))
+      .add(buildAuthRouter(authDb, accessControlService).call)
+      .add(buildAdminRouter(authDb, accessControlService).call)
+      .add(
+        buildGarageDoorRouter(
+          garageDoorService,
+          authDb,
+          accessControlService,
+        ).call,
+      )
+      .add(kennzeichenEventsBroker.handler(authDb, accessControlService))
       .add(
         buildKennzeichenRouter(
           kennzeichenDb,
           authDb,
           kennzeichenEventsBroker,
+          accessControlService,
         ).call,
       )
       .handler;
@@ -59,7 +83,9 @@ void main() async {
   final server = await serve(handler, '0.0.0.0', port);
 
   stdout.writeln(
-    'Server running on port ${server.port} (auth db: $authDbPath, kennzeichen db: $kennzeichenDbPath)',
+    'Server running on port ${server.port} '
+    '(auth db: $authDbPath, kennzeichen db: $kennzeichenDbPath, '
+    'allowed emails: $allowedEmailsFilePath, admin emails: $adminEmailsFilePath)',
   );
 }
 

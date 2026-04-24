@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:gated_backend/auth/email_access_control.dart';
 import 'package:gated_backend/auth/jwt_service.dart';
 import 'package:gated_backend/auth/request_auth.dart';
 import 'package:gated_backend/db/database.dart';
@@ -15,15 +17,29 @@ void main() {
 
   late DatabaseService db;
   late Handler handler;
+  late Directory tempDir;
+  late EmailAccessControlService accessControlService;
 
   setUp(() {
     loadJwtEnv(overrideSecret: 'test-jwt-secret');
     db = DatabaseService.openInMemory();
+    tempDir = Directory.systemTemp.createTempSync('gated-auth-test-');
+    File('${tempDir.path}/allowed_emails.txt').writeAsStringSync('$email\n');
+    File('${tempDir.path}/admin_emails.txt').writeAsStringSync('');
+    accessControlService = EmailAccessControlService(
+      db: db,
+      allowedEmailsFilePath: '${tempDir.path}/allowed_emails.txt',
+      adminEmailsFilePath: '${tempDir.path}/admin_emails.txt',
+    );
 
     final protectedRouter = Router()
       ..get('/protected', (Request request) async {
         try {
-          final authContext = await authenticateRequest(request, db);
+          final authContext = await authenticateRequest(
+            request,
+            db,
+            accessControlService,
+          );
           return Response.ok(
             jsonEncode({'uid': authContext.user.id}),
             headers: {'Content-Type': 'application/json'},
@@ -34,13 +50,14 @@ void main() {
       });
 
     handler = Cascade()
-        .add(buildAuthRouter(db).call)
+        .add(buildAuthRouter(db, accessControlService).call)
         .add(protectedRouter.call)
         .handler;
   });
 
   tearDown(() {
     db.close();
+    tempDir.deleteSync(recursive: true);
   });
 
   test('login returns access and refresh tokens', () async {
@@ -167,6 +184,25 @@ void main() {
       'password': newPassword,
     });
     expect(newPasswordLogin.statusCode, 200);
+  });
+
+  test('/auth/me returns the current role', () async {
+    File('${tempDir.path}/admin_emails.txt').writeAsStringSync('$email\n');
+    await accessControlService.sync();
+    await _register(handler, email: email, password: password);
+    final session = await _login(handler, email: email, password: password);
+
+    final response = await _send(
+      handler,
+      'GET',
+      '/auth/me',
+      headers: {'Authorization': 'Bearer ${session.accessToken}'},
+    );
+
+    expect(response.statusCode, 200);
+    final body = await _readJson(response);
+    expect(body['email'], email);
+    expect(body['role'], 'Admin');
   });
 }
 

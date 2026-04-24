@@ -6,6 +6,7 @@ import 'package:shelf_web_socket/shelf_web_socket.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+import '../auth/email_access_control.dart';
 import '../auth/request_auth.dart';
 import '../db/database.dart';
 import '../db/license_plate_database.dart';
@@ -16,10 +17,11 @@ Router buildKennzeichenRouter(
   LicensePlateDatabaseService db,
   DatabaseService authDb,
   KennzeichenEventsBroker eventsBroker,
+  EmailAccessControlService accessControlService,
 ) => Router()
   ..get('/kennzeichen', (Request request) async {
     try {
-      await authenticateRequest(request, authDb);
+      await authenticateRequest(request, authDb, accessControlService);
       final entries = await db.getAllTeacherLicensePlates();
       return Response.ok(
         jsonEncode({'items': entries.map((entry) => entry.toJson()).toList()}),
@@ -46,7 +48,7 @@ Router buildKennzeichenRouter(
     }
 
     try {
-      await authenticateRequest(request, authDb);
+      await authenticateRequest(request, authDb, accessControlService);
       final created = await db.createTeacherLicensePlate(
         teacherName: teacherName,
         licensePlate: licensePlate.toUpperCase(),
@@ -88,7 +90,7 @@ Router buildKennzeichenRouter(
     }
 
     try {
-      await authenticateRequest(request, authDb);
+      await authenticateRequest(request, authDb, accessControlService);
       final updated = await db.updateTeacherLicensePlate(
         id: parsedId,
         teacherName: teacherName,
@@ -117,7 +119,7 @@ Router buildKennzeichenRouter(
     }
 
     try {
-      await authenticateRequest(request, authDb);
+      await authenticateRequest(request, authDb, accessControlService);
       final deleted = await db.deleteTeacherLicensePlate(parsedId);
       if (!deleted) {
         return Response.notFound('Not found');
@@ -171,7 +173,10 @@ bool _isUniqueConstraint(SqliteException error) {
 class KennzeichenEventsBroker {
   final Set<WebSocketChannel> _clients = <WebSocketChannel>{};
 
-  Handler handler(DatabaseService authDb) {
+  Handler handler(
+    DatabaseService authDb,
+    EmailAccessControlService accessControlService,
+  ) {
     final webSocket = webSocketHandler((channel, _) {
       _clients.add(channel);
       channel.stream.listen(
@@ -201,6 +206,7 @@ class KennzeichenEventsBroker {
             },
           ),
           authDb,
+          accessControlService,
         );
       } on RequestAuthenticationException catch (error) {
         return error.response;

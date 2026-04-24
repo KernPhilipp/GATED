@@ -4,8 +4,11 @@ import 'package:flutter/material.dart';
 
 import '../features/navbar/navbar.dart';
 import '../features/pwa/pwa_install_controller.dart';
+import '../services/admin_service.dart';
 import '../services/auth_service.dart';
+import '../services/email_draft_service.dart';
 import '../utils/snackbar_utils.dart';
+import '../views/admin_view.dart';
 import '../views/dashboard_view.dart';
 import '../views/kennzeichen_view.dart';
 import '../views/profile_view.dart';
@@ -16,30 +19,51 @@ class HomeScreen extends StatefulWidget {
     super.key,
     required this.onThemeModeChanged,
     required this.pwaInstallController,
-  });
+    AuthService? authService,
+    AdminService? adminService,
+    EmailDraftService? emailDraftService,
+    Widget Function(bool isActive)? dashboardViewBuilder,
+    Widget Function(bool isActive)? kennzeichenViewBuilder,
+    Widget? profileView,
+    Widget? settingsView,
+  }) : _authService = authService,
+       _adminService = adminService,
+       _emailDraftService = emailDraftService,
+       _dashboardViewBuilder = dashboardViewBuilder,
+       _kennzeichenViewBuilder = kennzeichenViewBuilder,
+       _profileView = profileView,
+       _settingsView = settingsView;
 
   final ValueChanged<ThemeMode> onThemeModeChanged;
   final PwaInstallController pwaInstallController;
+  final AuthService? _authService;
+  final AdminService? _adminService;
+  final EmailDraftService? _emailDraftService;
+  final Widget Function(bool isActive)? _dashboardViewBuilder;
+  final Widget Function(bool isActive)? _kennzeichenViewBuilder;
+  final Widget? _profileView;
+  final Widget? _settingsView;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final _authService = const AuthService();
+  late final AuthService _authService;
+  late final AdminService _adminService;
+  late final EmailDraftService _emailDraftService;
   int _selectedIndex = 0;
-
-  final List<({String label, IconData icon})> _navItems = [
-    (label: 'Dashboard', icon: Icons.dashboard_rounded),
-    (label: 'Kennzeichen', icon: Icons.view_list_rounded),
-    (label: 'Profil', icon: Icons.person_rounded),
-    (label: 'Einstellungen', icon: Icons.settings_rounded),
-  ];
+  AuthUser? _currentUser;
 
   @override
   void initState() {
     super.initState();
-    unawaited(_authService.prefetchCurrentUser());
+    _authService = widget._authService ?? const AuthService();
+    _adminService =
+        widget._adminService ?? AdminService(authService: _authService);
+    _emailDraftService = widget._emailDraftService ?? const EmailDraftService();
+    _currentUser = _authService.cachedCurrentUser;
+    unawaited(_loadCurrentUser());
   }
 
   @override
@@ -47,25 +71,15 @@ class _HomeScreenState extends State<HomeScreen> {
     final width = MediaQuery.of(context).size.width;
     final isPhone = width < 500;
     final banner = _buildInstallBanner(context);
+    final navItems = _navItems;
+    final currentSelectedIndex = _selectedIndex >= navItems.length
+        ? navItems.length - 1
+        : _selectedIndex;
+    final children = _buildChildren(currentSelectedIndex);
 
     final content = _HomeContent(
-      selectedIndex: _selectedIndex,
-      children: [
-        DashboardView(
-          key: const ValueKey('dashboard-view'),
-          isActive: _selectedIndex == 0,
-        ),
-        KennzeichenView(
-          key: const ValueKey('kennzeichen-view'),
-          isActive: _selectedIndex == 1,
-        ),
-        const ProfileView(key: ValueKey('profile-view')),
-        SettingsView(
-          key: const ValueKey('settings-view'),
-          onThemeModeChanged: widget.onThemeModeChanged,
-          pwaInstallController: widget.pwaInstallController,
-        ),
-      ],
+      selectedIndex: currentSelectedIndex,
+      children: children,
     );
 
     return Scaffold(
@@ -79,8 +93,8 @@ class _HomeScreenState extends State<HomeScreen> {
           : Row(
               children: [
                 NavigationSidebar(
-                  items: _navItems,
-                  selectedIndex: _selectedIndex,
+                  items: navItems,
+                  selectedIndex: currentSelectedIndex,
                   onTap: _onNavTap,
                 ),
                 Expanded(
@@ -123,10 +137,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 }),
               ),
               child: NavigationBar(
-                selectedIndex: _selectedIndex,
+                selectedIndex: currentSelectedIndex,
                 onDestinationSelected: _onNavTap,
                 destinations: [
-                  for (final item in _navItems)
+                  for (final item in navItems)
                     NavigationDestination(
                       icon: Icon(item.icon),
                       label: item.label,
@@ -140,6 +154,80 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _onNavTap(int index) {
     setState(() => _selectedIndex = index);
+  }
+
+  Future<void> _loadCurrentUser() async {
+    try {
+      final user = await _authService.getCurrentUser();
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _currentUser = user;
+        if (_selectedIndex >= _buildChildrenCount(user)) {
+          _selectedIndex = _buildChildrenCount(user) - 1;
+        }
+      });
+    } catch (_) {
+      // Navigation falls back to the non-admin tabs if the profile is unavailable.
+    }
+  }
+
+  List<({String label, IconData icon})> get _navItems {
+    final items = <({String label, IconData icon})>[
+      (label: 'Dashboard', icon: Icons.dashboard_rounded),
+      (label: 'Kennzeichen', icon: Icons.view_list_rounded),
+      (label: 'Profil', icon: Icons.person_rounded),
+    ];
+
+    if (_currentUser?.role == AuthUserRole.admin) {
+      items.add((label: 'Admin', icon: Icons.admin_panel_settings_rounded));
+    }
+
+    items.add((label: 'Einstellungen', icon: Icons.settings_rounded));
+    return items;
+  }
+
+  List<Widget> _buildChildren(int selectedIndex) {
+    final children = <Widget>[
+      widget._dashboardViewBuilder?.call(selectedIndex == 0) ??
+          DashboardView(
+            key: const ValueKey('dashboard-view'),
+            isActive: selectedIndex == 0,
+          ),
+      widget._kennzeichenViewBuilder?.call(selectedIndex == 1) ??
+          KennzeichenView(
+            key: const ValueKey('kennzeichen-view'),
+            isActive: selectedIndex == 1,
+          ),
+      widget._profileView ?? const ProfileView(key: ValueKey('profile-view')),
+    ];
+
+    if (_currentUser?.role == AuthUserRole.admin) {
+      children.add(
+        AdminView(
+          key: const ValueKey('admin-view'),
+          adminService: _adminService,
+          emailDraftService: _emailDraftService,
+        ),
+      );
+    }
+
+    children.add(
+      widget._settingsView ??
+          SettingsView(
+            key: const ValueKey('settings-view'),
+            onThemeModeChanged: widget.onThemeModeChanged,
+            pwaInstallController: widget.pwaInstallController,
+          ),
+    );
+
+    return children;
+  }
+
+  int _buildChildrenCount(AuthUser user) {
+    return user.role == AuthUserRole.admin ? 5 : 4;
   }
 
   Widget _buildInstallBanner(BuildContext context) {

@@ -1,36 +1,8 @@
 ToDo
 
-UI und UX
-
-- Die Versionsnummer in "Ueber GATED" soll nicht hart codiert sein, sondern direkt aus der tatsaechlichen App-Version geladen werden.
-- Der Hover-Schatten von Buttons soll an die abgerundete Button-Form angepasst werden und nicht mehr eckig wirken.
-- Rote Warnungen unter Eingabefeldern, zum Beispiel "Bitte Email eingeben", sollen erst sichtbar werden, nachdem das Feld bereits verwendet oder angeklickt wurde.
-- Der Bereich "Passwort vergessen?" soll vereinfacht werden. Statt eines reinen Hinweises auf Ansprechpartner soll eine Option angeboten werden, die sofort eine vorgefertigte Email an "philipp.kern.student@htl-hallein.at" oeffnet.
-- Beim "Passwort vergessen?"-Ablauf soll klar darauf hingewiesen werden, dass diese Email mit jener Email-Adresse gesendet werden muss, die mit dem GATED-Account verknuepft ist.
-
-Anmeldung, Backend und Stabilitaet
-
-- Gespeicherte Anmeldedaten duerfen nicht dazu fuehren, dass der Login-Screen uebersprungen wird, wenn das Backend nicht erreichbar ist. In diesem Fall soll immer der Login-Screen angezeigt werden.
-- Wenn das Backend waehrend der Nutzung nicht erreichbar ist, soll die Dashboardansicht stabil bleiben. Die Fehlermeldung und das Loading-Icon sollen nicht laufend neu aufgebaut werden.
-- Die UI soll sich bei Verbindungsverlust erst dann sichtbar aendern, wenn das Backend tatsaechlich wieder erreichbar ist. Im Hintergrund darf weiterhin regelmaessig nach dem Backend gesucht werden.
-
-Benutzer- und Adminverwaltung
-
-- Eine Admin-Ansicht in GATED waere sinnvoll, um Benutzerdaten zentral verwalten zu koennen.
-- Diese Admin-Ansicht soll nur fuer zugelassene Admins verfuegbar sein.
-- Der Aufbau der Admin-Ansicht soll sich an der "kennzeichen_view.dart" orientieren, also ebenfalls eine Tabelle verwenden, diesmal jedoch fuer Benutzerdaten.
-- Die zugelassenen Email-Adressen sollen nicht mehr hart codiert sein, sondern ueber eine externe .txt-Datei verwaltet und ausgelesen werden.
-- Wenn eine Email-Adresse aus der Liste der zugelassenen Email-Adressen entfernt wird, soll auch der verknuepfte Account geloescht werden. Ein Bestaetigungsdialog soll versehentliches Loeschen verhindern.
-- Admins sollen nicht durch andere Admins bearbeitet oder geloescht werden koennen.
-- Admins sollen nur dann automatisch entfernt werden, wenn ihre Email-Adresse nicht mehr in der vorgesehenen .txt-Datei enthalten ist.
-- Die wichtige .txt-Datei fuer Admins soll in die .gitignore aufgenommen werden. Zusaetzlich sollen Beispiel-Dateien bereitgestellt werden, aehnlich wie bei den .env-Dateien.
-- In der Benutzerdatenbank soll ein Rollenfeld eingefuehrt werden, zum Beispiel mit den Werten "User" und "Admin".
-- Admins sollen aus der Tabelle heraus eine vorgefertigte Email an Benutzer senden koennen, die deren Email-Adresse und Passwort enthaelt.
-
 Dokumentation und Betrieb
 
-- Die vorhandenen README-Dateien sollen bei Bedarf aktualisiert werden.
-- Es soll geprueft werden, ob alte Versionen auf den Geraeten, zum Beispiel auf dem Raspberry Pi, beim Update vollstaendig entfernt und durch neue Versionen ersetzt werden.
+- Auf dem Raspberry Pi nach einem echten Release-Update pruefen, dass der `current`-Symlink auf die neue Version zeigt und alte Releases nur als Rollback-Fenster verbleiben.
 
 Hinweis bei Ausfuehrung mit
 "flutter run -d web-server --web-hostname 0.0.0.0 --web-port 8080 --release":

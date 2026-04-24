@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+
 import '../features/logo_assets.dart';
 import '../features/pwa/pwa_install_controller.dart';
+import '../services/app_metadata_service.dart';
 import '../services/auth_service.dart';
 import '../utils/snackbar_utils.dart';
 
@@ -10,10 +12,12 @@ class SettingsView extends StatefulWidget {
     super.key,
     required this.onThemeModeChanged,
     required this.pwaInstallController,
+    this.appMetadataService,
   });
 
   final ValueChanged<ThemeMode> onThemeModeChanged;
   final PwaInstallController pwaInstallController;
+  final AppMetadataService? appMetadataService;
 
   @override
   State<SettingsView> createState() => _SettingsViewState();
@@ -21,6 +25,16 @@ class SettingsView extends StatefulWidget {
 
 class _SettingsViewState extends State<SettingsView> {
   final _authService = const AuthService();
+  late final AppMetadataService _appMetadataService;
+  String? _applicationVersion;
+
+  @override
+  void initState() {
+    super.initState();
+    _appMetadataService =
+        widget.appMetadataService ?? const AppMetadataService();
+    _loadApplicationVersion();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +73,7 @@ class _SettingsViewState extends State<SettingsView> {
           Card(
             child: ListTile(
               leading: const Icon(Icons.info_outline_rounded),
-              title: const Text('Über GATED'),
+              title: const Text('Ueber GATED'),
               subtitle: const Text('App-Informationen anzeigen'),
               onTap: _showAboutDialog,
             ),
@@ -101,16 +115,45 @@ class _SettingsViewState extends State<SettingsView> {
   void _showAboutDialog() {
     final logoAsset = getFullLogoAsset(Theme.of(context).brightness);
 
-    showAboutDialog(
+    showDialog<void>(
       context: context,
-      applicationName: 'GATED',
-      applicationVersion: '1.0.0',
-      applicationIcon: Image.asset(logoAsset, width: 60, fit: BoxFit.contain),
-      children: const [
-        Text('Developed by Philipp Kern, Tobias Halwax and Felix Haader.'),
-        Text('Powered by HTL Hallein.'),
-      ],
+      builder: (context) {
+        return AboutDialog(
+          applicationName: 'GATED',
+          applicationVersion: _applicationVersion ?? 'Version wird geladen...',
+          applicationIcon: Image.asset(
+            logoAsset,
+            width: 60,
+            fit: BoxFit.contain,
+          ),
+          children: const [
+            Text('Developed by Philipp Kern, Tobias Halwax and Felix Haader.'),
+            Text('Powered by HTL Hallein.'),
+          ],
+        );
+      },
     );
+  }
+
+  Future<void> _loadApplicationVersion() async {
+    try {
+      final applicationVersion = await _appMetadataService.loadAppVersion();
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _applicationVersion = applicationVersion;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _applicationVersion = 'Unbekannt';
+      });
+    }
   }
 
   Future<void> _handleLogout() async {

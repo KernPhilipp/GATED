@@ -1,0 +1,4 @@
+# One allowed user email per line.
+philipp.kern.student@htl-hallein.at
+tobi.halwax@icloud.com
+felix.haader.student@htl-hallein.at

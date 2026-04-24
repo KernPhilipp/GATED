@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gated/screens/login_screen.dart';
 import 'package:gated/screens/register_screen.dart';
 import 'package:gated/services/auth_service.dart';
+import 'package:gated/services/email_draft_service.dart';
 
 void main() {
   testWidgets('login keeps warnings hidden until a field is touched', (
@@ -88,6 +89,46 @@ void main() {
     expect(find.text('Bitte E-Mail eingeben.'), findsOneWidget);
     expect(find.text('Bitte Passwort eingeben.'), findsOneWidget);
   });
+
+  testWidgets('forgot-password opens a prepared email draft', (tester) async {
+    final emailDraftService = _FakeEmailDraftService();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        routes: {
+          '/home': (_) => const Scaffold(body: Text('home')),
+          '/register': (_) => const Scaffold(body: Text('register')),
+        },
+        home: LoginScreen(
+          authService: _FakeLoginAuthService(),
+          emailDraftService: emailDraftService,
+        ),
+      ),
+    );
+
+    await tester.enterText(
+      find.byType(TextFormField).first,
+      'user@example.com',
+    );
+    await tester.ensureVisible(find.text('Passwort vergessen?'));
+    await tester.tap(find.text('Passwort vergessen?'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('E-Mail oeffnen'), findsOneWidget);
+    await tester.tap(find.text('E-Mail oeffnen'));
+    await tester.pumpAndSettle();
+
+    expect(emailDraftService.lastDraft, isNotNull);
+    expect(
+      emailDraftService.lastDraft!.to,
+      'philipp.kern.student@htl-hallein.at',
+    );
+    expect(emailDraftService.lastDraft!.body, contains('user@example.com'));
+    expect(
+      emailDraftService.lastDraft!.body,
+      contains('mit meinem GATED-Account verknuepften Adresse'),
+    );
+  });
 }
 
 class _FakeLoginAuthService extends AuthService {
@@ -112,4 +153,14 @@ class _FakeRegisterAuthService extends AuthService {
     required String email,
     required String password,
   }) async {}
+}
+
+class _FakeEmailDraftService extends EmailDraftService {
+  EmailDraft? lastDraft;
+
+  @override
+  Future<bool> openDraft(EmailDraft draft) async {
+    lastDraft = draft;
+    return true;
+  }
 }

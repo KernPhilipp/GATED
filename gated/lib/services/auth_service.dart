@@ -10,6 +10,7 @@ class AuthUser {
   const AuthUser({
     required this.id,
     required this.email,
+    required this.role,
     required this.createdAt,
   });
 
@@ -22,13 +23,33 @@ class AuthUser {
     return AuthUser(
       id: json['uid'] as int,
       email: json['email'] as String,
+      role: AuthUserRoleX.fromWireName(json['role'] as String?),
       createdAt: createdAt,
     );
   }
 
   final int id;
   final String email;
+  final AuthUserRole role;
   final DateTime? createdAt;
+}
+
+enum AuthUserRole { user, admin }
+
+extension AuthUserRoleX on AuthUserRole {
+  static AuthUserRole fromWireName(String? value) {
+    return switch (value) {
+      'Admin' => AuthUserRole.admin,
+      _ => AuthUserRole.user,
+    };
+  }
+
+  String get wireName {
+    return switch (this) {
+      AuthUserRole.user => 'User',
+      AuthUserRole.admin => 'Admin',
+    };
+  }
 }
 
 class AuthService {
@@ -206,9 +227,9 @@ class AuthService {
       await clearTokens();
       return false;
     } on AuthException {
-      return true;
+      return false;
     } catch (_) {
-      return true;
+      return false;
     }
   }
 

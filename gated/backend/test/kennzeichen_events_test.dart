@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:async/async.dart';
+import 'package:gated_backend/auth/email_access_control.dart';
 import 'package:gated_backend/auth/jwt_service.dart';
 import 'package:gated_backend/db/database.dart';
 import 'package:gated_backend/db/license_plate_database.dart';
@@ -21,20 +22,31 @@ void main() {
   late Handler kennzeichenHandler;
   late KennzeichenEventsBroker eventsBroker;
   HttpServer? webSocketServer;
+  late Directory tempDir;
+  late EmailAccessControlService accessControlService;
 
   setUp(() async {
     loadJwtEnv(overrideSecret: 'test-jwt-secret');
     authDb = DatabaseService.openInMemory();
     kennzeichenDb = LicensePlateDatabaseService.openInMemory();
-    authHandler = buildAuthRouter(authDb).call;
+    tempDir = Directory.systemTemp.createTempSync('gated-kennzeichen-test-');
+    File('${tempDir.path}/allowed_emails.txt').writeAsStringSync('$email\n');
+    File('${tempDir.path}/admin_emails.txt').writeAsStringSync('');
+    accessControlService = EmailAccessControlService(
+      db: authDb,
+      allowedEmailsFilePath: '${tempDir.path}/allowed_emails.txt',
+      adminEmailsFilePath: '${tempDir.path}/admin_emails.txt',
+    );
+    authHandler = buildAuthRouter(authDb, accessControlService).call;
     eventsBroker = KennzeichenEventsBroker();
     kennzeichenHandler = buildKennzeichenRouter(
       kennzeichenDb,
       authDb,
       eventsBroker,
+      accessControlService,
     ).call;
     webSocketServer = await shelf_io.serve(
-      eventsBroker.handler(authDb),
+      eventsBroker.handler(authDb, accessControlService),
       InternetAddress.loopbackIPv4,
       0,
     );
@@ -45,6 +57,7 @@ void main() {
     await webSocketServer?.close(force: true);
     kennzeichenDb.close();
     authDb.close();
+    tempDir.deleteSync(recursive: true);
   });
 
   test('websocket broadcasts create, update, and delete events', () async {
