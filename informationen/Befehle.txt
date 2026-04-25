@@ -1,61 +1,62 @@
-Befehle
+GATED - Befehle
 
-Allgemeines Setup
-
-flutter clean
-flutter upgrade
+1) Projekt vorbereiten
+----------------------
+cd gated
 flutter doctor -v
+flutter upgrade
+flutter clean
 flutter pub get
 
-Assets und Icons
+cd gated/backend
+dart pub get
 
-dart run flutter_launcher_icons
-
-Backend
-
-Hinweis: Diese Befehle im Ordner `gated\backend` ausfuehren.
-
+2) Lokal starten
+----------------
+cd gated/backend
 dart run server.dart
 
-Web auf dem PC
-
-Hinweis: Diese Befehle im Ordner `gated` ausfuehren.
-
+cd gated
 flutter run -d web-server --web-hostname 0.0.0.0 --web-port 8080 --release
-http://127.0.0.1:8080
 
-Smartphone per USB
-
+3) Smartphone per USB
+---------------------
 adb reverse tcp:8080 tcp:8080
 adb reverse tcp:8091 tcp:8091
+
+Frontend:
 http://127.0.0.1:8080
 
-App-Name und Bundle-ID
+4) Tests und Analyse
+--------------------
+cd gated
+flutter analyze
+flutter test
+
+cd gated/backend
+dart analyze
+dart test
+
+5) Assets und App-Metadaten
+---------------------------
+cd gated
+dart run flutter_launcher_icons
 
 dart pub global run rename
-
-Android
 dart pub global run rename setAppName --targets android,ios,web,windows,macos,linux --value "GATED"
+
 dart pub global run rename getBundleId --targets android
 dart pub global run rename setBundleId --targets android --value "com.example.gated"
 
-iOS
 dart pub global run rename getBundleId --targets ios
 dart pub global run rename setBundleId --targets ios --value "com.example.gated"
 
-Windows
 dart pub global run rename getBundleId --targets windows
 dart pub global run rename setBundleId --targets windows --value "gated"
 
-macOS
 dart pub global run rename getBundleId --targets macos
 dart pub global run rename setBundleId --targets macos --value "com.example.gated"
 
-Skripte
-
-powershell -ExecutionPolicy Bypass -File .\Update-GatedTerminplan.ps1
-
-Hinweise
-
-- Environment-Dateien mit deren Secrets niemals committen.
-- Lokale Datenbanken nicht committen.
+6) Lokale Diagnose
+------------------
+curl http://127.0.0.1:8091/health

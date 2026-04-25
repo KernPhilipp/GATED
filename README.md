@@ -2,22 +2,28 @@
 
 Garage Access Technology for Entry Detection
 
-## Backend access
+GATED ist eine Flutter-Web-App fuer Garagenzugang, Kennzeichenverwaltung und
+Torsteuerung im lokalen Netzwerk.
 
-The backend reads allowed users from a text file and derives the single admin
-account from `PRIMARY_ADMIN_EMAIL`:
+## Bestandteile
 
-- `gated/backend/allowed_emails.example.txt`
+- `gated`: Flutter Frontend
+- `gated/backend`: Dart Shelf Backend
+- `deploy`: Raspberry Pi Deployment
+- `informationen`: interne Projekt- und Betriebsnotizen
 
-Local development can either create the real ignored files
-`allowed_emails.txt` next to the backend `.env`, or rely on the example file as
-a fallback.
+## Kernfunktionen
 
-## Admin area
+- Login und Registrierung ueber erlaubte E-Mail-Adressen
+- Adminbereich fuer Nutzer und erlaubte E-Mails
+- Kennzeichenverwaltung mit Live-Aktualisierung
+- Dashboard fuer Garagentorstatus und Torsteuerung
 
-The Admin tab manages allowed user emails and registered accounts. The primary
-admin is visible in the table but cannot be edited or deleted. Resetting a user
-password creates a temporary password and opens a prepared email draft for the
-affected user.
+## Weiterfuehrende Doku
 
-Deployment docs for Raspberry Pi are available in `deploy/README.md`.
+- Lokale Befehle: `informationen/Befehle.txt`
+- Projektfakten: `informationen/Informationen.txt`
+- Raspberry Pi Setup: `informationen/PiSetupBefehle.txt`
+- Deployment-Konzept: `deploy/README.md`
+
+Echte Secrets, lokale Datenbanken und Runtime-Dateien werden nicht committed.

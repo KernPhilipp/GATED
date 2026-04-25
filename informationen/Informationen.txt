@@ -1,6 +1,42 @@
-Informationen
+GATED - Informationen
 
-Technische Hinweise
+1) Zweck
+--------
+GATED ist eine lokale Web/PWA-Loesung fuer Garagenzugang, Kennzeichenverwaltung
+und Torsteuerung.
 
-Shelly-Schaltbefehl:
+2) Architektur
+--------------
+- Frontend: Flutter in `gated`
+- Backend: Dart Shelf in `gated/backend`
+- Daten: SQLite und `allowed_emails.txt`
+- Betrieb: Raspberry Pi, nginx, systemd, GitHub Releases
+
+3) Ports
+--------
+- Lokales Frontend: 8080
+- Backend: 8091
+- Pi-Frontend: 8090
+- Produktion: Frontend nutzt `/api`, nginx proxyt an das Backend
+
+4) Wichtige Funktionen
+----------------------
+- Login und Registrierung
+- Adminbereich fuer Nutzer und erlaubte E-Mails
+- Primaerer Admin ueber `PRIMARY_ADMIN_EMAIL`
+- Passwort-Reset mit vorbereitetem E-Mail-Entwurf
+- Kennzeichenverwaltung mit Live-Events
+- Garagentorstatus und Torsteuerung
+
+5) Runtime-Daten
+----------------
+Lokale Runtime-Dateien liegen im Backend-Ordner und bleiben uncommitted.
+Produktive Runtime-Dateien liegen auf dem Pi unter:
+
+`/home/gated/gated-frontend/shared/`
+
+6) Shelly
+---------
+Bekannter Schaltbefehl:
+
 http://192.168.0.102/rpc/Switch.Set?id=0&on=true&toggle_after=1

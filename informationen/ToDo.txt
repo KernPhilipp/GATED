@@ -1,9 +1,19 @@
-ToDo
+GATED - ToDo
 
-Dokumentation und Betrieb
+1) Autofill
+-----------
+- Flutter Issue beobachten: https://github.com/flutter/flutter/issues/185327
+- Danach Autofill fuer Login und Registrierung sauber implementieren.
+- Auf Web, Android und PWA testen.
 
-- Auf dem Raspberry Pi nach einem echten Release-Update pruefen, dass der `current`-Symlink auf die neue Version zeigt und alte Releases nur als Rollback-Fenster verbleiben.
-- Die README.md sind derzeit teilweise outdated.
-- GitHub CI ist fehlgeschlagen.
-- Der Ordner "informationen" samt dessen Dateien muss umstrukturiert bzw. umgeschrieben werden.
-- Tests an den derzeitigen Code-Stand anpassen.
+2) Release und Betrieb
+----------------------
+- Nach Releases `current`-Symlink und Rollback-Fenster pruefen.
+- Produktiven Release-Tag dokumentieren.
+- Smoke Check nach Deploy durchfuehren.
+
+3) Systemlogik
+--------------
+- Tor-Zustandswechsel gegen schnelle Folgeereignisse absichern.
+- Verhalten bei zwei gueltigen Kennzeichen kurz hintereinander festlegen.
+- Noetige Rueckmeldungen aus Kennzeichenerkennung/Node-RED klaeren.
