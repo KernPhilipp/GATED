@@ -17,3 +17,10 @@ GATED - ToDo
 - Tor-Zustandswechsel gegen schnelle Folgeereignisse absichern.
 - Verhalten bei zwei gueltigen Kennzeichen kurz hintereinander festlegen.
 - Noetige Rueckmeldungen aus Kennzeichenerkennung/Node-RED klaeren.
+
+4) UI
+-----
+- Die Icons im Web müssen je nach Plattform angepasst werden.
+- Auch die Splashscreens müssen je nach Plattform angepasst werden.
+- Wie verhalten sich WebApps, wenn die Logos verändert werden?
+- Wieso wirken die Logos auf dem Smartphone clean, während sie auf dem PC verpixelt wirken?
