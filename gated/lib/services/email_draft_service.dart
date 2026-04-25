@@ -12,11 +12,15 @@ class EmailDraft {
   final String body;
 
   Uri toUri() {
-    return Uri(
-      scheme: 'mailto',
-      path: to,
-      queryParameters: {'subject': subject, 'body': body},
-    );
+    final query = {'subject': subject, 'body': body}.entries
+        .map((entry) {
+          final key = Uri.encodeComponent(entry.key);
+          final value = Uri.encodeComponent(entry.value);
+          return '$key=$value';
+        })
+        .join('&');
+
+    return Uri(scheme: 'mailto', path: to, query: query);
   }
 }
 

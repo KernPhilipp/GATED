@@ -240,14 +240,14 @@ class _LoginScreenState extends State<LoginScreen> {
     final opened = await _emailDraftService.openDraft(
       EmailDraft(
         to: 'philipp.kern.student@htl-hallein.at',
-        subject: 'GATED Passwort vergessen',
+        subject: 'GATED-Passwort zuruecksetzen',
         body:
-            'Hallo,\n\n'
-            'ich habe mein GATED-Passwort vergessen und bitte um einen Reset.\n'
-            'Diese E-Mail wird von der mit meinem GATED-Account verknuepften '
-            'Adresse gesendet.\n\n'
-            'GATED-E-Mail-Adresse: ${_emailController.text.trim()}\n\n'
-            'Vielen Dank.',
+            'Sehr geehrter Herr Kern,\n\n'
+            'ich bitte um die Zuruecksetzung meines GATED-Passworts.\n'
+            'Diese Anfrage wird von der E-Mail-Adresse gesendet, die mit '
+            'meinem GATED-Account verknuepft ist.\n\n'
+            'Vielen Dank im Voraus.\n\n'
+            'Mit freundlichen Gruessen',
       ),
     );
 

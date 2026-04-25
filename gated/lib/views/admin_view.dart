@@ -364,15 +364,18 @@ class _AdminViewState extends State<AdminView> {
       final draftOpened = await widget.emailDraftService.openDraft(
         EmailDraft(
           to: result.email,
-          subject: 'GATED Zugangsdaten',
+          subject: 'GATED-Zugangsdaten',
           body:
-              'Hallo,\n\n'
-              'dein GATED-Zugang wurde von einem Administrator aktualisiert.\n\n'
+              'Sehr geehrter GATED-User,\n\n'
+              'Ihr GATED-Zugang wurde von mir aktualisiert.\n\n'
               'E-Mail-Adresse: ${result.email}\n'
               'Temporaeres Passwort: ${result.temporaryPassword}\n\n'
-              'Bitte melde dich damit an und aendere dein Passwort anschliessend '
+              'Bitte melden Sie sich mit diesen Zugangsdaten an und aendern '
+              'Sie Ihr Passwort anschliessend '
               'direkt in GATED.\n\n'
-              'Viele Gruesse',
+              'Mit freundlichen Gruessen\n'
+              'Philipp Kern\n'
+              'Administrator'
         ),
       );
 

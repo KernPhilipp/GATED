@@ -228,6 +228,10 @@ void main() {
     expect(emailDraftService.lastDraft, isNotNull);
     expect(emailDraftService.lastDraft!.to, 'user@example.com');
     expect(emailDraftService.lastDraft!.body, contains('Temporaeres Passwort'));
+    expect(
+      emailDraftService.lastDraft!.body,
+      contains('Mit freundlichen Gruessen'),
+    );
     expect(emailDraftService.lastDraft!.body, contains('Temp123!'));
     await tester.pump(const Duration(seconds: 4));
     await tester.binding.setSurfaceSize(null);

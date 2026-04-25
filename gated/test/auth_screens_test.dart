@@ -126,7 +126,7 @@ void main() {
     expect(emailDraftService.lastDraft!.body, contains('user@example.com'));
     expect(
       emailDraftService.lastDraft!.body,
-      contains('mit meinem GATED-Account verknuepften Adresse'),
+      contains('GATED-Account verknuepft ist'),
     );
   });
 }
