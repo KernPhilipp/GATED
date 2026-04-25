@@ -7,8 +7,3 @@ Dokumentation und Betrieb
 - GitHub CI ist fehlgeschlagen.
 - Der Ordner "informationen" samt dessen Dateien muss umstrukturiert bzw. umgeschrieben werden.
 - Tests an den derzeitigen Code-Stand anpassen.
-
-Hinweis bei Ausfuehrung mit
-"flutter run -d web-server --web-hostname 0.0.0.0 --web-port 8080 --release":
-- The --pwa-strategy option is deprecated and will be removed in a future Flutter release.
-- For more information, see: https://github.com/flutter/flutter/issues/156910
