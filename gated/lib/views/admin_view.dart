@@ -6,6 +6,7 @@ import '../features/auth/session_expiration.dart';
 import '../services/admin_service.dart';
 import '../services/auth_service.dart';
 import '../services/email_draft_service.dart';
+import '../widgets/horizontal_table_scroll_view.dart';
 import '../services/realtime_event_subscription.dart';
 import '../utils/snackbar_utils.dart';
 
@@ -375,7 +376,7 @@ class _AdminViewState extends State<AdminView> {
               'direkt in GATED.\n\n'
               'Mit freundlichen Gruessen\n'
               'Philipp Kern\n'
-              'Administrator'
+              'Administrator',
         ),
       );
 
@@ -659,7 +660,7 @@ class _AdminUsersTable extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        const minTableWidth = 700.0;
+        const minTableWidth = 850.0;
         const minTableActionWidth = 150.0;
         const columnCount = 5;
         const sortArrowIconSize = 16.0;
@@ -680,8 +681,7 @@ class _AdminUsersTable extends StatelessWidget {
 
         final borderColor = Theme.of(context).dividerColor;
 
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
+        return HorizontalTableScrollView(
           child: ConstrainedBox(
             constraints: BoxConstraints(minWidth: tableWidth),
             child: DataTable(

@@ -4,8 +4,14 @@ Dokumentation und Betrieb
 
 - Auf dem Raspberry Pi nach einem echten Release-Update pruefen, dass der `current`-Symlink auf die neue Version zeigt und alte Releases nur als Rollback-Fenster verbleiben.
 - Die README.md sind derzeit teilweise outdated.
+- GitHub CI ist fehlgeschlagen.
+- Der Ordner "informationen" samt dessen Dateien muss umstrukturiert bzw. umgeschrieben werden.
 
 Hinweis bei Ausfuehrung mit
 "flutter run -d web-server --web-hostname 0.0.0.0 --web-port 8080 --release":
 - The --pwa-strategy option is deprecated and will be removed in a future Flutter release.
 - For more information, see: https://github.com/flutter/flutter/issues/156910
+
+UI
+
+- Falls der Smartphonebildschirm zu klein ist, um die Beschriftung in der Menüleiste in einer Zeile anzuzeigen, soll diese Beschriftung entfernt werden.

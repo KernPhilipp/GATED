@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/horizontal_table_scroll_view.dart';
 import 'editable_kennzeichen_row.dart';
 
 class KennzeichenDataTable extends StatelessWidget {
@@ -23,7 +24,7 @@ class KennzeichenDataTable extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        const minTableWidth = 350.0;
+        const minTableWidth = 425.0;
         const minTableActionWidth = 120.0;
         const columnCount = 3;
         const sortArrowIconSize = 16.0;
@@ -44,8 +45,7 @@ class KennzeichenDataTable extends StatelessWidget {
 
         final borderColor = Theme.of(context).dividerColor;
 
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
+        return HorizontalTableScrollView(
           child: ConstrainedBox(
             constraints: BoxConstraints(minWidth: tableWidth),
             child: DataTable(
