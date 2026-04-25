@@ -7,8 +7,7 @@ import '../auth/email_access_control.dart';
 import '../auth/request_auth.dart';
 import '../db/database.dart';
 import '../garage_door/garage_door_service.dart';
-
-const _jsonHeaders = {'Content-Type': 'application/json'};
+import 'request_helpers.dart';
 
 Router buildGarageDoorRouter(
   GarageDoorService garageDoorService,
@@ -19,7 +18,7 @@ Router buildGarageDoorRouter(
     try {
       await authenticateRequest(request, authDb, accessControlService);
       final snapshot = await garageDoorService.getStatus();
-      return Response.ok(jsonEncode(snapshot.toJson()), headers: _jsonHeaders);
+      return Response.ok(jsonEncode(snapshot.toJson()), headers: jsonHeaders);
     } on RequestAuthenticationException catch (error) {
       return error.response;
     } catch (_) {
@@ -30,7 +29,7 @@ Router buildGarageDoorRouter(
     try {
       await authenticateRequest(request, authDb, accessControlService);
       final snapshot = await garageDoorService.trigger();
-      return Response.ok(jsonEncode(snapshot.toJson()), headers: _jsonHeaders);
+      return Response.ok(jsonEncode(snapshot.toJson()), headers: jsonHeaders);
     } on RequestAuthenticationException catch (error) {
       return error.response;
     } on GarageDoorConflictException catch (error) {
@@ -42,12 +41,12 @@ Router buildGarageDoorRouter(
     }
   })
   ..post('/garage-door/state', (Request request) async {
-    final data = await _readJsonObject(request);
+    final data = await readJsonObject(request);
     if (data == null) {
       return Response.badRequest(body: 'Invalid JSON body');
     }
 
-    final stateName = _readRequiredString(data, 'state');
+    final stateName = readRequiredString(data, 'state');
     if (stateName == null) {
       return Response.badRequest(body: 'Missing state');
     }
@@ -66,7 +65,7 @@ Router buildGarageDoorRouter(
     try {
       await authenticateRequest(request, authDb, accessControlService);
       final snapshot = garageDoorService.setManualState(state);
-      return Response.ok(jsonEncode(snapshot.toJson()), headers: _jsonHeaders);
+      return Response.ok(jsonEncode(snapshot.toJson()), headers: jsonHeaders);
     } on RequestAuthenticationException catch (error) {
       return error.response;
     } on GarageDoorConflictException catch (error) {
@@ -75,34 +74,3 @@ Router buildGarageDoorRouter(
       return Response.internalServerError(body: 'Unexpected error');
     }
   });
-
-Future<Map<String, dynamic>?> _readJsonObject(Request request) async {
-  final raw = await request.readAsString();
-  if (raw.trim().isEmpty) {
-    return null;
-  }
-
-  try {
-    final decoded = jsonDecode(raw);
-    if (decoded is Map<String, dynamic>) {
-      return decoded;
-    }
-    if (decoded is Map) {
-      return decoded.map((key, value) => MapEntry('$key', value));
-    }
-  } catch (_) {
-    return null;
-  }
-
-  return null;
-}
-
-String? _readRequiredString(Map<String, dynamic> data, String key) {
-  final value = data[key];
-  if (value is! String) {
-    return null;
-  }
-
-  final trimmed = value.trim();
-  return trimmed.isEmpty ? null : trimmed;
-}

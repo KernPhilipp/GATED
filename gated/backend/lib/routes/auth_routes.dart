@@ -11,8 +11,7 @@ import '../auth/refresh_token_service.dart';
 import '../auth/request_auth.dart';
 import '../db/database.dart';
 import 'admin_events.dart';
-
-const _jsonHeaders = {'Content-Type': 'application/json'};
+import 'request_helpers.dart';
 
 Router buildAuthRouter(
   DatabaseService db,
@@ -21,7 +20,7 @@ Router buildAuthRouter(
 ]) => Router()
   ..post('/auth/register', (Request request) async {
     await accessControlService.sync();
-    final data = await _readJsonObject(request);
+    final data = await readJsonObject(request);
     if (data == null) {
       return Response.badRequest(body: 'Invalid JSON body');
     }
@@ -64,7 +63,7 @@ Router buildAuthRouter(
   })
   ..post('/auth/login', (Request request) async {
     await accessControlService.sync();
-    final data = await _readJsonObject(request);
+    final data = await readJsonObject(request);
     if (data == null) {
       return Response.badRequest(body: 'Invalid JSON body');
     }
@@ -92,16 +91,16 @@ Router buildAuthRouter(
 
     final tokens = await _createSessionTokens(db, user);
 
-    return Response.ok(jsonEncode(tokens.toJson()), headers: _jsonHeaders);
+    return Response.ok(jsonEncode(tokens.toJson()), headers: jsonHeaders);
   })
   ..post('/auth/refresh', (Request request) async {
     await accessControlService.sync();
-    final data = await _readJsonObject(request);
+    final data = await readJsonObject(request);
     if (data == null) {
       return Response.badRequest(body: 'Invalid JSON body');
     }
 
-    final refreshToken = _readRequiredString(data, 'refreshToken');
+    final refreshToken = readRequiredString(data, 'refreshToken');
     if (refreshToken == null) {
       return Response.badRequest(body: 'Missing refreshToken');
     }
@@ -151,7 +150,7 @@ Router buildAuthRouter(
 
     return Response.ok(
       jsonEncode({'accessToken': accessToken, 'refreshToken': newRefreshToken}),
-      headers: _jsonHeaders,
+      headers: jsonHeaders,
     );
   })
   ..get('/auth/me', (Request request) async {
@@ -163,12 +162,12 @@ Router buildAuthRouter(
       );
       return Response.ok(
         jsonEncode({
-          'uid': authContext.user.id,
+          'id': authContext.user.id,
           'email': authContext.user.email,
           'role': authContext.user.role.wireName,
           'createdAt': authContext.user.createdAt,
         }),
-        headers: {'Content-Type': 'application/json'},
+        headers: jsonHeaders,
       );
     } on RequestAuthenticationException catch (e) {
       return e.response;
@@ -203,7 +202,7 @@ Router buildAuthRouter(
         db,
         accessControlService,
       );
-      final data = await _readJsonObject(request);
+      final data = await readJsonObject(request);
       if (data == null) {
         return Response.badRequest(body: 'Invalid JSON body');
       }
@@ -250,37 +249,6 @@ Router buildAuthRouter(
       return Response.internalServerError(body: 'Unexpected error');
     }
   });
-
-Future<Map<String, dynamic>?> _readJsonObject(Request request) async {
-  final raw = await request.readAsString();
-  if (raw.trim().isEmpty) {
-    return null;
-  }
-
-  try {
-    final decoded = jsonDecode(raw);
-    if (decoded is Map<String, dynamic>) {
-      return decoded;
-    }
-    if (decoded is Map) {
-      return decoded.map((key, value) => MapEntry(key.toString(), value));
-    }
-  } catch (_) {
-    return null;
-  }
-
-  return null;
-}
-
-String? _readRequiredString(Map<String, dynamic> data, String key) {
-  final value = data[key];
-  if (value is! String) {
-    return null;
-  }
-
-  final trimmed = value.trim();
-  return trimmed.isEmpty ? null : trimmed;
-}
 
 Future<_SessionTokens> _createSessionTokens(
   DatabaseService db,

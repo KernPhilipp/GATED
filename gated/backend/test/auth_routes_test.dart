@@ -39,7 +39,7 @@ void main() {
             accessControlService,
           );
           return Response.ok(
-            jsonEncode({'uid': authContext.user.id}),
+            jsonEncode({'id': authContext.user.id}),
             headers: {'Content-Type': 'application/json'},
           );
         } on RequestAuthenticationException catch (error) {
@@ -198,6 +198,7 @@ void main() {
 
     expect(response.statusCode, 200);
     final body = await _readJson(response);
+    expect(body['id'], isA<int>());
     expect(body['email'], email);
     expect(body['role'], 'Admin');
   });

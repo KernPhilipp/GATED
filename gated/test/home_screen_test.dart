@@ -58,21 +58,21 @@ void main() {
           adminService: _FakeAdminService(
             users: const [
               AdminUser(
-                userId: 1,
+                id: 1,
                 email: 'admin@example.com',
                 role: AuthUserRole.admin,
                 isRegistered: true,
                 createdAt: null,
               ),
               AdminUser(
-                userId: 2,
+                id: 2,
                 email: 'user@example.com',
                 role: AuthUserRole.user,
                 isRegistered: true,
                 createdAt: null,
               ),
               AdminUser(
-                userId: null,
+                id: null,
                 email: 'pending@example.com',
                 role: AuthUserRole.user,
                 isRegistered: false,
@@ -150,7 +150,7 @@ void main() {
           adminService: _FakeAdminService(
             users: const [
               AdminUser(
-                userId: null,
+                id: null,
                 email: 'pending@example.com',
                 role: AuthUserRole.user,
                 isRegistered: false,
@@ -202,7 +202,7 @@ void main() {
           adminService: _FakeAdminService(
             users: const [
               AdminUser(
-                userId: 2,
+                id: 2,
                 email: 'user@example.com',
                 role: AuthUserRole.user,
                 isRegistered: true,
@@ -262,7 +262,7 @@ class _FakeAdminService extends AdminService {
   Future<List<AdminUser>> fetchUsers() async => users;
 
   @override
-  Future<AdminPasswordResetResult> resetPassword(int userId) async {
+  Future<AdminPasswordResetResult> resetPassword(int id) async {
     return const AdminPasswordResetResult(
       email: 'user@example.com',
       temporaryPassword: 'Temp123!',

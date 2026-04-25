@@ -91,7 +91,7 @@ void main() {
     );
     expect(allowedUser['role'], 'User');
     expect(allowedUser['isRegistered'], isFalse);
-    expect(allowedUser['userId'], isNull);
+    expect(allowedUser['id'], isNull);
   });
 
   test('non-admin users cannot access admin endpoints', () async {

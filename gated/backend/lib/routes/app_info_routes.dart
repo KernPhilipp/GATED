@@ -4,12 +4,12 @@ import 'dart:io';
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 
-const _jsonHeaders = {'Content-Type': 'application/json'};
+import 'request_helpers.dart';
 
 Router buildAppInfoRouter({String versionFilePath = '../VERSION'}) => Router()
   ..get('/app/version', (_) async {
     final version = await _readInstalledVersion(versionFilePath);
-    return Response.ok(jsonEncode({'version': version}), headers: _jsonHeaders);
+    return Response.ok(jsonEncode({'version': version}), headers: jsonHeaders);
   });
 
 Future<String> _readInstalledVersion(String versionFilePath) async {

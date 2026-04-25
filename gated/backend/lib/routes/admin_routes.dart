@@ -9,6 +9,7 @@ import '../auth/hashing.dart';
 import '../auth/request_auth.dart';
 import '../db/database.dart';
 import 'admin_events.dart';
+import 'request_helpers.dart';
 
 Router buildAdminRouter(
   DatabaseService db,
@@ -44,7 +45,6 @@ Router buildAdminRouterWithEvents(
             final role = snapshot.roleForEmail(email) ?? DbUserRole.user;
             return {
               'id': user?.id,
-              'userId': user?.id,
               'email': email,
               'role': role.wireName,
               'isRegistered': user != null,
@@ -52,7 +52,7 @@ Router buildAdminRouterWithEvents(
             };
           }).toList(),
         ),
-        headers: {'Content-Type': 'application/json'},
+        headers: jsonHeaders,
       );
     } on RequestAuthenticationException catch (error) {
       return error.response;
@@ -117,7 +117,7 @@ Router buildAdminRouterWithEvents(
           'email': targetUser.email,
           'temporaryPassword': temporaryPassword,
         }),
-        headers: {'Content-Type': 'application/json'},
+        headers: jsonHeaders,
       );
     } on RequestAuthenticationException catch (error) {
       return error.response;
@@ -128,8 +128,8 @@ Router buildAdminRouterWithEvents(
   ..post('/admin/allowed-emails', (Request request) async {
     try {
       await authenticateAdminRequest(request, db, accessControlService);
-      final data = await _readJsonObject(request);
-      final email = _readRequiredString(data, 'email');
+      final data = await readJsonObject(request);
+      final email = readRequiredString(data, 'email');
       if (email == null) {
         return Response.badRequest(body: 'Missing email');
       }
@@ -151,8 +151,8 @@ Router buildAdminRouterWithEvents(
   ) async {
     try {
       await authenticateAdminRequest(request, db, accessControlService);
-      final data = await _readJsonObject(request);
-      final newEmail = _readRequiredString(data, 'email');
+      final data = await readJsonObject(request);
+      final newEmail = readRequiredString(data, 'email');
       if (newEmail == null) {
         return Response.badRequest(body: 'Missing email');
       }
@@ -198,41 +198,6 @@ Future<DbUser?> _readTargetUser(DatabaseService db, String rawId) async {
   }
 
   return db.getUserById(id);
-}
-
-Future<Map<String, dynamic>?> _readJsonObject(Request request) async {
-  final raw = await request.readAsString();
-  if (raw.trim().isEmpty) {
-    return null;
-  }
-
-  try {
-    final decoded = jsonDecode(raw);
-    if (decoded is Map<String, dynamic>) {
-      return decoded;
-    }
-    if (decoded is Map) {
-      return decoded.map((key, value) => MapEntry(key.toString(), value));
-    }
-  } catch (_) {
-    return null;
-  }
-
-  return null;
-}
-
-String? _readRequiredString(Map<String, dynamic>? data, String key) {
-  if (data == null) {
-    return null;
-  }
-
-  final value = data[key];
-  if (value is! String) {
-    return null;
-  }
-
-  final trimmed = value.trim();
-  return trimmed.isEmpty ? null : trimmed;
 }
 
 Response _responseForWriteError(EmailAccessControlWriteException error) {

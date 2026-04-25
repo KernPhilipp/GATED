@@ -21,7 +21,7 @@ class AuthUser {
         : null;
 
     return AuthUser(
-      id: json['uid'] as int,
+      id: json['id'] as int,
       email: json['email'] as String,
       role: AuthUserRoleX.fromWireName(json['role'] as String?),
       createdAt: createdAt,
@@ -288,8 +288,6 @@ class AuthService {
     return _tokenStore.read(authRefreshTokenKey);
   }
 
-  Future<String?> readToken() => readAccessToken();
-
   Future<void> clearTokens({
     AuthSessionEndReason reason = AuthSessionEndReason.expired,
   }) async {
@@ -298,8 +296,6 @@ class AuthService {
     await _tokenStore.remove(authAccessTokenKey);
     await _tokenStore.remove(authRefreshTokenKey);
   }
-
-  Future<void> clearToken() => clearTokens();
 
   Future<AuthUser> _startCurrentUserRequest() {
     final requestVersion = _currentUserCacheVersion;

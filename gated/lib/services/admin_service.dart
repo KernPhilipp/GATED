@@ -6,7 +6,7 @@ import 'auth_service.dart';
 
 class AdminUser {
   const AdminUser({
-    required this.userId,
+    required this.id,
     required this.email,
     required this.role,
     required this.isRegistered,
@@ -20,22 +20,22 @@ class AdminUser {
         : null;
 
     return AdminUser(
-      userId: json['userId'] as int? ?? json['id'] as int?,
+      id: json['id'] as int?,
       email: json['email'] as String,
       role: AuthUserRoleX.fromWireName(json['role'] as String?),
-      isRegistered: json['isRegistered'] as bool? ?? json['id'] != null,
+      isRegistered: json['isRegistered'] as bool,
       createdAt: createdAt,
     );
   }
 
-  final int? userId;
+  final int? id;
   final String email;
   final AuthUserRole role;
   final bool isRegistered;
   final DateTime? createdAt;
 
   bool get isAdmin => role == AuthUserRole.admin;
-  bool get canResetPassword => !isAdmin && isRegistered && userId != null;
+  bool get canResetPassword => !isAdmin && isRegistered && id != null;
   bool get canDelete => !isAdmin;
   bool get canEdit => !isAdmin;
 
@@ -94,9 +94,9 @@ class AdminService {
     }).toList();
   }
 
-  Future<void> deleteUser(int userId) async {
+  Future<void> deleteUser(int id) async {
     final response = await _authService
-        .sendAuthorizedRequest(method: 'DELETE', path: '/admin/users/$userId')
+        .sendAuthorizedRequest(method: 'DELETE', path: '/admin/users/$id')
         .timeout(const Duration(seconds: 10));
 
     if (response.statusCode == 204) {
@@ -160,11 +160,11 @@ class AdminService {
     throw AdminException(_messageForStatus(response.statusCode));
   }
 
-  Future<AdminPasswordResetResult> resetPassword(int userId) async {
+  Future<AdminPasswordResetResult> resetPassword(int id) async {
     final response = await _authService
         .sendAuthorizedRequest(
           method: 'POST',
-          path: '/admin/users/$userId/reset-password',
+          path: '/admin/users/$id/reset-password',
         )
         .timeout(const Duration(seconds: 10));
 

@@ -1,13 +1,11 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
 
-import '../config/app_config.dart';
 import '../features/auth/session_expiration.dart';
 import '../services/auth_service.dart';
 import '../services/kennzeichen_service.dart';
+import '../services/realtime_event_subscription.dart';
 import '../utils/snackbar_utils.dart';
 import 'kennzeichen/editable_kennzeichen_row.dart';
 import 'kennzeichen/kennzeichen_edit_dialog.dart';
@@ -31,24 +29,25 @@ class _KennzeichenViewState extends State<KennzeichenView> {
   final KennzeichenRowsController _rowsController = KennzeichenRowsController();
   final List<EditableKennzeichenRow> _rows = [];
   final TextEditingController _searchController = TextEditingController();
+  late final RealtimeEventSubscription _realtimeEvents;
 
   bool _isLoading = true;
   bool _isRefreshing = false;
   bool _isMutating = false;
   bool _isRedirectingToLogin = false;
   bool _hasLoadedOnce = false;
-  bool _isConnectingRealtime = false;
   int? _sortColumnIndex;
   bool _sortAscending = true;
-  int _reconnectAttempt = 0;
-
-  WebSocketChannel? _eventsChannel;
-  StreamSubscription<dynamic>? _eventsSubscription;
-  Timer? _reconnectTimer;
 
   @override
   void initState() {
     super.initState();
+    _realtimeEvents = RealtimeEventSubscription(
+      authService: _authService,
+      path: '/kennzeichen/events',
+      canConnect: () => mounted && widget.isActive && !_isRedirectingToLogin,
+      onEvent: _handleRealtimeEvent,
+    );
     if (widget.isActive) {
       _activateRealtimeUpdates(initialLoad: true);
     }
@@ -71,7 +70,7 @@ class _KennzeichenViewState extends State<KennzeichenView> {
 
   @override
   void dispose() {
-    _disconnectRealtimeUpdates();
+    _realtimeEvents.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -99,7 +98,7 @@ class _KennzeichenViewState extends State<KennzeichenView> {
                 Text('Kennzeichen', style: theme.textTheme.headlineMedium),
                 const SizedBox(height: 20),
                 Text(
-                  'Lehrer und zugehörige Kennzeichen verwalten.',
+                  'Lehrer und zugehoerige Kennzeichen verwalten.',
                   style: theme.textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 20),
@@ -183,7 +182,7 @@ class _KennzeichenViewState extends State<KennzeichenView> {
     } on KennzeichenException catch (e) {
       _showErrorSnackBar(e.message);
     } on TimeoutException {
-      _showErrorSnackBar('Zeitüberschreitung beim Laden der Kennzeichen.');
+      _showErrorSnackBar('Zeitueberschreitung beim Laden der Kennzeichen.');
     } catch (_) {
       _showErrorSnackBar('Laden der Kennzeichen fehlgeschlagen.');
     } finally {
@@ -234,7 +233,7 @@ class _KennzeichenViewState extends State<KennzeichenView> {
     } on KennzeichenException catch (e) {
       _showErrorSnackBar(e.message);
     } on TimeoutException {
-      _showErrorSnackBar('Zeitüberschreitung beim Speichern.');
+      _showErrorSnackBar('Zeitueberschreitung beim Speichern.');
     } catch (_) {
       _showErrorSnackBar('Speichern fehlgeschlagen.');
     } finally {
@@ -285,7 +284,7 @@ class _KennzeichenViewState extends State<KennzeichenView> {
     } on KennzeichenException catch (e) {
       _showErrorSnackBar(e.message);
     } on TimeoutException {
-      _showErrorSnackBar('Zeitüberschreitung beim Speichern.');
+      _showErrorSnackBar('Zeitueberschreitung beim Speichern.');
     } catch (_) {
       _showErrorSnackBar('Speichern fehlgeschlagen.');
     } finally {
@@ -314,7 +313,7 @@ class _KennzeichenViewState extends State<KennzeichenView> {
         _rows.remove(row);
       });
 
-      showAppSnackBar(context, message: 'Eintrag gelöscht.');
+      showAppSnackBar(context, message: 'Eintrag geloescht.');
     } on SessionExpiredException catch (e) {
       if (mounted) {
         setState(() => row.isBusy = false);
@@ -326,12 +325,12 @@ class _KennzeichenViewState extends State<KennzeichenView> {
         setState(() => row.isBusy = false);
       }
     } on TimeoutException {
-      _showErrorSnackBar('Zeitüberschreitung beim Löschen.');
+      _showErrorSnackBar('Zeitueberschreitung beim Loeschen.');
       if (mounted) {
         setState(() => row.isBusy = false);
       }
     } catch (_) {
-      _showErrorSnackBar('Löschen fehlgeschlagen.');
+      _showErrorSnackBar('Loeschen fehlgeschlagen.');
       if (mounted) {
         setState(() => row.isBusy = false);
       }
@@ -376,68 +375,12 @@ class _KennzeichenViewState extends State<KennzeichenView> {
       unawaited(_loadRows(refreshOnly: true));
     }
 
-    unawaited(_connectRealtimeUpdates());
+    _realtimeEvents.start();
   }
 
-  Future<void> _connectRealtimeUpdates() async {
-    if (!widget.isActive ||
-        _isRedirectingToLogin ||
-        _eventsSubscription != null ||
-        _isConnectingRealtime) {
-      return;
-    }
-
-    _isConnectingRealtime = true;
-    final accessToken = await _authService.readAccessToken();
-    if (!mounted || accessToken == null || accessToken.isEmpty) {
-      _isConnectingRealtime = false;
-      return;
-    }
-
-    final channel = WebSocketChannel.connect(
-      _kennzeichenEventsUri(accessToken),
-    );
-
-    try {
-      await channel.ready;
-    } on Object {
-      _isConnectingRealtime = false;
-      channel.sink.close();
-      _scheduleRealtimeReconnect();
-      return;
-    }
-
-    if (!mounted || !widget.isActive) {
-      _isConnectingRealtime = false;
-      channel.sink.close();
-      return;
-    }
-
-    _isConnectingRealtime = false;
-    _eventsChannel = channel;
-    _reconnectAttempt = 0;
-    _eventsSubscription = channel.stream.listen(
-      _handleRealtimeMessage,
-      onError: (Object error, StackTrace stackTrace) => _handleRealtimeClosed(),
-      onDone: _handleRealtimeClosed,
-      cancelOnError: true,
-    );
-  }
-
-  void _handleRealtimeMessage(dynamic message) {
+  void _handleRealtimeEvent() {
     if (!mounted || !widget.isActive || _isRedirectingToLogin) {
       return;
-    }
-
-    if (message is String && message.isNotEmpty) {
-      try {
-        final decoded = jsonDecode(message);
-        if (decoded is! Map<String, dynamic>) {
-          return;
-        }
-      } catch (_) {
-        return;
-      }
     }
 
     if (_isLoading || _isRefreshing || _isMutating) {
@@ -447,51 +390,7 @@ class _KennzeichenViewState extends State<KennzeichenView> {
     unawaited(_loadRows(refreshOnly: true));
   }
 
-  void _handleRealtimeClosed() {
-    _eventsSubscription = null;
-    _eventsChannel = null;
-    _isConnectingRealtime = false;
-    _scheduleRealtimeReconnect();
-  }
-
-  void _scheduleRealtimeReconnect() {
-    if (!mounted || !widget.isActive || _isRedirectingToLogin) {
-      return;
-    }
-
-    _reconnectTimer?.cancel();
-    final nextDelaySeconds = (_reconnectAttempt + 1).clamp(1, 5);
-    _reconnectAttempt = nextDelaySeconds;
-    _reconnectTimer = Timer(Duration(seconds: nextDelaySeconds), () {
-      if (!mounted || !widget.isActive) {
-        return;
-      }
-      unawaited(_connectRealtimeUpdates());
-    });
-  }
-
   void _disconnectRealtimeUpdates() {
-    _reconnectTimer?.cancel();
-    _reconnectTimer = null;
-    _eventsSubscription?.cancel();
-    _eventsSubscription = null;
-    _eventsChannel?.sink.close();
-    _eventsChannel = null;
-    _isConnectingRealtime = false;
-  }
-
-  Uri _kennzeichenEventsUri(String accessToken) {
-    final baseUri = Uri.parse(AppConfig.apiBaseUrl);
-    final scheme = switch (baseUri.scheme.toLowerCase()) {
-      'https' => 'wss',
-      'wss' => 'wss',
-      _ => 'ws',
-    };
-
-    return baseUri.replace(
-      scheme: scheme,
-      path: '/kennzeichen/events',
-      queryParameters: {'accessToken': accessToken},
-    );
+    _realtimeEvents.stop();
   }
 }
