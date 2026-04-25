@@ -123,7 +123,14 @@ void main() {
       emailDraftService.lastDraft!.to,
       'philipp.kern.student@htl-hallein.at',
     );
-    expect(emailDraftService.lastDraft!.body, contains('user@example.com'));
+    expect(
+      emailDraftService.lastDraft!.subject,
+      'GATED-Passwort zuruecksetzen',
+    );
+    expect(
+      emailDraftService.lastDraft!.body,
+      contains('Zuruecksetzung meines GATED-Passworts'),
+    );
     expect(
       emailDraftService.lastDraft!.body,
       contains('GATED-Account verknuepft ist'),
