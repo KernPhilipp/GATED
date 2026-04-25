@@ -69,9 +69,11 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
-    final isPhone = width < 500;
+    final isPhone = width < 600;
+    final colorScheme = Theme.of(context).colorScheme;
     final banner = _buildInstallBanner(context);
     final navItems = _navItems;
+    final hideBottomNavLabels = isPhone && width < 450 && navItems.length == 5;
     final currentSelectedIndex = _selectedIndex >= navItems.length
         ? navItems.length - 1
         : _selectedIndex;
@@ -108,44 +110,47 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
       bottomNavigationBar: isPhone
-          ? NavigationBarTheme(
-              data: NavigationBarThemeData(
-                backgroundColor: Theme.of(
-                  context,
-                ).colorScheme.surfaceContainerHighest,
-                iconTheme: WidgetStateProperty.resolveWith((states) {
-                  if (states.contains(WidgetState.selected)) {
-                    return IconThemeData(
-                      color: Theme.of(context).colorScheme.secondary,
-                    );
-                  }
-                  return IconThemeData(
-                    color: Theme.of(context).colorScheme.primary,
-                  );
-                }),
-                labelTextStyle: WidgetStateProperty.resolveWith((states) {
-                  if (states.contains(WidgetState.selected)) {
-                    return TextStyle(
-                      color: Theme.of(context).colorScheme.secondary,
-                      fontWeight: FontWeight.w700,
-                    );
-                  }
-                  return TextStyle(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontWeight: FontWeight.normal,
-                  );
-                }),
-              ),
-              child: NavigationBar(
-                selectedIndex: currentSelectedIndex,
-                onDestinationSelected: _onNavTap,
-                destinations: [
-                  for (final item in navItems)
-                    NavigationDestination(
-                      icon: Icon(item.icon),
-                      label: item.label,
-                    ),
-                ],
+          ? ColoredBox(
+              color: colorScheme.surfaceContainerHighest,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: NavigationBarTheme(
+                  data: NavigationBarThemeData(
+                    backgroundColor: colorScheme.surfaceContainerHighest,
+                    iconTheme: WidgetStateProperty.resolveWith((states) {
+                      if (states.contains(WidgetState.selected)) {
+                        return IconThemeData(color: colorScheme.secondary);
+                      }
+                      return IconThemeData(color: colorScheme.primary);
+                    }),
+                    labelTextStyle: WidgetStateProperty.resolveWith((states) {
+                      if (states.contains(WidgetState.selected)) {
+                        return TextStyle(
+                          color: colorScheme.secondary,
+                          fontWeight: FontWeight.w700,
+                        );
+                      }
+                      return TextStyle(
+                        color: colorScheme.primary,
+                        fontWeight: FontWeight.normal,
+                      );
+                    }),
+                  ),
+                  child: NavigationBar(
+                    selectedIndex: currentSelectedIndex,
+                    labelBehavior: hideBottomNavLabels
+                        ? NavigationDestinationLabelBehavior.alwaysHide
+                        : NavigationDestinationLabelBehavior.alwaysShow,
+                    onDestinationSelected: _onNavTap,
+                    destinations: [
+                      for (final item in navItems)
+                        NavigationDestination(
+                          icon: Icon(item.icon),
+                          label: item.label,
+                        ),
+                    ],
+                  ),
+                ),
               ),
             )
           : null,

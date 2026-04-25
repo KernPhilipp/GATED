@@ -6,6 +6,7 @@ Dokumentation und Betrieb
 - Die README.md sind derzeit teilweise outdated.
 - GitHub CI ist fehlgeschlagen.
 - Der Ordner "informationen" samt dessen Dateien muss umstrukturiert bzw. umgeschrieben werden.
+- Tests an den derzeitigen Code-Stand anpassen.
 
 Hinweis bei Ausfuehrung mit
 "flutter run -d web-server --web-hostname 0.0.0.0 --web-port 8080 --release":

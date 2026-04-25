@@ -40,6 +40,176 @@ void main() {
     await tester.binding.setSurfaceSize(null);
   });
 
+  testWidgets(
+    'bottom navigation keeps labels for four items on narrow phones',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(375, 667);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: HomeScreen(
+            onThemeModeChanged: (_) {},
+            pwaInstallController: _FakePwaInstallController(),
+            authService: _FakeAuthService(
+              user: AuthUser(
+                id: 1,
+                email: 'user@example.com',
+                role: AuthUserRole.user,
+                createdAt: DateTime.utc(2026, 4, 24),
+              ),
+            ),
+            adminService: _FakeAdminService(),
+            emailDraftService: _FakeEmailDraftService(),
+            dashboardViewBuilder: (_) => const SizedBox.shrink(),
+            kennzeichenViewBuilder: (_) => const SizedBox.shrink(),
+            profileView: const SizedBox.shrink(),
+            settingsView: const SizedBox.shrink(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final navigationBar = tester.widget<NavigationBar>(
+        find.byType(NavigationBar),
+      );
+      expect(
+        navigationBar.labelBehavior,
+        NavigationDestinationLabelBehavior.alwaysShow,
+      );
+    },
+  );
+
+  testWidgets(
+    'bottom navigation hides labels for five items on narrow phones',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(375, 667);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: HomeScreen(
+            onThemeModeChanged: (_) {},
+            pwaInstallController: _FakePwaInstallController(),
+            authService: _FakeAuthService(
+              user: AuthUser(
+                id: 1,
+                email: 'admin@example.com',
+                role: AuthUserRole.admin,
+                createdAt: DateTime.utc(2026, 4, 24),
+              ),
+            ),
+            adminService: _FakeAdminService(),
+            emailDraftService: _FakeEmailDraftService(),
+            dashboardViewBuilder: (_) => const SizedBox.shrink(),
+            kennzeichenViewBuilder: (_) => const SizedBox.shrink(),
+            profileView: const SizedBox.shrink(),
+            settingsView: const SizedBox.shrink(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final navigationBar = tester.widget<NavigationBar>(
+        find.byType(NavigationBar),
+      );
+      expect(
+        navigationBar.labelBehavior,
+        NavigationDestinationLabelBehavior.alwaysHide,
+      );
+    },
+  );
+
+  testWidgets('bottom navigation keeps labels on regular phones', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(414, 896);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: HomeScreen(
+          onThemeModeChanged: (_) {},
+          pwaInstallController: _FakePwaInstallController(),
+          authService: _FakeAuthService(
+            user: AuthUser(
+              id: 1,
+              email: 'user@example.com',
+              role: AuthUserRole.user,
+              createdAt: DateTime.utc(2026, 4, 24),
+            ),
+          ),
+          adminService: _FakeAdminService(),
+          emailDraftService: _FakeEmailDraftService(),
+          dashboardViewBuilder: (_) => const SizedBox.shrink(),
+          kennzeichenViewBuilder: (_) => const SizedBox.shrink(),
+          profileView: const SizedBox.shrink(),
+          settingsView: const SizedBox.shrink(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final navigationBar = tester.widget<NavigationBar>(
+      find.byType(NavigationBar),
+    );
+    expect(
+      navigationBar.labelBehavior,
+      NavigationDestinationLabelBehavior.alwaysShow,
+    );
+  });
+
+  testWidgets('bottom navigation uses view horizontal padding on phones', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(414, 896);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: HomeScreen(
+          onThemeModeChanged: (_) {},
+          pwaInstallController: _FakePwaInstallController(),
+          authService: _FakeAuthService(
+            user: AuthUser(
+              id: 1,
+              email: 'user@example.com',
+              role: AuthUserRole.user,
+              createdAt: DateTime.utc(2026, 4, 24),
+            ),
+          ),
+          adminService: _FakeAdminService(),
+          emailDraftService: _FakeEmailDraftService(),
+          dashboardViewBuilder: (_) => const SizedBox.shrink(),
+          kennzeichenViewBuilder: (_) => const SizedBox.shrink(),
+          profileView: const SizedBox.shrink(),
+          settingsView: const SizedBox.shrink(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final padding = tester.widget<Padding>(
+      find.ancestor(
+        of: find.byType(NavigationBar),
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is Padding &&
+              widget.padding == const EdgeInsets.symmetric(horizontal: 24),
+        ),
+      ),
+    );
+    expect(padding.padding, const EdgeInsets.symmetric(horizontal: 24));
+  });
+
   testWidgets('admin table disables actions for admin rows', (tester) async {
     await tester.binding.setSurfaceSize(const Size(1400, 900));
     await tester.pumpWidget(
