@@ -8,27 +8,49 @@ import '../auth/email_access_control.dart';
 import '../auth/hashing.dart';
 import '../auth/request_auth.dart';
 import '../db/database.dart';
+import 'admin_events.dart';
 
 Router buildAdminRouter(
   DatabaseService db,
   EmailAccessControlService accessControlService,
+) {
+  final eventsBroker = AdminEventsBroker();
+
+  return buildAdminRouterWithEvents(db, accessControlService, eventsBroker);
+}
+
+Router buildAdminRouterWithEvents(
+  DatabaseService db,
+  EmailAccessControlService accessControlService,
+  AdminEventsBroker eventsBroker,
 ) => Router()
   ..get('/admin/users', (Request request) async {
     try {
       await authenticateAdminRequest(request, db, accessControlService);
+      final snapshot = await accessControlService.snapshot();
       final users = await db.getAllUsers();
+      final usersByEmail = {
+        for (final user in users) normalizeEmail(user.email): user,
+      };
+      final emails = {
+        ...snapshot.allowedEmails,
+        snapshot.primaryAdminEmail,
+      }.toList()..sort((a, b) => a.compareTo(b));
+
       return Response.ok(
         jsonEncode(
-          users
-              .map(
-                (user) => {
-                  'id': user.id,
-                  'email': user.email,
-                  'role': user.role.wireName,
-                  'createdAt': user.createdAt,
-                },
-              )
-              .toList(),
+          emails.map((email) {
+            final user = usersByEmail[email];
+            final role = snapshot.roleForEmail(email) ?? DbUserRole.user;
+            return {
+              'id': user?.id,
+              'userId': user?.id,
+              'email': email,
+              'role': role.wireName,
+              'isRegistered': user != null,
+              'createdAt': user?.createdAt,
+            };
+          }).toList(),
         ),
         headers: {'Content-Type': 'application/json'},
       );
@@ -50,14 +72,14 @@ Router buildAdminRouter(
         return Response(409, body: 'Admin users cannot be modified');
       }
 
-      final deleted = await db.deleteUserById(targetUser.id);
-      if (!deleted) {
-        return Response.notFound('User not found');
-      }
+      await accessControlService.removeAllowedEmail(targetUser.email);
+      eventsBroker.publish(type: 'deleted', email: targetUser.email);
 
       return Response(204);
     } on RequestAuthenticationException catch (error) {
       return error.response;
+    } on EmailAccessControlWriteException catch (error) {
+      return _responseForWriteError(error);
     } catch (_) {
       return Response.internalServerError(body: 'Unexpected error');
     }
@@ -88,6 +110,7 @@ Router buildAdminRouter(
         userId: targetUser.id,
         revokedAt: DateTime.now().toUtc().toIso8601String(),
       );
+      eventsBroker.publish(type: 'password-reset', email: targetUser.email);
 
       return Response.ok(
         jsonEncode({
@@ -101,6 +124,71 @@ Router buildAdminRouter(
     } catch (_) {
       return Response.internalServerError(body: 'Unexpected error');
     }
+  })
+  ..post('/admin/allowed-emails', (Request request) async {
+    try {
+      await authenticateAdminRequest(request, db, accessControlService);
+      final data = await _readJsonObject(request);
+      final email = _readRequiredString(data, 'email');
+      if (email == null) {
+        return Response.badRequest(body: 'Missing email');
+      }
+
+      await accessControlService.addAllowedEmail(email);
+      eventsBroker.publish(type: 'allowed-created', email: email);
+      return Response(201);
+    } on RequestAuthenticationException catch (error) {
+      return error.response;
+    } on EmailAccessControlWriteException catch (error) {
+      return _responseForWriteError(error);
+    } catch (_) {
+      return Response.internalServerError(body: 'Unexpected error');
+    }
+  })
+  ..put('/admin/allowed-emails/<email>', (
+    Request request,
+    String encodedEmail,
+  ) async {
+    try {
+      await authenticateAdminRequest(request, db, accessControlService);
+      final data = await _readJsonObject(request);
+      final newEmail = _readRequiredString(data, 'email');
+      if (newEmail == null) {
+        return Response.badRequest(body: 'Missing email');
+      }
+
+      final currentEmail = Uri.decodeComponent(encodedEmail);
+      await accessControlService.updateAllowedEmail(
+        currentEmail: currentEmail,
+        newEmail: newEmail,
+      );
+      eventsBroker.publish(type: 'allowed-updated', email: newEmail);
+      return Response.ok('Updated');
+    } on RequestAuthenticationException catch (error) {
+      return error.response;
+    } on EmailAccessControlWriteException catch (error) {
+      return _responseForWriteError(error);
+    } catch (_) {
+      return Response.internalServerError(body: 'Unexpected error');
+    }
+  })
+  ..delete('/admin/allowed-emails/<email>', (
+    Request request,
+    String encodedEmail,
+  ) async {
+    try {
+      await authenticateAdminRequest(request, db, accessControlService);
+      final email = Uri.decodeComponent(encodedEmail);
+      await accessControlService.removeAllowedEmail(email);
+      eventsBroker.publish(type: 'allowed-deleted', email: email);
+      return Response(204);
+    } on RequestAuthenticationException catch (error) {
+      return error.response;
+    } on EmailAccessControlWriteException catch (error) {
+      return _responseForWriteError(error);
+    } catch (_) {
+      return Response.internalServerError(body: 'Unexpected error');
+    }
   });
 
 Future<DbUser?> _readTargetUser(DatabaseService db, String rawId) async {
@@ -110,6 +198,58 @@ Future<DbUser?> _readTargetUser(DatabaseService db, String rawId) async {
   }
 
   return db.getUserById(id);
+}
+
+Future<Map<String, dynamic>?> _readJsonObject(Request request) async {
+  final raw = await request.readAsString();
+  if (raw.trim().isEmpty) {
+    return null;
+  }
+
+  try {
+    final decoded = jsonDecode(raw);
+    if (decoded is Map<String, dynamic>) {
+      return decoded;
+    }
+    if (decoded is Map) {
+      return decoded.map((key, value) => MapEntry(key.toString(), value));
+    }
+  } catch (_) {
+    return null;
+  }
+
+  return null;
+}
+
+String? _readRequiredString(Map<String, dynamic>? data, String key) {
+  if (data == null) {
+    return null;
+  }
+
+  final value = data[key];
+  if (value is! String) {
+    return null;
+  }
+
+  final trimmed = value.trim();
+  return trimmed.isEmpty ? null : trimmed;
+}
+
+Response _responseForWriteError(EmailAccessControlWriteException error) {
+  return switch (error.error) {
+    EmailAccessControlWriteError.invalidEmail => Response.badRequest(
+      body: 'Invalid email',
+    ),
+    EmailAccessControlWriteError.emailNotAllowed => Response.notFound(
+      'Email not found',
+    ),
+    EmailAccessControlWriteError.emailAlreadyAllowed ||
+    EmailAccessControlWriteError.emailAlreadyRegistered ||
+    EmailAccessControlWriteError.primaryAdminCannotBeModified => Response(
+      409,
+      body: 'Email cannot be modified',
+    ),
+  };
 }
 
 String _generateTemporaryPassword({int length = 16}) {

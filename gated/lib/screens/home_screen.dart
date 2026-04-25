@@ -210,6 +210,8 @@ class _HomeScreenState extends State<HomeScreen> {
           key: const ValueKey('admin-view'),
           adminService: _adminService,
           emailDraftService: _emailDraftService,
+          authService: _authService,
+          isActive: selectedIndex == 3,
         ),
       );
     }

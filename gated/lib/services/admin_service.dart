@@ -6,9 +6,10 @@ import 'auth_service.dart';
 
 class AdminUser {
   const AdminUser({
-    required this.id,
+    required this.userId,
     required this.email,
     required this.role,
+    required this.isRegistered,
     required this.createdAt,
   });
 
@@ -19,19 +20,24 @@ class AdminUser {
         : null;
 
     return AdminUser(
-      id: json['id'] as int,
+      userId: json['userId'] as int? ?? json['id'] as int?,
       email: json['email'] as String,
       role: AuthUserRoleX.fromWireName(json['role'] as String?),
+      isRegistered: json['isRegistered'] as bool? ?? json['id'] != null,
       createdAt: createdAt,
     );
   }
 
-  final int id;
+  final int? userId;
   final String email;
   final AuthUserRole role;
+  final bool isRegistered;
   final DateTime? createdAt;
 
   bool get isAdmin => role == AuthUserRole.admin;
+  bool get canResetPassword => !isAdmin && isRegistered && userId != null;
+  bool get canDelete => !isAdmin;
+  bool get canEdit => !isAdmin;
 
   String get roleLabel {
     return isAdmin ? 'Admin' : 'User';
@@ -100,6 +106,60 @@ class AdminService {
     throw AdminException(_messageForStatus(response.statusCode));
   }
 
+  Future<void> addAllowedEmail(String email) async {
+    final response = await _authService
+        .sendAuthorizedRequest(
+          method: 'POST',
+          path: '/admin/allowed-emails',
+          body: jsonEncode({'email': email}),
+          includeJsonContentType: true,
+        )
+        .timeout(const Duration(seconds: 10));
+
+    if (response.statusCode == 201) {
+      return;
+    }
+
+    throw AdminException(_messageForStatus(response.statusCode));
+  }
+
+  Future<void> updateAllowedEmail({
+    required String currentEmail,
+    required String newEmail,
+  }) async {
+    final encodedEmail = Uri.encodeComponent(currentEmail);
+    final response = await _authService
+        .sendAuthorizedRequest(
+          method: 'PUT',
+          path: '/admin/allowed-emails/$encodedEmail',
+          body: jsonEncode({'email': newEmail}),
+          includeJsonContentType: true,
+        )
+        .timeout(const Duration(seconds: 10));
+
+    if (response.statusCode == 200) {
+      return;
+    }
+
+    throw AdminException(_messageForStatus(response.statusCode));
+  }
+
+  Future<void> deleteAllowedEmail(String email) async {
+    final encodedEmail = Uri.encodeComponent(email);
+    final response = await _authService
+        .sendAuthorizedRequest(
+          method: 'DELETE',
+          path: '/admin/allowed-emails/$encodedEmail',
+        )
+        .timeout(const Duration(seconds: 10));
+
+    if (response.statusCode == 204) {
+      return;
+    }
+
+    throw AdminException(_messageForStatus(response.statusCode));
+  }
+
   Future<AdminPasswordResetResult> resetPassword(int userId) async {
     final response = await _authService
         .sendAuthorizedRequest(
@@ -128,9 +188,9 @@ class AdminService {
       case 403:
         return 'Keine Berechtigung fuer diesen Bereich.';
       case 404:
-        return 'Benutzer wurde nicht gefunden.';
+        return 'Benutzer oder E-Mail wurde nicht gefunden.';
       case 409:
-        return 'Admins koennen nicht bearbeitet oder geloescht werden.';
+        return 'Diese E-Mail kann nicht bearbeitet werden.';
       case 500:
         return 'Serverfehler. Bitte spaeter versuchen.';
       default:

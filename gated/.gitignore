@@ -37,7 +37,6 @@ backend/.env
 backend/gated.db
 backend/kennzeichen.db
 backend/allowed_emails.txt
-backend/admin_emails.txt
 
 # Symbolication related
 app.*.symbols

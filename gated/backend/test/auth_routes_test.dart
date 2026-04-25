@@ -25,11 +25,9 @@ void main() {
     db = DatabaseService.openInMemory();
     tempDir = Directory.systemTemp.createTempSync('gated-auth-test-');
     File('${tempDir.path}/allowed_emails.txt').writeAsStringSync('$email\n');
-    File('${tempDir.path}/admin_emails.txt').writeAsStringSync('');
     accessControlService = EmailAccessControlService(
       db: db,
       allowedEmailsFilePath: '${tempDir.path}/allowed_emails.txt',
-      adminEmailsFilePath: '${tempDir.path}/admin_emails.txt',
     );
 
     final protectedRouter = Router()
@@ -187,7 +185,6 @@ void main() {
   });
 
   test('/auth/me returns the current role', () async {
-    File('${tempDir.path}/admin_emails.txt').writeAsStringSync('$email\n');
     await accessControlService.sync();
     await _register(handler, email: email, password: password);
     final session = await _login(handler, email: email, password: password);

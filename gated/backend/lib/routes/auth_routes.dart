@@ -10,13 +10,15 @@ import '../auth/jwt_service.dart';
 import '../auth/refresh_token_service.dart';
 import '../auth/request_auth.dart';
 import '../db/database.dart';
+import 'admin_events.dart';
 
 const _jsonHeaders = {'Content-Type': 'application/json'};
 
 Router buildAuthRouter(
   DatabaseService db,
-  EmailAccessControlService accessControlService,
-) => Router()
+  EmailAccessControlService accessControlService, [
+  AdminEventsBroker? adminEventsBroker,
+]) => Router()
   ..post('/auth/register', (Request request) async {
     await accessControlService.sync();
     final data = await _readJsonObject(request);
@@ -57,6 +59,7 @@ Router buildAuthRouter(
     } catch (_) {
       return Response.internalServerError(body: 'Unexpected error');
     }
+    adminEventsBroker?.publish(type: 'registered', email: normalizedEmail);
     return Response.ok('Registered');
   })
   ..post('/auth/login', (Request request) async {

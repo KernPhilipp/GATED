@@ -3,6 +3,7 @@ ToDo
 Dokumentation und Betrieb
 
 - Auf dem Raspberry Pi nach einem echten Release-Update pruefen, dass der `current`-Symlink auf die neue Version zeigt und alte Releases nur als Rollback-Fenster verbleiben.
+- Die README.md sind derzeit teilweise outdated.
 
 Hinweis bei Ausfuehrung mit
 "flutter run -d web-server --web-hostname 0.0.0.0 --web-port 8080 --release":

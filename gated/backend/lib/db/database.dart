@@ -264,6 +264,23 @@ WHERE id = ?;
     }
   }
 
+  Future<bool> updateUserEmail({
+    required int userId,
+    required String email,
+  }) async {
+    final stmt = db.prepare('''
+UPDATE users
+SET email = ?
+WHERE id = ?;
+''');
+    try {
+      stmt.execute([email, userId]);
+      return db.getUpdatedRows() > 0;
+    } finally {
+      stmt.close();
+    }
+  }
+
   Future<bool> deleteUserById(int userId) async {
     final stmt = db.prepare('''
 DELETE FROM users

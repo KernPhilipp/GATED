@@ -60,11 +60,9 @@ void main() {
     db = DatabaseService.openInMemory();
     tempDir = Directory.systemTemp.createTempSync('gated-garage-test-');
     File('${tempDir.path}/allowed_emails.txt').writeAsStringSync('$email\n');
-    File('${tempDir.path}/admin_emails.txt').writeAsStringSync('');
     accessControlService = EmailAccessControlService(
       db: db,
       allowedEmailsFilePath: '${tempDir.path}/allowed_emails.txt',
-      adminEmailsFilePath: '${tempDir.path}/admin_emails.txt',
     );
     shellyClient = _FakeShellyRelayClient();
     rebuildHandler();

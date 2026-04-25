@@ -1,6 +1,13 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
+import 'dart:convert';
 
+import 'package:flutter/material.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
+
+import '../config/app_config.dart';
+import '../features/auth/session_expiration.dart';
 import '../services/admin_service.dart';
+import '../services/auth_service.dart';
 import '../services/email_draft_service.dart';
 import '../utils/snackbar_utils.dart';
 
@@ -9,10 +16,14 @@ class AdminView extends StatefulWidget {
     super.key,
     required this.adminService,
     required this.emailDraftService,
-  });
+    AuthService? authService,
+    this.isActive = true,
+  }) : _authService = authService;
 
   final AdminService adminService;
   final EmailDraftService emailDraftService;
+  final AuthService? _authService;
+  final bool isActive;
 
   @override
   State<AdminView> createState() => _AdminViewState();
@@ -21,21 +32,49 @@ class AdminView extends StatefulWidget {
 class _AdminViewState extends State<AdminView> {
   final TextEditingController _searchController = TextEditingController();
   final List<AdminUser> _users = [];
+  late final AuthService _authService;
 
   bool _isLoading = true;
+  bool _isRefreshing = false;
   bool _isMutating = false;
-  String? _loadError;
+  bool _isRedirectingToLogin = false;
+  bool _hasLoadedOnce = false;
+  bool _isConnectingRealtime = false;
   int? _sortColumnIndex;
   bool _sortAscending = true;
+  int _reconnectAttempt = 0;
+
+  WebSocketChannel? _eventsChannel;
+  StreamSubscription<dynamic>? _eventsSubscription;
+  Timer? _reconnectTimer;
 
   @override
   void initState() {
     super.initState();
-    _loadUsers();
+    _authService = widget._authService ?? const AuthService();
+    if (widget.isActive) {
+      _activateRealtimeUpdates(initialLoad: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant AdminView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isActive == widget.isActive) {
+      return;
+    }
+
+    if (widget.isActive) {
+      _activateRealtimeUpdates(initialLoad: !_hasLoadedOnce);
+      return;
+    }
+
+    _disconnectRealtimeUpdates();
   }
 
   @override
   void dispose() {
+    _disconnectRealtimeUpdates();
     _searchController.dispose();
     super.dispose();
   }
@@ -58,21 +97,25 @@ class _AdminViewState extends State<AdminView> {
                 Text('Admin', style: theme.textTheme.headlineMedium),
                 const SizedBox(height: 20),
                 Text(
-                  'Benutzerdaten zentral verwalten. Admin-Konten bleiben '
-                  'sichtbar, koennen aber nicht bearbeitet oder geloescht werden.',
+                  'Zugelassene Benutzer und registrierte Accounts verwalten.',
                   style: theme.textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 20),
-                _buildToolbar(),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: _buildContent(visibleUsers, searchQuery),
-                    ),
-                  ),
+                _AdminTableSection(
+                  users: visibleUsers,
+                  hasAnyUsers: _users.isNotEmpty,
+                  searchController: _searchController,
+                  searchQuery: searchQuery,
+                  sortColumnIndex: _sortColumnIndex,
+                  sortAscending: _sortAscending,
+                  isLoading: _isLoading,
+                  onSearchChanged: (_) => setState(() {}),
+                  onClearSearch: _clearSearch,
+                  onSort: _handleSort,
+                  onAddUser: _openCreateDialog,
+                  onEditUser: _openEditDialog,
+                  onDeleteUser: _confirmDeleteUser,
+                  onResetPassword: _resetPasswordForUser,
                 ),
               ],
             ),
@@ -91,81 +134,6 @@ class _AdminViewState extends State<AdminView> {
     );
   }
 
-  Widget _buildToolbar() {
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
-      alignment: WrapAlignment.spaceBetween,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
-        SizedBox(
-          width: 320,
-          child: TextField(
-            controller: _searchController,
-            onChanged: (_) => setState(() {}),
-            decoration: InputDecoration(
-              labelText: 'Benutzer suchen',
-              hintText: 'Nach E-Mail oder Rolle filtern',
-              prefixIcon: const Icon(Icons.search_rounded),
-              suffixIcon: _searchController.text.isEmpty
-                  ? null
-                  : IconButton(
-                      tooltip: 'Suche leeren',
-                      onPressed: _clearSearch,
-                      icon: const Icon(Icons.close_rounded),
-                    ),
-            ),
-          ),
-        ),
-        FilledButton.icon(
-          onPressed: _isLoading ? null : () => _loadUsers(forceRefresh: true),
-          icon: const Icon(Icons.refresh_rounded),
-          label: const Text('Aktualisieren'),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildContent(List<AdminUser> visibleUsers, String searchQuery) {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator.adaptive());
-    }
-
-    if (_loadError != null) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Benutzerdaten konnten nicht geladen werden.'),
-          const SizedBox(height: 8),
-          Text(_loadError!),
-          const SizedBox(height: 20),
-          FilledButton.icon(
-            onPressed: () => _loadUsers(forceRefresh: true),
-            icon: const Icon(Icons.refresh_rounded),
-            label: const Text('Erneut versuchen'),
-          ),
-        ],
-      );
-    }
-
-    if (_users.isEmpty) {
-      return const Text('Noch keine Benutzer vorhanden.');
-    }
-
-    if (visibleUsers.isEmpty) {
-      return Text('Keine Treffer fuer "$searchQuery".');
-    }
-
-    return _AdminUsersTable(
-      users: visibleUsers,
-      sortColumnIndex: _sortColumnIndex,
-      sortAscending: _sortAscending,
-      onSort: _handleSort,
-      onDelete: _confirmDeleteUser,
-      onResetPassword: _resetPasswordForUser,
-    );
-  }
-
   List<AdminUser> _buildVisibleUsers(String searchQuery) {
     final normalizedQuery = searchQuery.toLowerCase();
     final filteredUsers = _users.where((user) {
@@ -174,7 +142,8 @@ class _AdminViewState extends State<AdminView> {
       }
 
       return user.email.toLowerCase().contains(normalizedQuery) ||
-          user.roleLabel.toLowerCase().contains(normalizedQuery);
+          user.roleLabel.toLowerCase().contains(normalizedQuery) ||
+          _registeredLabel(user).toLowerCase().contains(normalizedQuery);
     }).toList();
 
     int compare(AdminUser a, AdminUser b) {
@@ -182,6 +151,12 @@ class _AdminViewState extends State<AdminView> {
         case 1:
           return a.roleLabel.compareTo(b.roleLabel);
         case 2:
+          return a.isRegistered == b.isRegistered
+              ? 0
+              : a.isRegistered
+              ? 1
+              : -1;
+        case 3:
           final aTime = a.createdAt?.millisecondsSinceEpoch ?? 0;
           final bTime = b.createdAt?.millisecondsSinceEpoch ?? 0;
           return aTime.compareTo(bTime);
@@ -215,15 +190,16 @@ class _AdminViewState extends State<AdminView> {
     setState(() {});
   }
 
-  Future<void> _loadUsers({bool forceRefresh = false}) async {
-    if (!mounted) {
+  Future<void> _loadUsers({bool refreshOnly = false}) async {
+    if (!mounted || _isRedirectingToLogin) {
       return;
     }
 
     setState(() {
-      _isLoading = true;
-      if (forceRefresh) {
-        _loadError = null;
+      if (refreshOnly) {
+        _isRefreshing = true;
+      } else {
+        _isLoading = true;
       }
     });
 
@@ -234,35 +210,97 @@ class _AdminViewState extends State<AdminView> {
       }
 
       setState(() {
+        _hasLoadedOnce = true;
         _users
           ..clear()
           ..addAll(users);
-        _isLoading = false;
-        _loadError = null;
       });
+    } on SessionExpiredException catch (error) {
+      await _handleSessionExpired(error);
     } on AdminException catch (error) {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _isLoading = false;
-        _loadError = error.message;
-      });
+      _showError(error.message);
+    } on TimeoutException {
+      _showError('Zeitueberschreitung beim Laden der Benutzer.');
     } catch (_) {
+      _showError('Benutzerdaten konnten nicht geladen werden.');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _isRefreshing = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _openCreateDialog() async {
+    final result = await showAdminEmailDialog(
+      context,
+      title: 'Benutzer zulassen',
+      confirmLabel: 'Anlegen',
+    );
+    if (!mounted || result == null) {
+      return;
+    }
+
+    setState(() => _isMutating = true);
+    try {
+      await widget.adminService.addAllowedEmail(result.email);
+      await _loadUsers(refreshOnly: true);
       if (!mounted) {
         return;
       }
+      showAppSnackBar(context, message: 'Benutzer zugelassen.');
+    } on AdminException catch (error) {
+      _showError(error.message);
+    } catch (_) {
+      _showError('Benutzer konnte nicht zugelassen werden.');
+    } finally {
+      if (mounted) {
+        setState(() => _isMutating = false);
+      }
+    }
+  }
 
-      setState(() {
-        _isLoading = false;
-        _loadError = 'Benutzerdaten konnten nicht geladen werden.';
-      });
+  Future<void> _openEditDialog(AdminUser user) async {
+    if (!user.canEdit) {
+      return;
+    }
+
+    final result = await showAdminEmailDialog(
+      context,
+      title: 'Benutzer bearbeiten',
+      confirmLabel: 'Speichern',
+      initialEmail: user.email,
+    );
+    if (!mounted || result == null || result.email == user.email) {
+      return;
+    }
+
+    setState(() => _isMutating = true);
+    try {
+      await widget.adminService.updateAllowedEmail(
+        currentEmail: user.email,
+        newEmail: result.email,
+      );
+      await _loadUsers(refreshOnly: true);
+      if (!mounted) {
+        return;
+      }
+      showAppSnackBar(context, message: 'Benutzer gespeichert.');
+    } on AdminException catch (error) {
+      _showError(error.message);
+    } catch (_) {
+      _showError('Benutzer konnte nicht gespeichert werden.');
+    } finally {
+      if (mounted) {
+        setState(() => _isMutating = false);
+      }
     }
   }
 
   Future<void> _confirmDeleteUser(AdminUser user) async {
-    if (user.isAdmin) {
+    if (!user.canDelete) {
       return;
     }
 
@@ -272,7 +310,8 @@ class _AdminViewState extends State<AdminView> {
         return AlertDialog(
           title: const Text('Benutzer loeschen'),
           content: Text(
-            'Soll der Account ${user.email} wirklich geloescht werden?',
+            'Soll ${user.email} wirklich geloescht und aus den zugelassenen '
+            'E-Mails entfernt werden?',
           ),
           actions: [
             TextButton(
@@ -294,14 +333,15 @@ class _AdminViewState extends State<AdminView> {
 
     setState(() => _isMutating = true);
     try {
-      await widget.adminService.deleteUser(user.id);
+      if (user.userId != null) {
+        await widget.adminService.deleteUser(user.userId!);
+      } else {
+        await widget.adminService.deleteAllowedEmail(user.email);
+      }
+      await _loadUsers(refreshOnly: true);
       if (!mounted) {
         return;
       }
-
-      setState(() {
-        _users.removeWhere((entry) => entry.id == user.id);
-      });
       showAppSnackBar(context, message: 'Benutzer geloescht.');
     } on AdminException catch (error) {
       _showError(error.message);
@@ -315,13 +355,13 @@ class _AdminViewState extends State<AdminView> {
   }
 
   Future<void> _resetPasswordForUser(AdminUser user) async {
-    if (user.isAdmin) {
+    if (!user.canResetPassword) {
       return;
     }
 
     setState(() => _isMutating = true);
     try {
-      final result = await widget.adminService.resetPassword(user.id);
+      final result = await widget.adminService.resetPassword(user.userId!);
       final draftOpened = await widget.emailDraftService.openDraft(
         EmailDraft(
           to: result.email,
@@ -385,6 +425,144 @@ class _AdminViewState extends State<AdminView> {
     );
   }
 
+  void _activateRealtimeUpdates({required bool initialLoad}) {
+    if (initialLoad) {
+      unawaited(_loadUsers());
+    } else {
+      unawaited(_loadUsers(refreshOnly: true));
+    }
+
+    unawaited(_connectRealtimeUpdates());
+  }
+
+  Future<void> _connectRealtimeUpdates() async {
+    if (!widget.isActive ||
+        _isRedirectingToLogin ||
+        _eventsSubscription != null ||
+        _isConnectingRealtime) {
+      return;
+    }
+
+    _isConnectingRealtime = true;
+    final accessToken = await _authService.readAccessToken();
+    if (!mounted || accessToken == null || accessToken.isEmpty) {
+      _isConnectingRealtime = false;
+      return;
+    }
+
+    final channel = WebSocketChannel.connect(_adminEventsUri(accessToken));
+
+    try {
+      await channel.ready;
+    } on Object {
+      _isConnectingRealtime = false;
+      channel.sink.close();
+      _scheduleRealtimeReconnect();
+      return;
+    }
+
+    if (!mounted || !widget.isActive) {
+      _isConnectingRealtime = false;
+      channel.sink.close();
+      return;
+    }
+
+    _isConnectingRealtime = false;
+    _eventsChannel = channel;
+    _reconnectAttempt = 0;
+    _eventsSubscription = channel.stream.listen(
+      _handleRealtimeMessage,
+      onError: (Object error, StackTrace stackTrace) => _handleRealtimeClosed(),
+      onDone: _handleRealtimeClosed,
+      cancelOnError: true,
+    );
+  }
+
+  void _handleRealtimeMessage(dynamic message) {
+    if (!mounted || !widget.isActive || _isRedirectingToLogin) {
+      return;
+    }
+
+    if (message is String && message.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(message);
+        if (decoded is! Map<String, dynamic>) {
+          return;
+        }
+      } catch (_) {
+        return;
+      }
+    }
+
+    if (_isLoading || _isRefreshing || _isMutating) {
+      return;
+    }
+
+    unawaited(_loadUsers(refreshOnly: true));
+  }
+
+  void _handleRealtimeClosed() {
+    _eventsSubscription = null;
+    _eventsChannel = null;
+    _isConnectingRealtime = false;
+    _scheduleRealtimeReconnect();
+  }
+
+  void _scheduleRealtimeReconnect() {
+    if (!mounted || !widget.isActive || _isRedirectingToLogin) {
+      return;
+    }
+
+    _reconnectTimer?.cancel();
+    final nextDelaySeconds = (_reconnectAttempt + 1).clamp(1, 5);
+    _reconnectAttempt = nextDelaySeconds;
+    _reconnectTimer = Timer(Duration(seconds: nextDelaySeconds), () {
+      if (!mounted || !widget.isActive) {
+        return;
+      }
+      unawaited(_connectRealtimeUpdates());
+    });
+  }
+
+  void _disconnectRealtimeUpdates() {
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
+    _eventsSubscription?.cancel();
+    _eventsSubscription = null;
+    _eventsChannel?.sink.close();
+    _eventsChannel = null;
+    _isConnectingRealtime = false;
+  }
+
+  Uri _adminEventsUri(String accessToken) {
+    final baseUri = Uri.parse(AppConfig.apiBaseUrl);
+    final scheme = switch (baseUri.scheme.toLowerCase()) {
+      'https' => 'wss',
+      'wss' => 'wss',
+      _ => 'ws',
+    };
+
+    return baseUri.replace(
+      scheme: scheme,
+      path: '/admin/events',
+      queryParameters: {'accessToken': accessToken},
+    );
+  }
+
+  Future<void> _handleSessionExpired(SessionExpiredException error) async {
+    if (_isRedirectingToLogin || !mounted) {
+      return;
+    }
+
+    _isRedirectingToLogin = true;
+    await redirectToLoginAfterSessionExpired(
+      context,
+      authService: _authService,
+      message: error.message,
+      reason: error.reason,
+    );
+  }
+
   void _showError(String message) {
     if (!mounted) {
       return;
@@ -399,12 +577,168 @@ class _AdminViewState extends State<AdminView> {
   }
 }
 
+class _AdminTableSection extends StatelessWidget {
+  const _AdminTableSection({
+    required this.users,
+    required this.hasAnyUsers,
+    required this.searchController,
+    required this.searchQuery,
+    required this.sortColumnIndex,
+    required this.sortAscending,
+    required this.isLoading,
+    required this.onSearchChanged,
+    required this.onClearSearch,
+    required this.onSort,
+    required this.onAddUser,
+    required this.onEditUser,
+    required this.onDeleteUser,
+    required this.onResetPassword,
+  });
+
+  final List<AdminUser> users;
+  final bool hasAnyUsers;
+  final TextEditingController searchController;
+  final String searchQuery;
+  final int? sortColumnIndex;
+  final bool sortAscending;
+  final bool isLoading;
+  final ValueChanged<String> onSearchChanged;
+  final VoidCallback onClearSearch;
+  final void Function(int columnIndex, bool ascending) onSort;
+  final VoidCallback onAddUser;
+  final ValueChanged<AdminUser> onEditUser;
+  final ValueChanged<AdminUser> onDeleteUser;
+  final ValueChanged<AdminUser> onResetPassword;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _AdminTableActions(
+          searchController: searchController,
+          searchQuery: searchQuery,
+          onSearchChanged: onSearchChanged,
+          onClearSearch: onClearSearch,
+          onAddUser: onAddUser,
+        ),
+        const SizedBox(height: 20),
+        SizedBox(
+          width: double.infinity,
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: _buildContent(),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildContent() {
+    if (isLoading) {
+      return const Center(child: CircularProgressIndicator.adaptive());
+    }
+
+    if (!hasAnyUsers && searchQuery.isEmpty) {
+      return Column(
+        children: [
+          const Text('Noch keine Benutzer zugelassen.'),
+          const SizedBox(height: 20),
+          FilledButton.icon(
+            onPressed: onAddUser,
+            icon: const Icon(Icons.add_rounded),
+            label: const Text('Ersten Benutzer zulassen'),
+          ),
+        ],
+      );
+    }
+
+    if (users.isEmpty) {
+      return Center(child: Text('Keine Treffer fuer "$searchQuery".'));
+    }
+
+    return _AdminUsersTable(
+      users: users,
+      sortColumnIndex: sortColumnIndex,
+      sortAscending: sortAscending,
+      onSort: onSort,
+      onEdit: onEditUser,
+      onDelete: onDeleteUser,
+      onResetPassword: onResetPassword,
+    );
+  }
+}
+
+class _AdminTableActions extends StatelessWidget {
+  const _AdminTableActions({
+    required this.searchController,
+    required this.searchQuery,
+    required this.onSearchChanged,
+    required this.onClearSearch,
+    required this.onAddUser,
+  });
+
+  final TextEditingController searchController;
+  final String searchQuery;
+  final ValueChanged<String> onSearchChanged;
+  final VoidCallback onClearSearch;
+  final VoidCallback onAddUser;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 20,
+          runSpacing: 20,
+          alignment: WrapAlignment.start,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            FilledButton.icon(
+              onPressed: searchQuery.isNotEmpty ? null : onAddUser,
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Benutzer hinzufuegen'),
+              style: searchQuery.isNotEmpty
+                  ? FilledButton.styleFrom(
+                      foregroundColor: Theme.of(context).disabledColor,
+                      backgroundColor: Theme.of(context).disabledColor,
+                    )
+                  : null,
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        TextField(
+          controller: searchController,
+          onChanged: onSearchChanged,
+          decoration: InputDecoration(
+            labelText: 'Suche',
+            hintText: 'Nach E-Mail, Rolle oder Status filtern',
+            prefixIcon: const Icon(Icons.search_rounded),
+            suffixIcon: searchController.text.isEmpty
+                ? null
+                : IconButton(
+                    tooltip: 'Suche leeren',
+                    onPressed: onClearSearch,
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _AdminUsersTable extends StatelessWidget {
   const _AdminUsersTable({
     required this.users,
     required this.sortColumnIndex,
     required this.sortAscending,
     required this.onSort,
+    required this.onEdit,
     required this.onDelete,
     required this.onResetPassword,
   });
@@ -413,6 +747,7 @@ class _AdminUsersTable extends StatelessWidget {
   final int? sortColumnIndex;
   final bool sortAscending;
   final void Function(int columnIndex, bool ascending) onSort;
+  final ValueChanged<AdminUser> onEdit;
   final ValueChanged<AdminUser> onDelete;
   final ValueChanged<AdminUser> onResetPassword;
 
@@ -420,14 +755,25 @@ class _AdminUsersTable extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        const minTableWidth = 640.0;
-        const actionColumnWidth = 170.0;
-        const columnCount = 4;
-        final tableWidth = constraints.maxWidth < minTableWidth
+        const minTableWidth = 700.0;
+        const minTableActionWidth = 150.0;
+        const columnCount = 5;
+        const sortArrowIconSize = 16.0;
+        const sortArrowPadding = 2.0;
+        const sortIndicatorWidth = sortArrowIconSize + (sortArrowPadding * 2);
+        const sortRightPadding = 10.0;
+
+        final availableWidth = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : minTableWidth;
+        final tableWidth = availableWidth < minTableWidth
             ? minTableWidth
-            : constraints.maxWidth;
-        final flexibleColumnWidth =
-            (tableWidth - actionColumnWidth) / (columnCount - 1);
+            : availableWidth;
+        final columnWidth = tableWidth / columnCount;
+        final tableActionWidth = columnWidth < minTableActionWidth
+            ? minTableActionWidth
+            : columnWidth;
+
         final borderColor = Theme.of(context).dividerColor;
 
         return SingleChildScrollView(
@@ -453,66 +799,114 @@ class _AdminUsersTable extends StatelessWidget {
               ),
               columns: [
                 DataColumn(
-                  label: _headerCell('E-Mail', flexibleColumnWidth),
+                  headingRowAlignment: MainAxisAlignment.start,
+                  label: _headerCell(
+                    'Email',
+                    columnWidth,
+                    isSortable: true,
+                    sortIndicatorWidth: sortIndicatorWidth,
+                    sortRightPadding: sortRightPadding,
+                  ),
                   onSort: onSort,
                 ),
                 DataColumn(
-                  label: _headerCell('Rolle', flexibleColumnWidth),
+                  headingRowAlignment: MainAxisAlignment.start,
+                  label: _headerCell(
+                    'Rolle',
+                    columnWidth,
+                    isSortable: true,
+                    sortIndicatorWidth: sortIndicatorWidth,
+                    sortRightPadding: sortRightPadding,
+                  ),
                   onSort: onSort,
                 ),
                 DataColumn(
-                  label: _headerCell('Erstellt am', flexibleColumnWidth),
+                  headingRowAlignment: MainAxisAlignment.start,
+                  label: _headerCell(
+                    'Bereits registriert',
+                    columnWidth,
+                    isSortable: true,
+                    sortIndicatorWidth: sortIndicatorWidth,
+                    sortRightPadding: sortRightPadding,
+                  ),
                   onSort: onSort,
                 ),
-                DataColumn(label: _headerCell('Aktionen', actionColumnWidth)),
+                DataColumn(
+                  headingRowAlignment: MainAxisAlignment.start,
+                  label: _headerCell(
+                    'Erstellt am',
+                    columnWidth,
+                    isSortable: true,
+                    sortIndicatorWidth: sortIndicatorWidth,
+                    sortRightPadding: sortRightPadding,
+                  ),
+                  onSort: onSort,
+                ),
+                DataColumn(label: _headerCell('Aktionen', tableActionWidth)),
               ],
               rows: [
-                for (final user in users)
-                  DataRow(
+                for (var index = 0; index < users.length; index++)
+                  DataRow.byIndex(
+                    index: index,
                     cells: [
                       DataCell(
                         _dataCell(
-                          width: flexibleColumnWidth,
+                          width: columnWidth,
                           child: Text(
-                            user.email,
+                            users[index].email,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ),
                       DataCell(
                         _dataCell(
-                          width: flexibleColumnWidth,
-                          child: Text(user.roleLabel),
+                          width: columnWidth,
+                          child: Text(users[index].roleLabel),
                         ),
                       ),
                       DataCell(
                         _dataCell(
-                          width: flexibleColumnWidth,
-                          child: Text(_formatCreatedAt(user.createdAt)),
+                          width: columnWidth,
+                          child: Text(_registeredLabel(users[index])),
                         ),
                       ),
                       DataCell(
-                        SizedBox(
-                          width: actionColumnWidth,
+                        _dataCell(
+                          width: columnWidth,
+                          child: Text(_formatCreatedAt(users[index].createdAt)),
+                        ),
+                      ),
+                      DataCell(
+                        _buttonCell(
+                          width: tableActionWidth,
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               IconButton(
-                                tooltip: user.isAdmin
-                                    ? 'Admins koennen nicht bearbeitet werden'
-                                    : 'Temporaeres Passwort erstellen',
-                                onPressed: user.isAdmin
-                                    ? null
-                                    : () => onResetPassword(user),
+                                tooltip: users[index].canEdit
+                                    ? 'Bearbeiten'
+                                    : 'Admins koennen nicht bearbeitet werden',
+                                onPressed: users[index].canEdit
+                                    ? () => onEdit(users[index])
+                                    : null,
+                                icon: const Icon(Icons.edit_rounded),
+                              ),
+                              IconButton(
+                                tooltip: users[index].canResetPassword
+                                    ? 'Temporaeres Passwort erstellen'
+                                    : 'Nur registrierte Benutzer',
+                                onPressed: users[index].canResetPassword
+                                    ? () => onResetPassword(users[index])
+                                    : null,
                                 icon: const Icon(Icons.mail_outline_rounded),
                               ),
                               IconButton(
-                                tooltip: user.isAdmin
-                                    ? 'Admins koennen nicht geloescht werden'
-                                    : 'Benutzer loeschen',
-                                onPressed: user.isAdmin
-                                    ? null
-                                    : () => onDelete(user),
+                                tooltip: users[index].canDelete
+                                    ? 'Benutzer loeschen'
+                                    : 'Admins koennen nicht geloescht werden',
+                                onPressed: users[index].canDelete
+                                    ? () => onDelete(users[index])
+                                    : null,
                                 icon: const Icon(Icons.delete_outline_rounded),
                               ),
                             ],
@@ -529,12 +923,22 @@ class _AdminUsersTable extends StatelessWidget {
     );
   }
 
-  Widget _headerCell(String label, double width) {
+  Widget _headerCell(
+    String text,
+    double width, {
+    bool isSortable = false,
+    double sortIndicatorWidth = 0,
+    double sortRightPadding = 0,
+  }) {
+    final adjustedWidth = isSortable
+        ? (width - sortIndicatorWidth - sortRightPadding).clamp(0.0, width)
+        : width;
+
     return SizedBox(
-      width: width,
+      width: adjustedWidth,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Text(label),
+        child: Text(text),
       ),
     );
   }
@@ -549,17 +953,127 @@ class _AdminUsersTable extends StatelessWidget {
     );
   }
 
-  String _formatCreatedAt(DateTime? createdAt) {
-    if (createdAt == null) {
-      return 'Nicht verfuegbar';
+  Widget _buttonCell({required double width, required Widget child}) {
+    return SizedBox(width: width, child: child);
+  }
+}
+
+class AdminEmailDialogResult {
+  const AdminEmailDialogResult({required this.email});
+
+  final String email;
+}
+
+Future<AdminEmailDialogResult?> showAdminEmailDialog(
+  BuildContext context, {
+  required String title,
+  required String confirmLabel,
+  String? initialEmail,
+}) {
+  return showDialog<AdminEmailDialogResult>(
+    context: context,
+    builder: (context) => _AdminEmailDialog(
+      title: title,
+      confirmLabel: confirmLabel,
+      initialEmail: initialEmail,
+    ),
+  );
+}
+
+class _AdminEmailDialog extends StatefulWidget {
+  const _AdminEmailDialog({
+    required this.title,
+    required this.confirmLabel,
+    this.initialEmail,
+  });
+
+  final String title;
+  final String confirmLabel;
+  final String? initialEmail;
+
+  @override
+  State<_AdminEmailDialog> createState() => _AdminEmailDialogState();
+}
+
+class _AdminEmailDialogState extends State<_AdminEmailDialog> {
+  static final RegExp _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _emailController;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailController = TextEditingController(text: widget.initialEmail ?? '');
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: Form(
+        key: _formKey,
+        child: TextFormField(
+          controller: _emailController,
+          autofocus: true,
+          keyboardType: TextInputType.emailAddress,
+          decoration: const InputDecoration(labelText: 'E-Mail'),
+          validator: _validateEmail,
+          onFieldSubmitted: (_) => _submit(),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Abbrechen'),
+        ),
+        FilledButton(onPressed: _submit, child: Text(widget.confirmLabel)),
+      ],
+    );
+  }
+
+  String? _validateEmail(String? value) {
+    final email = (value ?? '').trim();
+    if (email.isEmpty) {
+      return 'Bitte E-Mail eingeben.';
+    }
+    if (!_emailPattern.hasMatch(email)) {
+      return 'Bitte eine gueltige E-Mail eingeben.';
+    }
+    return null;
+  }
+
+  void _submit() {
+    if (_formKey.currentState?.validate() == false) {
+      return;
     }
 
-    final day = createdAt.day.toString().padLeft(2, '0');
-    final month = createdAt.month.toString().padLeft(2, '0');
-    final year = createdAt.year.toString();
-    final hour = createdAt.hour.toString().padLeft(2, '0');
-    final minute = createdAt.minute.toString().padLeft(2, '0');
-
-    return '$day.$month.$year, $hour:$minute';
+    Navigator.of(
+      context,
+    ).pop(AdminEmailDialogResult(email: _emailController.text.trim()));
   }
+}
+
+String _registeredLabel(AdminUser user) {
+  return user.isRegistered ? 'Ja' : 'Nein';
+}
+
+String _formatCreatedAt(DateTime? createdAt) {
+  if (createdAt == null) {
+    return 'Nicht verfuegbar';
+  }
+
+  final day = createdAt.day.toString().padLeft(2, '0');
+  final month = createdAt.month.toString().padLeft(2, '0');
+  final year = createdAt.year.toString();
+  final hour = createdAt.hour.toString().padLeft(2, '0');
+  final minute = createdAt.minute.toString().padLeft(2, '0');
+
+  return '$day.$month.$year, $hour:$minute';
 }

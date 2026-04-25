@@ -31,11 +31,9 @@ void main() {
     kennzeichenDb = LicensePlateDatabaseService.openInMemory();
     tempDir = Directory.systemTemp.createTempSync('gated-kennzeichen-test-');
     File('${tempDir.path}/allowed_emails.txt').writeAsStringSync('$email\n');
-    File('${tempDir.path}/admin_emails.txt').writeAsStringSync('');
     accessControlService = EmailAccessControlService(
       db: authDb,
       allowedEmailsFilePath: '${tempDir.path}/allowed_emails.txt',
-      adminEmailsFilePath: '${tempDir.path}/admin_emails.txt',
     );
     authHandler = buildAuthRouter(authDb, accessControlService).call;
     eventsBroker = KennzeichenEventsBroker();

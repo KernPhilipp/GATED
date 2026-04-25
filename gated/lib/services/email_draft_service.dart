@@ -1,4 +1,4 @@
-import 'package:url_launcher/url_launcher.dart';
+import 'email_draft_launcher.dart';
 
 class EmailDraft {
   const EmailDraft({
@@ -24,6 +24,6 @@ class EmailDraftService {
   const EmailDraftService();
 
   Future<bool> openDraft(EmailDraft draft) {
-    return launchUrl(draft.toUri());
+    return launchEmailDraft(draft.toUri());
   }
 }

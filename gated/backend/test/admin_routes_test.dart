@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:gated_backend/auth/email_access_control.dart';
 import 'package:gated_backend/auth/jwt_service.dart';
 import 'package:gated_backend/db/database.dart';
+import 'package:gated_backend/routes/admin_events.dart';
 import 'package:gated_backend/routes/admin_routes.dart';
 import 'package:gated_backend/routes/auth_routes.dart';
 import 'package:shelf/shelf.dart';
@@ -23,19 +24,22 @@ void main() {
     loadJwtEnv(overrideSecret: 'test-jwt-secret');
     db = DatabaseService.openInMemory();
     tempDir = Directory.systemTemp.createTempSync('gated-admin-test-');
-    _writeEmailFiles(
-      tempDir,
-      allowedEmails: {userEmail},
-      adminEmails: {adminEmail},
-    );
+    _writeEmailFiles(tempDir, allowedEmails: {userEmail});
     accessControlService = EmailAccessControlService(
       db: db,
       allowedEmailsFilePath: '${tempDir.path}/allowed_emails.txt',
-      adminEmailsFilePath: '${tempDir.path}/admin_emails.txt',
+      primaryAdminEmail: adminEmail,
     );
+    final adminEventsBroker = AdminEventsBroker();
     handler = Cascade()
-        .add(buildAuthRouter(db, accessControlService).call)
-        .add(buildAdminRouter(db, accessControlService).call)
+        .add(buildAuthRouter(db, accessControlService, adminEventsBroker).call)
+        .add(
+          buildAdminRouterWithEvents(
+            db,
+            accessControlService,
+            adminEventsBroker,
+          ).call,
+        )
         .handler;
   });
 
@@ -50,28 +54,45 @@ void main() {
       await _register(handler, email: adminEmail, password: password);
       await _register(handler, email: userEmail, password: password);
 
-      _writeEmailFiles(
-        tempDir,
-        allowedEmails: {adminEmail},
-        adminEmails: const <String>{},
-      );
+      _writeEmailFiles(tempDir, allowedEmails: {adminEmail});
       await accessControlService.sync();
 
-      final downgradedAdmin = await db.getUserByEmail(adminEmail);
+      final unchangedAdmin = await db.getUserByEmail(adminEmail);
       final deletedUser = await db.getUserByEmail(userEmail);
-      expect(downgradedAdmin?.role, DbUserRole.user);
+      expect(unchangedAdmin?.role, DbUserRole.admin);
       expect(deletedUser, isNull);
 
-      _writeEmailFiles(
-        tempDir,
-        allowedEmails: const <String>{},
-        adminEmails: const <String>{},
-      );
+      _writeEmailFiles(tempDir, allowedEmails: const <String>{});
       await accessControlService.sync();
 
-      expect(await db.getUserByEmail(adminEmail), isNull);
+      expect((await db.getUserByEmail(adminEmail))?.role, DbUserRole.admin);
     },
   );
+
+  test('admins can list allowed but unregistered users', () async {
+    await _register(handler, email: adminEmail, password: password);
+    final adminSession = await _login(
+      handler,
+      email: adminEmail,
+      password: password,
+    );
+
+    final listResponse = await _send(
+      handler,
+      'GET',
+      '/admin/users',
+      headers: {'Authorization': 'Bearer ${adminSession.accessToken}'},
+    );
+
+    expect(listResponse.statusCode, 200);
+    final listedUsers = await _readJsonList(listResponse);
+    final allowedUser = listedUsers.firstWhere(
+      (user) => user['email'] == userEmail,
+    );
+    expect(allowedUser['role'], 'User');
+    expect(allowedUser['isRegistered'], isFalse);
+    expect(allowedUser['userId'], isNull);
+  });
 
   test('non-admin users cannot access admin endpoints', () async {
     await _register(handler, email: userEmail, password: password);
@@ -122,6 +143,102 @@ void main() {
     );
     expect(deleteAdminResponse.statusCode, 409);
   });
+
+  test(
+    'deleting a registered user removes the allowed email and blocks re-registration',
+    () async {
+      await _register(handler, email: adminEmail, password: password);
+      await _register(handler, email: userEmail, password: password);
+      final adminSession = await _login(
+        handler,
+        email: adminEmail,
+        password: password,
+      );
+      final user = await db.getUserByEmail(userEmail);
+
+      final deleteResponse = await _send(
+        handler,
+        'DELETE',
+        '/admin/users/${user!.id}',
+        headers: {'Authorization': 'Bearer ${adminSession.accessToken}'},
+      );
+      expect(deleteResponse.statusCode, 204);
+      expect(await db.getUserByEmail(userEmail), isNull);
+      expect(_readAllowedEmails(tempDir), isNot(contains(userEmail)));
+
+      final registerAgain = await _sendJson(handler, 'POST', '/auth/register', {
+        'email': userEmail,
+        'password': password,
+      });
+      expect(registerAgain.statusCode, 403);
+    },
+  );
+
+  test('admins can add and edit allowed emails', () async {
+    await _register(handler, email: adminEmail, password: password);
+    await _register(handler, email: userEmail, password: password);
+    final adminSession = await _login(
+      handler,
+      email: adminEmail,
+      password: password,
+    );
+
+    final addResponse = await _sendJson(
+      handler,
+      'POST',
+      '/admin/allowed-emails',
+      {'email': 'new-user@example.com'},
+      headers: {'Authorization': 'Bearer ${adminSession.accessToken}'},
+    );
+    expect(addResponse.statusCode, 201);
+    expect(_readAllowedEmails(tempDir), contains('new-user@example.com'));
+
+    final editResponse = await _sendJson(
+      handler,
+      'PUT',
+      '/admin/allowed-emails/${Uri.encodeComponent(userEmail)}',
+      {'email': 'renamed@example.com'},
+      headers: {'Authorization': 'Bearer ${adminSession.accessToken}'},
+    );
+    expect(editResponse.statusCode, 200);
+    expect(await db.getUserByEmail(userEmail), isNull);
+    expect(await db.getUserByEmail('renamed@example.com'), isNotNull);
+    expect(_readAllowedEmails(tempDir), contains('renamed@example.com'));
+    expect(_readAllowedEmails(tempDir), isNot(contains(userEmail)));
+  });
+
+  test(
+    'primary admin is fixed and cannot be modified through the allowlist',
+    () async {
+      await _register(handler, email: adminEmail, password: password);
+      final adminSession = await _login(
+        handler,
+        email: adminEmail,
+        password: password,
+      );
+
+      final addAdminResponse = await _sendJson(
+        handler,
+        'POST',
+        '/admin/allowed-emails',
+        {'email': adminEmail},
+        headers: {'Authorization': 'Bearer ${adminSession.accessToken}'},
+      );
+      expect(addAdminResponse.statusCode, 409);
+
+      final listResponse = await _send(
+        handler,
+        'GET',
+        '/admin/users',
+        headers: {'Authorization': 'Bearer ${adminSession.accessToken}'},
+      );
+      final listedUsers = await _readJsonList(listResponse);
+      final adminUser = listedUsers.firstWhere(
+        (user) => user['email'] == adminEmail,
+      );
+      expect(adminUser['role'], 'Admin');
+    },
+  );
 
   test(
     'reset-password invalidates old sessions and allows login with the new password',
@@ -177,17 +294,18 @@ void main() {
   );
 }
 
-void _writeEmailFiles(
-  Directory tempDir, {
-  required Set<String> allowedEmails,
-  required Set<String> adminEmails,
-}) {
+void _writeEmailFiles(Directory tempDir, {required Set<String> allowedEmails}) {
   File(
     '${tempDir.path}/allowed_emails.txt',
   ).writeAsStringSync('${allowedEmails.join('\n')}\n');
-  File(
-    '${tempDir.path}/admin_emails.txt',
-  ).writeAsStringSync('${adminEmails.join('\n')}\n');
+}
+
+Set<String> _readAllowedEmails(Directory tempDir) {
+  return File('${tempDir.path}/allowed_emails.txt')
+      .readAsLinesSync()
+      .where((line) => line.trim().isNotEmpty)
+      .map((line) => line.trim())
+      .toSet();
 }
 
 Future<void> _register(
