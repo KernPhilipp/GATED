@@ -11,8 +11,8 @@
         "minimal-ui",
         "browser"
     ],
-    "background_color": "#CAF0F8",
-    "theme_color": "#03045E",
+    "background_color": "#FFFFFF",
+    "theme_color": "#FFFFFF",
     "description": "Garage Access Technology for Entry Detection",
     "orientation": "any",
     "categories": [
