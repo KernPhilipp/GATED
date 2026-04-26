@@ -70,7 +70,11 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
     final isPhone = width < 600;
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final bottomNavigationGradientEnd = theme.brightness == Brightness.dark
+        ? Colors.black
+        : Colors.white;
     final banner = _buildInstallBanner(context);
     final navItems = _navItems;
     final hideBottomNavLabels = isPhone && width < 450 && navItems.length == 5;
@@ -110,13 +114,22 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
       bottomNavigationBar: isPhone
-          ? ColoredBox(
-              color: colorScheme.surfaceContainerHighest,
+          ? DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    colorScheme.surfaceContainerHighest,
+                    bottomNavigationGradientEnd,
+                  ],
+                ),
+              ),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: NavigationBarTheme(
                   data: NavigationBarThemeData(
-                    backgroundColor: colorScheme.surfaceContainerHighest,
+                    backgroundColor: Colors.transparent,
                     iconTheme: WidgetStateProperty.resolveWith((states) {
                       if (states.contains(WidgetState.selected)) {
                         return IconThemeData(color: colorScheme.secondary);
@@ -137,6 +150,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     }),
                   ),
                   child: NavigationBar(
+                    backgroundColor: Colors.transparent,
+                    elevation: 0,
                     selectedIndex: currentSelectedIndex,
                     labelBehavior: hideBottomNavLabels
                         ? NavigationDestinationLabelBehavior.alwaysHide
