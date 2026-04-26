@@ -19,6 +19,9 @@ flutter_launcher_icons:
   # background_color_ios: "#ffffff"
 
   web:
+    # The generated Flutter web defaults are kept as a fallback.
+    # Final browser, desktop PWA, mobile PWA, and splash assets are maintained
+    # separately in web/icons and web/apple_splash.
     generate: true
     image_path: "assets/icon/icon.png"
     background_color: "#CAF0F8"
