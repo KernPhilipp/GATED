@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../features/logo_assets.dart';
 import '../features/pwa/pwa_install_controller.dart';
@@ -121,7 +122,7 @@ class _SettingsViewState extends State<SettingsView> {
         return AboutDialog(
           applicationName: 'GATED',
           applicationVersion: _applicationVersion ?? 'Version wird geladen...',
-          applicationIcon: Image.asset(
+          applicationIcon: SvgPicture.asset(
             logoAsset,
             width: 60,
             fit: BoxFit.contain,

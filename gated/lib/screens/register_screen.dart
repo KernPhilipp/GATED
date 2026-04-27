@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../features/logo_assets.dart';
 import '../services/auth_service.dart';
@@ -81,7 +82,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                             SizedBox(
                               height: 200,
-                              child: Image.asset(logoAsset),
+                              child: SvgPicture.asset(logoAsset),
                             ),
                             TextFormField(
                               controller: _emailController,

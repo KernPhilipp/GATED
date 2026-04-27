@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+
 import '../logo_assets.dart';
 import 'navbar_constants.dart';
 import 'navbar_item.dart';
@@ -50,12 +52,12 @@ class NavigationSidebar extends StatelessWidget {
                   );
                 },
                 child: isCompactNav
-                    ? Image.asset(
+                    ? SvgPicture.asset(
                         compactLogoAsset,
                         key: ValueKey('compactLogo-$compactLogoAsset'),
                         fit: BoxFit.contain,
                       )
-                    : Image.asset(
+                    : SvgPicture.asset(
                         fullLogoAsset,
                         key: ValueKey('fullLogo-$fullLogoAsset'),
                         fit: BoxFit.contain,
