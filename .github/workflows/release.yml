@@ -52,10 +52,10 @@ jobs:
 
       - name: Upload package to GitHub release
         if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.event.release.tag_name }}
-          files: |
-            .release-dist/gated-release.tar.gz
-            .release-dist/gated-release.tar.gz.sha256
-          overwrite_files: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ github.event.release.tag_name }}" \
+            .release-dist/gated-release.tar.gz \
+            .release-dist/gated-release.tar.gz.sha256 \
+            --clobber
