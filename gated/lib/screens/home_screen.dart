@@ -72,9 +72,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final isPhone = width < 600;
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final bottomNavigationGradientEnd = theme.brightness == Brightness.dark
-        ? Colors.black
-        : Colors.white;
     final banner = _buildInstallBanner(context);
     final navItems = _navItems;
     final hideBottomNavLabels = isPhone && width < 450 && navItems.length == 5;
@@ -121,7 +118,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   end: Alignment.bottomCenter,
                   colors: [
                     colorScheme.surfaceContainerHighest,
-                    bottomNavigationGradientEnd,
+                    Theme.of(context).scaffoldBackgroundColor,
                   ],
                 ),
               ),
