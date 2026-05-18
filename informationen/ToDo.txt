@@ -17,3 +17,8 @@ GATED - ToDo
 - Tor-Zustandswechsel gegen schnelle Folgeereignisse absichern.
 - Verhalten bei zwei gueltigen Kennzeichen kurz hintereinander festlegen.
 - Noetige Rueckmeldungen aus Kennzeichenerkennung/Node-RED klaeren.
+
+4) Diplomarbeit
+---------------
+- Deutsche Umlaute im Code korrigieren
+- Betroffene Screenshots in der Diplomarbeit ersetzen
