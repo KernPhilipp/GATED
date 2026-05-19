@@ -30,6 +30,8 @@ class AdminView extends StatefulWidget {
 
 class _AdminViewState extends State<AdminView> {
   final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _shellyBaseUrlController =
+      TextEditingController();
   final List<AdminUser> _users = [];
   late final AuthService _authService;
   late final RealtimeEventSubscription _realtimeEvents;
@@ -37,6 +39,8 @@ class _AdminViewState extends State<AdminView> {
   bool _isLoading = true;
   bool _isRefreshing = false;
   bool _isMutating = false;
+  bool _isLoadingGarageDoorConfig = false;
+  bool _isSavingGarageDoorConfig = false;
   bool _isRedirectingToLogin = false;
   bool _hasLoadedOnce = false;
   int? _sortColumnIndex;
@@ -76,6 +80,7 @@ class _AdminViewState extends State<AdminView> {
   void dispose() {
     _realtimeEvents.dispose();
     _searchController.dispose();
+    _shellyBaseUrlController.dispose();
     super.dispose();
   }
 
@@ -101,6 +106,13 @@ class _AdminViewState extends State<AdminView> {
                   style: theme.textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 20),
+                _AdminGarageDoorConfigCard(
+                  shellyBaseUrlController: _shellyBaseUrlController,
+                  isLoading: _isLoadingGarageDoorConfig,
+                  isSaving: _isSavingGarageDoorConfig,
+                  onSave: _saveGarageDoorConfig,
+                ),
+                const SizedBox(height: 12),
                 _AdminTableSection(
                   users: visibleUsers,
                   hasAnyUsers: _users.isNotEmpty,
@@ -229,6 +241,68 @@ class _AdminViewState extends State<AdminView> {
           _isLoading = false;
           _isRefreshing = false;
         });
+      }
+    }
+  }
+
+  Future<void> _loadGarageDoorConfig() async {
+    if (!mounted || _isRedirectingToLogin) {
+      return;
+    }
+
+    setState(() => _isLoadingGarageDoorConfig = true);
+    try {
+      final config = await widget.adminService.fetchGarageDoorConfig();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _shellyBaseUrlController.text = config.shellyBaseUrl;
+      });
+    } on SessionExpiredException catch (error) {
+      await _handleSessionExpired(error);
+    } on AdminException catch (error) {
+      _showError(error.message);
+    } catch (_) {
+      _showError('Shelly-Konfiguration konnte nicht geladen werden.');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingGarageDoorConfig = false);
+      }
+    }
+  }
+
+  Future<void> _saveGarageDoorConfig() async {
+    final baseUrl = _shellyBaseUrlController.text.trim();
+    final uri = Uri.tryParse(baseUrl);
+    if (uri == null ||
+        !uri.isAbsolute ||
+        (uri.scheme != 'http' && uri.scheme != 'https')) {
+      _showError('Bitte eine gueltige Shelly-URL eingeben.');
+      return;
+    }
+
+    setState(() => _isSavingGarageDoorConfig = true);
+    try {
+      final config = await widget.adminService.updateGarageDoorConfig(
+        AdminGarageDoorConfig(shellyBaseUrl: baseUrl),
+      );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _shellyBaseUrlController.text = config.shellyBaseUrl;
+      });
+      showAppSnackBar(context, message: 'Shelly-Konfiguration gespeichert.');
+    } on SessionExpiredException catch (error) {
+      await _handleSessionExpired(error);
+    } on AdminException catch (error) {
+      _showError(error.message);
+    } catch (_) {
+      _showError('Shelly-Konfiguration konnte nicht gespeichert werden.');
+    } finally {
+      if (mounted) {
+        setState(() => _isSavingGarageDoorConfig = false);
       }
     }
   }
@@ -431,6 +505,7 @@ class _AdminViewState extends State<AdminView> {
   void _activateRealtimeUpdates({required bool initialLoad}) {
     if (initialLoad) {
       unawaited(_loadUsers());
+      unawaited(_loadGarageDoorConfig());
     } else {
       unawaited(_loadUsers(refreshOnly: true));
     }
@@ -572,6 +647,104 @@ class _AdminTableSection extends StatelessWidget {
       onEdit: onEditUser,
       onDelete: onDeleteUser,
       onResetPassword: onResetPassword,
+    );
+  }
+}
+
+class _AdminGarageDoorConfigCard extends StatelessWidget {
+  const _AdminGarageDoorConfigCard({
+    required this.shellyBaseUrlController,
+    required this.isLoading,
+    required this.isSaving,
+    required this.onSave,
+  });
+
+  final TextEditingController shellyBaseUrlController;
+  final bool isLoading;
+  final bool isSaving;
+  final VoidCallback onSave;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return SizedBox(
+      width: double.infinity,
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.router_rounded, color: theme.colorScheme.primary),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Shelly-Konfiguration',
+                      style: theme.textTheme.titleMedium,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              if (isLoading)
+                const Center(child: CircularProgressIndicator.adaptive())
+              else
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isNarrow = constraints.maxWidth < 720;
+                    final input = TextField(
+                      controller: shellyBaseUrlController,
+                      enabled: !isSaving,
+                      keyboardType: TextInputType.url,
+                      decoration: const InputDecoration(
+                        labelText: 'Shelly Base-URL',
+                        hintText: 'http://192.168.0.102',
+                        prefixIcon: Icon(Icons.link_rounded),
+                      ),
+                    );
+                    final saveButton = FilledButton.icon(
+                      onPressed: isSaving ? null : onSave,
+                      icon: isSaving
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.save_rounded),
+                      label: const Text('Speichern'),
+                    );
+
+                    if (isNarrow) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          input,
+                          const SizedBox(height: 12),
+                          saveButton,
+                        ],
+                      );
+                    }
+
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: input),
+                        const SizedBox(width: 16),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: saveButton,
+                        ),
+                      ],
+                    );
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

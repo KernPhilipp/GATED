@@ -4,22 +4,18 @@ import 'dart:io';
 
 import 'package:dotenv/dotenv.dart';
 
+import '../db/database.dart';
+
 enum GarageDoorState { determining, opening, open, closing, closed, unknown }
 
-enum GarageDoorActionType {
-  startup,
-  trigger,
-  manualOverride,
-  automaticTransition,
-  externalHeuristicTrigger,
-}
-
-enum GarageDoorStateConfidence { modeled, heuristic }
+enum GarageDoorStateConfidence { modeled, heuristic, sensor }
 
 class GarageDoorConfig {
   const GarageDoorConfig({
     required this.shellyBaseUrl,
     required this.switchId,
+    required this.inputId,
+    required this.sensorSettleDuration,
     required this.shellyRequestTimeout,
     required this.statusRefreshDebounce,
     required this.shellyPollInterval,
@@ -64,6 +60,8 @@ class GarageDoorConfig {
     return GarageDoorConfig(
       shellyBaseUrl: readString('SHELLY_BASE_URL', 'http://192.168.0.102'),
       switchId: readString('SHELLY_SWITCH_ID', '0'),
+      inputId: '0',
+      sensorSettleDuration: const Duration(seconds: 5),
       shellyRequestTimeout: Duration(
         seconds: readSeconds('SHELLY_REQUEST_TIMEOUT_SECONDS', 3),
       ),
@@ -99,6 +97,8 @@ class GarageDoorConfig {
 
   final String shellyBaseUrl;
   final String switchId;
+  final String inputId;
+  final Duration sensorSettleDuration;
   final Duration shellyRequestTimeout;
   final Duration statusRefreshDebounce;
   final Duration shellyPollInterval;
@@ -108,13 +108,43 @@ class GarageDoorConfig {
   final Duration openHoldDuration;
   final Duration closingDuration;
   final Duration startupDeterminationDuration;
+
+  GarageDoorConfig copyWith({String? shellyBaseUrl}) {
+    return GarageDoorConfig(
+      shellyBaseUrl: shellyBaseUrl ?? this.shellyBaseUrl,
+      switchId: switchId,
+      inputId: inputId,
+      sensorSettleDuration: sensorSettleDuration,
+      shellyRequestTimeout: shellyRequestTimeout,
+      statusRefreshDebounce: statusRefreshDebounce,
+      shellyPollInterval: shellyPollInterval,
+      selfTriggerSuppressionWindow: selfTriggerSuppressionWindow,
+      pulseDuration: pulseDuration,
+      openingDuration: openingDuration,
+      openHoldDuration: openHoldDuration,
+      closingDuration: closingDuration,
+      startupDeterminationDuration: startupDeterminationDuration,
+    );
+  }
+
+  GarageDoorConfig withRuntimeConfig(DbGarageDoorConfig config) {
+    return copyWith(shellyBaseUrl: config.shellyBaseUrl);
+  }
+
+  DbGarageDoorConfig toDbConfig() {
+    return DbGarageDoorConfig(shellyBaseUrl: shellyBaseUrl);
+  }
+
+  Map<String, Object?> toPublicJson() {
+    return {'shellyBaseUrl': shellyBaseUrl};
+  }
 }
 
 class GarageDoorStatusSnapshot {
   const GarageDoorStatusSnapshot({
     required this.state,
     required this.stateConfidence,
-    required this.lastAction,
+    required this.lastChangedAt,
     this.nextState,
     this.phaseEndsAt,
     this.remainingMs,
@@ -128,7 +158,7 @@ class GarageDoorStatusSnapshot {
   final DateTime? phaseEndsAt;
   final int? remainingMs;
   final String? countdownLabel;
-  final GarageDoorLastAction lastAction;
+  final DateTime? lastChangedAt;
   final ShellyHelperSnapshot? shelly;
 
   Map<String, Object?> toJson() {
@@ -139,31 +169,8 @@ class GarageDoorStatusSnapshot {
       'phaseEndsAt': phaseEndsAt?.toUtc().toIso8601String(),
       'remainingMs': remainingMs,
       'countdownLabel': countdownLabel,
-      'lastAction': lastAction.toJson(),
+      'lastChangedAt': lastChangedAt?.toUtc().toIso8601String(),
       'shelly': shelly?.toJson(),
-    };
-  }
-}
-
-class GarageDoorLastAction {
-  const GarageDoorLastAction({
-    required this.type,
-    required this.source,
-    required this.description,
-    required this.timestamp,
-  });
-
-  final GarageDoorActionType type;
-  final String source;
-  final String description;
-  final DateTime timestamp;
-
-  Map<String, Object?> toJson() {
-    return {
-      'type': type.name,
-      'source': source,
-      'description': description,
-      'timestamp': timestamp.toUtc().toIso8601String(),
     };
   }
 }
@@ -173,12 +180,16 @@ class ShellyHelperSnapshot {
     required this.lastCheckedAt,
     this.isReachable,
     this.relayOutput,
+    this.inputState,
+    this.isDoorClosedBySensor,
     this.errorMessage,
   });
 
   final DateTime? lastCheckedAt;
   final bool? isReachable;
   final bool? relayOutput;
+  final bool? inputState;
+  final bool? isDoorClosedBySensor;
   final String? errorMessage;
 
   Map<String, Object?> toJson() {
@@ -186,6 +197,8 @@ class ShellyHelperSnapshot {
       'lastCheckedAt': lastCheckedAt?.toUtc().toIso8601String(),
       'isReachable': isReachable,
       'relayOutput': relayOutput,
+      'inputState': inputState,
+      'isDoorClosedBySensor': isDoorClosedBySensor,
       'errorMessage': errorMessage,
     };
   }
@@ -213,24 +226,34 @@ class HttpShellyRelayClient implements ShellyRelayClient {
   HttpShellyRelayClient({
     required this.baseUrl,
     required this.switchId,
+    required this.inputId,
     this.timeout = const Duration(seconds: 3),
   });
 
-  final String baseUrl;
+  String baseUrl;
   final String switchId;
+  final String inputId;
   final Duration timeout;
+
+  void updateBaseUrl(String value) {
+    baseUrl = value;
+  }
 
   @override
   Future<ShellyStatusSnapshot> fetchStatus() async {
-    final response = await _sendRequest('/rpc/Switch.GetStatus', {
+    final switchResponse = await _sendRequest('/rpc/Switch.GetStatus', {
       'id': switchId,
     });
-    final decoded = _decodeJsonObject(response.body);
+    final switchDecoded = _decodeJsonObject(switchResponse.body);
+    final inputResponse = await _sendRequest('/rpc/Input.GetStatus', {
+      'id': inputId,
+    });
+    final inputDecoded = _decodeJsonObject(inputResponse.body);
 
     return ShellyStatusSnapshot(
       checkedAt: DateTime.now().toUtc(),
-      relayOutput: _readOptionalBool(decoded['output']),
-      inputState: _readOptionalBool(decoded['input']),
+      relayOutput: _readOptionalBool(switchDecoded['output']),
+      inputState: _readOptionalBool(inputDecoded['state']),
     );
   }
 
@@ -322,7 +345,7 @@ class GarageDoorService {
     _startShellyPolling();
   }
 
-  final GarageDoorConfig _config;
+  GarageDoorConfig _config;
   final ShellyRelayClient _shellyClient;
   final DateTime Function() _now;
 
@@ -332,6 +355,7 @@ class GarageDoorService {
   GarageDoorState? _nextState;
   String? _countdownLabel;
   DateTime? _phaseEndsAt;
+  DateTime? _lastChangedAt;
   Timer? _phaseTimer;
   Timer? _shellyPollTimer;
   DateTime? _lastShellyCheckAt;
@@ -339,13 +363,9 @@ class GarageDoorService {
   bool? _lastObservedRelayOutput;
   bool? _lastShellyReachable;
   bool? _lastRelayOutput;
+  bool? _lastInputState;
   String? _lastShellyError;
-  GarageDoorLastAction _lastAction = GarageDoorLastAction(
-    type: GarageDoorActionType.startup,
-    source: 'backend',
-    description: 'Initialisierung gestartet.',
-    timestamp: DateTime.now().toUtc(),
-  );
+  bool _isSensorSettlePhase = false;
   bool _isRefreshingShellyStatus = false;
 
   Future<GarageDoorStatusSnapshot> getStatus() async {
@@ -359,6 +379,18 @@ class GarageDoorService {
       await _pollShellyStatus(force: true);
     }
 
+    return _buildSnapshot();
+  }
+
+  GarageDoorConfig getConfig() => _config;
+
+  Future<GarageDoorStatusSnapshot> updateConfig(GarageDoorConfig config) async {
+    _config = config;
+    final shellyClient = _shellyClient;
+    if (shellyClient is HttpShellyRelayClient) {
+      shellyClient.updateBaseUrl(config.shellyBaseUrl);
+    }
+    await _pollShellyStatus(force: true);
     return _buildSnapshot();
   }
 
@@ -377,67 +409,12 @@ class GarageDoorService {
     _lastInternalTriggerAt = _now().toUtc();
 
     if (_state == GarageDoorState.open) {
-      _startClosing(
-        action: _createAction(
-          type: GarageDoorActionType.trigger,
-          source: 'dashboard',
-          description: 'Manueller Impuls zum vorzeitigen Schliessen gesendet.',
-        ),
-        stateConfidence: GarageDoorStateConfidence.modeled,
-      );
+      _startClosing(stateConfidence: GarageDoorStateConfidence.modeled);
     } else {
-      _startOpening(
-        action: _createAction(
-          type: GarageDoorActionType.trigger,
-          source: 'dashboard',
-          description: 'Manueller Impuls zum Oeffnen gesendet.',
-        ),
-        stateConfidence: GarageDoorStateConfidence.modeled,
-      );
+      _startOpening(stateConfidence: GarageDoorStateConfidence.modeled);
     }
 
     unawaited(_pollShellyStatus(force: true));
-    return _buildSnapshot();
-  }
-
-  GarageDoorStatusSnapshot setManualState(GarageDoorState state) {
-    _syncState();
-
-    final action = _createAction(
-      type: GarageDoorActionType.manualOverride,
-      source: 'dashboard',
-      description: 'Torstatus manuell auf ${state.name} gesetzt.',
-    );
-
-    switch (state) {
-      case GarageDoorState.open:
-        _startOpenHold(
-          action: action,
-          stateConfidence: GarageDoorStateConfidence.modeled,
-        );
-        break;
-      case GarageDoorState.closed:
-        _setStableState(
-          GarageDoorState.closed,
-          action: action,
-          stateConfidence: GarageDoorStateConfidence.modeled,
-        );
-        break;
-      case GarageDoorState.unknown:
-        _setStableState(
-          GarageDoorState.unknown,
-          action: action,
-          stateConfidence: GarageDoorStateConfidence.modeled,
-        );
-        break;
-      case GarageDoorState.determining:
-      case GarageDoorState.opening:
-      case GarageDoorState.closing:
-        throw const GarageDoorConflictException(
-          'Dieser Status darf nicht manuell gesetzt werden.',
-        );
-    }
-
     return _buildSnapshot();
   }
 
@@ -447,65 +424,63 @@ class GarageDoorService {
   }
 
   void _startDetermining() {
-    _setTimedState(
+    _setMovingState(
       GarageDoorState.determining,
-      duration: _config.startupDeterminationDuration,
-      nextState: GarageDoorState.closed,
-      countdownLabel: 'Bis Standardstatus geschlossen',
-      action: _createAction(
-        type: GarageDoorActionType.startup,
-        source: 'backend',
-        description: 'Status wird nach Backend-Start ermittelt.',
-      ),
+      nextState: null,
+      countdownLabel: 'Warten auf Sensorstatus',
       stateConfidence: GarageDoorStateConfidence.modeled,
     );
   }
 
-  void _startOpening({
-    required GarageDoorLastAction action,
-    GarageDoorStateConfidence? stateConfidence,
-  }) {
-    _setTimedState(
+  void _startOpening({GarageDoorStateConfidence? stateConfidence}) {
+    _setMovingState(
       GarageDoorState.opening,
-      duration: _config.openingDuration,
       nextState: GarageDoorState.open,
-      countdownLabel: 'Bis Zustand offen',
-      action: action,
+      countdownLabel: 'Warten auf Sensorbestaetigung offen',
       stateConfidence: stateConfidence,
     );
   }
 
-  void _startOpenHold({
-    required GarageDoorLastAction action,
-    GarageDoorStateConfidence? stateConfidence,
-  }) {
+  void _startOpenHold({GarageDoorStateConfidence? stateConfidence}) {
     _setTimedState(
       GarageDoorState.open,
       duration: _config.openHoldDuration,
       nextState: GarageDoorState.closing,
       countdownLabel: 'Bis automatisches Schliessen',
-      action: action,
       stateConfidence: stateConfidence,
     );
   }
 
-  void _startClosing({
-    required GarageDoorLastAction action,
-    GarageDoorStateConfidence? stateConfidence,
-  }) {
-    _setTimedState(
+  void _startClosing({GarageDoorStateConfidence? stateConfidence}) {
+    _setMovingState(
       GarageDoorState.closing,
-      duration: _config.closingDuration,
       nextState: GarageDoorState.closed,
-      countdownLabel: 'Bis Zustand geschlossen',
-      action: action,
+      countdownLabel: 'Warten auf Sensorbestaetigung geschlossen',
       stateConfidence: stateConfidence,
     );
+  }
+
+  void _setMovingState(
+    GarageDoorState state, {
+    required GarageDoorState? nextState,
+    required String countdownLabel,
+    GarageDoorStateConfidence? stateConfidence,
+  }) {
+    _phaseTimer?.cancel();
+    _phaseTimer = null;
+    _state = state;
+    _nextState = nextState;
+    _countdownLabel = countdownLabel;
+    _phaseEndsAt = null;
+    _isSensorSettlePhase = false;
+    _lastChangedAt = _now().toUtc();
+    if (stateConfidence != null) {
+      _stateConfidence = stateConfidence;
+    }
   }
 
   void _setStableState(
     GarageDoorState state, {
-    required GarageDoorLastAction action,
     GarageDoorStateConfidence? stateConfidence,
   }) {
     _phaseTimer?.cancel();
@@ -514,7 +489,8 @@ class GarageDoorService {
     _nextState = null;
     _countdownLabel = null;
     _phaseEndsAt = null;
-    _lastAction = action;
+    _isSensorSettlePhase = false;
+    _lastChangedAt = _now().toUtc();
     if (stateConfidence != null) {
       _stateConfidence = stateConfidence;
     }
@@ -525,8 +501,8 @@ class GarageDoorService {
     required Duration duration,
     required GarageDoorState nextState,
     required String countdownLabel,
-    required GarageDoorLastAction action,
     GarageDoorStateConfidence? stateConfidence,
+    bool isSensorSettlePhase = false,
   }) {
     _phaseTimer?.cancel();
     _phaseTimer = null;
@@ -535,7 +511,8 @@ class GarageDoorService {
     _nextState = nextState;
     _countdownLabel = countdownLabel;
     _phaseEndsAt = _now().toUtc().add(duration);
-    _lastAction = action;
+    _isSensorSettlePhase = isSensorSettlePhase;
+    _lastChangedAt = _now().toUtc();
     if (stateConfidence != null) {
       _stateConfidence = stateConfidence;
     }
@@ -556,46 +533,30 @@ class GarageDoorService {
     _phaseTimer?.cancel();
     _phaseTimer = null;
 
+    if (_isSensorSettlePhase && _nextState != null) {
+      final completedState = _nextState!;
+      _setStableState(
+        completedState,
+        stateConfidence: GarageDoorStateConfidence.sensor,
+      );
+      return;
+    }
+
     switch (_state) {
       case GarageDoorState.determining:
         _setStableState(
           GarageDoorState.closed,
-          action: _createAction(
-            type: GarageDoorActionType.automaticTransition,
-            source: 'backend',
-            description:
-                'Initiale Ermittlung abgeschlossen, Standardstatus geschlossen.',
-          ),
           stateConfidence: GarageDoorStateConfidence.modeled,
         );
         break;
       case GarageDoorState.opening:
-        _startOpenHold(
-          action: _createAction(
-            type: GarageDoorActionType.automaticTransition,
-            source: 'backend',
-            description: 'Modellierter Zustand auf offen gewechselt.',
-          ),
-        );
+        _startOpenHold();
         break;
       case GarageDoorState.open:
-        _startClosing(
-          action: _createAction(
-            type: GarageDoorActionType.automaticTransition,
-            source: 'backend',
-            description: 'Automatisches Schliessen gestartet.',
-          ),
-        );
+        _startClosing();
         break;
       case GarageDoorState.closing:
-        _setStableState(
-          GarageDoorState.closed,
-          action: _createAction(
-            type: GarageDoorActionType.automaticTransition,
-            source: 'backend',
-            description: 'Modellierter Zustand auf geschlossen gewechselt.',
-          ),
-        );
+        _setStableState(GarageDoorState.closed);
         break;
       case GarageDoorState.closed:
       case GarageDoorState.unknown:
@@ -642,7 +603,15 @@ class GarageDoorService {
     _lastShellyCheckAt = snapshot.checkedAt.toUtc();
     _lastShellyReachable = true;
     _lastRelayOutput = snapshot.relayOutput;
+    _lastInputState = snapshot.inputState;
     _lastShellyError = null;
+
+    final inputState = snapshot.inputState;
+    if (inputState != null) {
+      _applySensorState(inputState);
+      _lastObservedRelayOutput = snapshot.relayOutput;
+      return;
+    }
 
     final currentOutput = snapshot.relayOutput;
     final previousOutput = _lastObservedRelayOutput;
@@ -656,6 +625,63 @@ class GarageDoorService {
 
       _lastObservedRelayOutput = currentOutput;
     }
+  }
+
+  void _applySensorState(bool inputState) {
+    _syncState();
+
+    final isClosedBySensor = inputState == false;
+    switch (_state) {
+      case GarageDoorState.determining:
+        _startSensorSettle(
+          isClosedBySensor ? GarageDoorState.closed : GarageDoorState.open,
+        );
+        break;
+      case GarageDoorState.closed:
+      case GarageDoorState.unknown:
+        if (!isClosedBySensor) {
+          _startSensorSettle(GarageDoorState.open);
+        }
+        break;
+      case GarageDoorState.open:
+        if (isClosedBySensor) {
+          _startSensorSettle(GarageDoorState.closed);
+        }
+        break;
+      case GarageDoorState.opening:
+        if (!isClosedBySensor) {
+          _startSensorSettle(GarageDoorState.open);
+        }
+        break;
+      case GarageDoorState.closing:
+        if (isClosedBySensor) {
+          _startSensorSettle(GarageDoorState.closed);
+        }
+        break;
+    }
+  }
+
+  void _startSensorSettle(GarageDoorState targetState) {
+    if (_isSensorSettlePhase &&
+        _nextState == targetState &&
+        _phaseEndsAt != null) {
+      return;
+    }
+
+    final movingState = targetState == GarageDoorState.closed
+        ? GarageDoorState.closing
+        : GarageDoorState.opening;
+
+    _setTimedState(
+      movingState,
+      duration: _config.sensorSettleDuration,
+      nextState: targetState,
+      countdownLabel: targetState == GarageDoorState.closed
+          ? 'Bis Sensorstatus geschlossen bestaetigt'
+          : 'Bis Sensorstatus offen bestaetigt',
+      stateConfidence: GarageDoorStateConfidence.sensor,
+      isSensorSettlePhase: true,
+    );
   }
 
   bool _isSuppressedSelfTrigger(DateTime detectedAt) {
@@ -676,37 +702,15 @@ class GarageDoorService {
       case GarageDoorState.closed:
       case GarageDoorState.unknown:
       case GarageDoorState.determining:
-        _startOpening(
-          action: _createAction(
-            type: GarageDoorActionType.externalHeuristicTrigger,
-            source: 'heuristic-external',
-            description:
-                'Heuristisch externer Shelly-Impuls erkannt. Modell startet Oeffnung.',
-          ),
-          stateConfidence: GarageDoorStateConfidence.heuristic,
-        );
+        _startOpening(stateConfidence: GarageDoorStateConfidence.heuristic);
         break;
       case GarageDoorState.open:
-        _startClosing(
-          action: _createAction(
-            type: GarageDoorActionType.externalHeuristicTrigger,
-            source: 'heuristic-external',
-            description:
-                'Heuristisch externer Shelly-Impuls erkannt. Modell startet Schliessen.',
-          ),
-          stateConfidence: GarageDoorStateConfidence.heuristic,
-        );
+        _startClosing(stateConfidence: GarageDoorStateConfidence.heuristic);
         break;
       case GarageDoorState.opening:
       case GarageDoorState.closing:
         _setStableState(
           GarageDoorState.unknown,
-          action: _createAction(
-            type: GarageDoorActionType.externalHeuristicTrigger,
-            source: 'heuristic-external',
-            description:
-                'Heuristisch externer Shelly-Impuls waehrend laufender Bewegung erkannt. Status auf unbekannt gesetzt.',
-          ),
           stateConfidence: GarageDoorStateConfidence.heuristic,
         );
         break;
@@ -717,19 +721,6 @@ class GarageDoorService {
     _lastShellyCheckAt = _now().toUtc();
     _lastShellyReachable = true;
     _lastShellyError = null;
-  }
-
-  GarageDoorLastAction _createAction({
-    required GarageDoorActionType type,
-    required String source,
-    required String description,
-  }) {
-    return GarageDoorLastAction(
-      type: type,
-      source: source,
-      description: description,
-      timestamp: _now().toUtc(),
-    );
   }
 
   GarageDoorStatusSnapshot _buildSnapshot() {
@@ -748,11 +739,15 @@ class GarageDoorService {
       phaseEndsAt: phaseEndsAt,
       remainingMs: phaseEndsAt == null ? null : remainingMs as int,
       countdownLabel: _countdownLabel,
-      lastAction: _lastAction,
+      lastChangedAt: _lastChangedAt,
       shelly: ShellyHelperSnapshot(
         lastCheckedAt: _lastShellyCheckAt,
         isReachable: _lastShellyReachable,
         relayOutput: _lastRelayOutput,
+        inputState: _lastInputState,
+        isDoorClosedBySensor: _lastInputState == null
+            ? null
+            : _lastInputState == false,
         errorMessage: _lastShellyError,
       ),
     );

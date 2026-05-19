@@ -79,6 +79,12 @@ class DbAuthSession {
   }
 }
 
+class DbGarageDoorConfig {
+  const DbGarageDoorConfig({required this.shellyBaseUrl});
+
+  final String shellyBaseUrl;
+}
+
 class DatabaseService {
   final Database db;
 
@@ -143,6 +149,13 @@ ON auth_sessions(user_id);
     db.execute('''
 CREATE INDEX IF NOT EXISTS idx_auth_sessions_expires_at
 ON auth_sessions(expires_at);
+''');
+
+    db.execute('''
+CREATE TABLE IF NOT EXISTS app_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
 ''');
   }
 
@@ -414,6 +427,35 @@ WHERE user_id = ?;
 ''');
     try {
       stmt.execute([revokedAt, userId]);
+    } finally {
+      stmt.close();
+    }
+  }
+
+  Future<DbGarageDoorConfig> getGarageDoorConfig({
+    required DbGarageDoorConfig defaults,
+  }) async {
+    final result = db.select(
+      "SELECT value FROM app_settings WHERE key = 'garage_door.shelly_base_url' LIMIT 1;",
+    );
+    if (result.isEmpty) {
+      return defaults;
+    }
+
+    final value = (result.first['value'] as String).trim();
+    return DbGarageDoorConfig(
+      shellyBaseUrl: value.isEmpty ? defaults.shellyBaseUrl : value,
+    );
+  }
+
+  Future<void> saveGarageDoorConfig(DbGarageDoorConfig config) async {
+    final stmt = db.prepare('''
+INSERT INTO app_settings (key, value)
+VALUES ('garage_door.shelly_base_url', ?)
+ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+''');
+    try {
+      stmt.execute([config.shellyBaseUrl]);
     } finally {
       stmt.close();
     }

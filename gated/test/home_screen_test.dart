@@ -350,6 +350,98 @@ void main() {
     await tester.binding.setSurfaceSize(null);
   });
 
+  testWidgets('admin view saves Shelly configuration', (tester) async {
+    final adminService = _FakeAdminService();
+
+    await tester.binding.setSurfaceSize(const Size(1400, 900));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: HomeScreen(
+          onThemeModeChanged: (_) {},
+          pwaInstallController: _FakePwaInstallController(),
+          authService: _FakeAuthService(
+            user: AuthUser(
+              id: 1,
+              email: 'admin@example.com',
+              role: AuthUserRole.admin,
+              createdAt: DateTime.utc(2026, 4, 24),
+            ),
+          ),
+          adminService: adminService,
+          emailDraftService: _FakeEmailDraftService(),
+          dashboardViewBuilder: (_) => const SizedBox.shrink(),
+          kennzeichenViewBuilder: (_) => const SizedBox.shrink(),
+          profileView: const SizedBox.shrink(),
+          settingsView: const SizedBox.shrink(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.admin_panel_settings_rounded));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Shelly-Konfiguration'), findsOneWidget);
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Shelly Base-URL'),
+      'http://192.168.0.250',
+    );
+    await tester.tap(find.text('Speichern'));
+    await tester.pumpAndSettle();
+
+    expect(adminService.garageDoorConfig.shellyBaseUrl, 'http://192.168.0.250');
+    expect(find.text('Shelly-Konfiguration gespeichert.'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 4));
+    await tester.binding.setSurfaceSize(null);
+  });
+
+  testWidgets('admin view rejects invalid Shelly URL', (tester) async {
+    final adminService = _FakeAdminService();
+
+    await tester.binding.setSurfaceSize(const Size(1400, 900));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: HomeScreen(
+          onThemeModeChanged: (_) {},
+          pwaInstallController: _FakePwaInstallController(),
+          authService: _FakeAuthService(
+            user: AuthUser(
+              id: 1,
+              email: 'admin@example.com',
+              role: AuthUserRole.admin,
+              createdAt: DateTime.utc(2026, 4, 24),
+            ),
+          ),
+          adminService: adminService,
+          emailDraftService: _FakeEmailDraftService(),
+          dashboardViewBuilder: (_) => const SizedBox.shrink(),
+          kennzeichenViewBuilder: (_) => const SizedBox.shrink(),
+          profileView: const SizedBox.shrink(),
+          settingsView: const SizedBox.shrink(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.admin_panel_settings_rounded));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Shelly Base-URL'),
+      'ftp://192.168.0.250',
+    );
+    await tester.tap(find.text('Speichern'));
+    await tester.pumpAndSettle();
+
+    expect(adminService.garageDoorConfig.shellyBaseUrl, 'http://192.168.0.102');
+    expect(
+      find.text('Bitte eine gueltige Shelly-URL eingeben.'),
+      findsOneWidget,
+    );
+    await tester.pump(const Duration(seconds: 4));
+    await tester.binding.setSurfaceSize(null);
+  });
+
   testWidgets('admin password reset opens a prepared email draft', (
     tester,
   ) async {
@@ -431,6 +523,9 @@ class _FakeAdminService extends AdminService {
     : super(authService: AuthService(baseUrl: 'http://localhost'));
 
   final List<AdminUser> users;
+  AdminGarageDoorConfig garageDoorConfig = const AdminGarageDoorConfig(
+    shellyBaseUrl: 'http://192.168.0.102',
+  );
 
   @override
   Future<List<AdminUser>> fetchUsers() async => users;
@@ -441,6 +536,19 @@ class _FakeAdminService extends AdminService {
       email: 'user@example.com',
       temporaryPassword: 'Temp123!',
     );
+  }
+
+  @override
+  Future<AdminGarageDoorConfig> fetchGarageDoorConfig() async {
+    return garageDoorConfig;
+  }
+
+  @override
+  Future<AdminGarageDoorConfig> updateGarageDoorConfig(
+    AdminGarageDoorConfig config,
+  ) async {
+    garageDoorConfig = config;
+    return config;
   }
 }
 

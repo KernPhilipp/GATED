@@ -130,6 +130,11 @@ class _FakeAdminService extends AdminService {
 
   @override
   Future<List<AdminUser>> fetchUsers() async => users;
+
+  @override
+  Future<AdminGarageDoorConfig> fetchGarageDoorConfig() async {
+    return const AdminGarageDoorConfig(shellyBaseUrl: 'http://192.168.0.102');
+  }
 }
 
 class _FakeAuthService extends AuthService {

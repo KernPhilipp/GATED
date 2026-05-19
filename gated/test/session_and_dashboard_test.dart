@@ -100,10 +100,6 @@ class _FakeGarageDoorController implements GarageDoorController {
   }
 
   @override
-  Future<GarageDoorStatus> setManualState(GarageDoorState state) async =>
-      status;
-
-  @override
   Future<GarageDoorStatus> triggerPulse() async => status;
 }
 
@@ -131,12 +127,12 @@ GarageDoorStatus _status({
     phaseEndsAt: null,
     remainingMs: null,
     countdownLabel: null,
-    lastAction: GarageDoorLastAction(
-      type: 'test',
-      source: 'widget-test',
-      description: 'Widget test status',
-      timestamp: DateTime.utc(2026, 4, 19, 12),
+    lastChangedAt: DateTime.utc(2026, 4, 19, 12),
+    shelly: const GarageDoorShellyStatus(
+      isReachable: true,
+      relayOutput: false,
+      inputState: false,
+      isDoorClosedBySensor: true,
     ),
-    shelly: const GarageDoorShellyStatus(isReachable: true, relayOutput: false),
   );
 }

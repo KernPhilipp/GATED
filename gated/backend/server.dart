@@ -50,12 +50,16 @@ void main() async {
   final adminEventsBroker = AdminEventsBroker();
   final kennzeichenEventsBroker = KennzeichenEventsBroker();
   final garageDoorConfig = GarageDoorConfig.fromEnvironment();
+  final effectiveGarageDoorConfig = garageDoorConfig.withRuntimeConfig(
+    await authDb.getGarageDoorConfig(defaults: garageDoorConfig.toDbConfig()),
+  );
   final garageDoorService = GarageDoorService(
-    config: garageDoorConfig,
+    config: effectiveGarageDoorConfig,
     shellyClient: HttpShellyRelayClient(
-      baseUrl: garageDoorConfig.shellyBaseUrl,
-      switchId: garageDoorConfig.switchId,
-      timeout: garageDoorConfig.shellyRequestTimeout,
+      baseUrl: effectiveGarageDoorConfig.shellyBaseUrl,
+      switchId: effectiveGarageDoorConfig.switchId,
+      inputId: effectiveGarageDoorConfig.inputId,
+      timeout: effectiveGarageDoorConfig.shellyRequestTimeout,
     ),
   );
   final healthRouter = Router()..get('/health', (_) => Response.ok('ok'));

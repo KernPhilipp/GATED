@@ -10,7 +10,7 @@ void main() {
         state: GarageDoorState.determining,
         stateConfidence: GarageDoorStateConfidence.modeled,
         remainingMs: 4000,
-        countdownLabel: 'Bis Standardstatus geschlossen',
+        countdownLabel: 'Warten auf Sensorstatus',
       ),
     );
 
@@ -26,11 +26,14 @@ void main() {
     await tester.pump();
 
     expect(find.text('Status wird ermittelt'), findsOneWidget);
-    expect(find.text('Bis Standardstatus geschlossen'), findsOneWidget);
+    expect(find.text('Sensorstatus'), findsOneWidget);
+    expect(find.text('Bestaetigung laeuft (4 s)'), findsOneWidget);
     expect(find.text('Impuls senden'), findsOneWidget);
+    expect(find.text('Shelly-Hinweise'), findsNothing);
+    expect(find.text('Hinweis zum Modell'), findsNothing);
   });
 
-  testWidgets('dashboard sends trigger and manual correction actions', (
+  testWidgets('dashboard sends trigger without manual correction controls', (
     tester,
   ) async {
     final controller = _FakeGarageDoorController(
@@ -42,11 +45,7 @@ void main() {
         state: GarageDoorState.opening,
         stateConfidence: GarageDoorStateConfidence.modeled,
         remainingMs: 5000,
-        countdownLabel: 'Bis Zustand offen',
-      ),
-      manualStatus: _status(
-        state: GarageDoorState.unknown,
-        stateConfidence: GarageDoorStateConfidence.modeled,
+        countdownLabel: 'Warten auf Sensorbestaetigung offen',
       ),
     );
 
@@ -67,26 +66,18 @@ void main() {
 
     expect(controller.triggerCalls, 1);
     expect(find.text('Tor oeffnet'), findsOneWidget);
-
-    await tester.ensureVisible(find.text('Als unbekannt markieren'));
-    await tester.tap(find.text('Als unbekannt markieren'));
-    await tester.pump();
-
-    expect(controller.manualStates, [GarageDoorState.unknown]);
-    expect(find.text('Status unbekannt'), findsOneWidget);
+    expect(find.text('Status manuell korrigieren'), findsNothing);
+    expect(find.text('Als unbekannt markieren'), findsNothing);
 
     await tester.pump(const Duration(seconds: 3));
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('dashboard highlights heuristic external origin', (tester) async {
+  testWidgets('dashboard displays Shelly sensor state', (tester) async {
     final controller = _FakeGarageDoorController(
       initialStatus: _status(
-        state: GarageDoorState.unknown,
-        stateConfidence: GarageDoorStateConfidence.heuristic,
-        source: 'heuristic-external',
-        description:
-            'Heuristisch externer Shelly-Impuls waehrend laufender Bewegung erkannt. Status auf unbekannt gesetzt.',
+        state: GarageDoorState.closed,
+        stateConfidence: GarageDoorStateConfidence.sensor,
       ),
     );
 
@@ -101,9 +92,71 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('Statusbasis'), findsOneWidget);
-    expect(find.text('Heuristisch erkannt'), findsWidgets);
-    expect(find.textContaining('Heuristisch extern erkannt:'), findsOneWidget);
+    expect(find.text('Sensorstatus'), findsOneWidget);
+    expect(find.text('Erreichbar'), findsWidgets);
+    expect(find.text('Shelly'), findsOneWidget);
+    expect(find.text('Relais'), findsNothing);
+    expect(find.text('Sensor zuletzt geprueft'), findsOneWidget);
+    expect(find.text('Letzte Aenderung'), findsOneWidget);
+  });
+
+  testWidgets('dashboard hides removed technical detail rows', (tester) async {
+    final controller = _FakeGarageDoorController(
+      initialStatus: _status(
+        state: GarageDoorState.unknown,
+        stateConfidence: GarageDoorStateConfidence.heuristic,
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: DashboardView(garageDoorController: controller),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Statusbasis'), findsNothing);
+    expect(find.text('Naechster modellierter Zustand'), findsNothing);
+    expect(find.text('Letzte Aktion'), findsNothing);
+    expect(find.text('Relais'), findsNothing);
+  });
+
+  testWidgets('dashboard disables trigger while Shelly sensor is unavailable', (
+    tester,
+  ) async {
+    final controller = _FakeGarageDoorController(
+      initialStatus: _status(
+        state: GarageDoorState.closed,
+        stateConfidence: GarageDoorStateConfidence.sensor,
+        shelly: const GarageDoorShellyStatus(
+          isReachable: false,
+          errorMessage: 'Shelly antwortet nicht rechtzeitig.',
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: DashboardView(garageDoorController: controller),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Nicht erreichbar'), findsOneWidget);
+    expect(find.text('Shelly antwortet nicht rechtzeitig.'), findsOneWidget);
+
+    final button = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Impuls senden'),
+    );
+    expect(button.onPressed, isNull);
   });
 
   testWidgets('dashboard keeps last known status during backend outages', (
@@ -157,24 +210,14 @@ class _FakeGarageDoorController implements GarageDoorController {
   _FakeGarageDoorController({
     required this.initialStatus,
     GarageDoorStatus? triggerStatus,
-    GarageDoorStatus? manualStatus,
-  }) : _triggerStatus = triggerStatus ?? initialStatus,
-       _manualStatus = manualStatus ?? initialStatus;
+  }) : _triggerStatus = triggerStatus ?? initialStatus;
 
   final GarageDoorStatus initialStatus;
   final GarageDoorStatus _triggerStatus;
-  final GarageDoorStatus _manualStatus;
   int triggerCalls = 0;
-  final List<GarageDoorState> manualStates = [];
 
   @override
   Future<GarageDoorStatus> fetchStatus() async => initialStatus;
-
-  @override
-  Future<GarageDoorStatus> setManualState(GarageDoorState state) async {
-    manualStates.add(state);
-    return _manualStatus;
-  }
 
   @override
   Future<GarageDoorStatus> triggerPulse() async {
@@ -204,11 +247,6 @@ class _SequenceGarageDoorController implements GarageDoorController {
   }
 
   @override
-  Future<GarageDoorStatus> setManualState(GarageDoorState state) async {
-    throw UnimplementedError();
-  }
-
-  @override
   Future<GarageDoorStatus> triggerPulse() async {
     throw UnimplementedError();
   }
@@ -219,8 +257,12 @@ GarageDoorStatus _status({
   required GarageDoorStateConfidence stateConfidence,
   int? remainingMs,
   String? countdownLabel,
-  String source = 'widget-test',
-  String description = 'Widget test status',
+  GarageDoorShellyStatus shelly = const GarageDoorShellyStatus(
+    isReachable: true,
+    relayOutput: false,
+    inputState: false,
+    isDoorClosedBySensor: true,
+  ),
 }) {
   return GarageDoorStatus(
     state: state,
@@ -229,12 +271,7 @@ GarageDoorStatus _status({
     phaseEndsAt: null,
     remainingMs: remainingMs,
     countdownLabel: countdownLabel,
-    lastAction: GarageDoorLastAction(
-      type: 'test',
-      source: source,
-      description: description,
-      timestamp: DateTime.utc(2026, 4, 19, 12),
-    ),
-    shelly: const GarageDoorShellyStatus(isReachable: true, relayOutput: false),
+    lastChangedAt: DateTime.utc(2026, 4, 19, 12),
+    shelly: shelly,
   );
 }

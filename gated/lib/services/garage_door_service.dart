@@ -6,41 +6,15 @@ import 'auth_service.dart';
 
 enum GarageDoorState { determining, opening, open, closing, closed, unknown }
 
-enum GarageDoorStateConfidence { modeled, heuristic }
-
-class GarageDoorLastAction {
-  const GarageDoorLastAction({
-    required this.type,
-    required this.source,
-    required this.description,
-    required this.timestamp,
-  });
-
-  factory GarageDoorLastAction.fromJson(Map<String, dynamic> json) {
-    final timestampValue = json['timestamp'];
-    final timestamp = timestampValue is String
-        ? DateTime.tryParse(timestampValue)
-        : null;
-
-    return GarageDoorLastAction(
-      type: json['type'] as String? ?? 'unknown',
-      source: json['source'] as String? ?? 'unknown',
-      description: json['description'] as String? ?? '',
-      timestamp: timestamp,
-    );
-  }
-
-  final String type;
-  final String source;
-  final String description;
-  final DateTime? timestamp;
-}
+enum GarageDoorStateConfidence { modeled, heuristic, sensor }
 
 class GarageDoorShellyStatus {
   const GarageDoorShellyStatus({
     this.lastCheckedAt,
     this.isReachable,
     this.relayOutput,
+    this.inputState,
+    this.isDoorClosedBySensor,
     this.errorMessage,
   });
 
@@ -54,6 +28,8 @@ class GarageDoorShellyStatus {
       lastCheckedAt: checkedAt,
       isReachable: json['isReachable'] as bool?,
       relayOutput: json['relayOutput'] as bool?,
+      inputState: json['inputState'] as bool?,
+      isDoorClosedBySensor: json['isDoorClosedBySensor'] as bool?,
       errorMessage: json['errorMessage'] as String?,
     );
   }
@@ -61,6 +37,8 @@ class GarageDoorShellyStatus {
   final DateTime? lastCheckedAt;
   final bool? isReachable;
   final bool? relayOutput;
+  final bool? inputState;
+  final bool? isDoorClosedBySensor;
   final String? errorMessage;
 }
 
@@ -68,7 +46,7 @@ class GarageDoorStatus {
   const GarageDoorStatus({
     required this.state,
     required this.stateConfidence,
-    required this.lastAction,
+    this.lastChangedAt,
     this.nextState,
     this.phaseEndsAt,
     this.remainingMs,
@@ -84,7 +62,10 @@ class GarageDoorStatus {
     final phaseEndsAt = phaseEndsAtValue is String
         ? DateTime.tryParse(phaseEndsAtValue)
         : null;
-    final lastActionJson = json['lastAction'];
+    final lastChangedAtValue = json['lastChangedAt'];
+    final lastChangedAt = lastChangedAtValue is String
+        ? DateTime.tryParse(lastChangedAtValue)
+        : null;
     final shellyJson = json['shelly'];
 
     return GarageDoorStatus(
@@ -96,16 +77,7 @@ class GarageDoorStatus {
       phaseEndsAt: phaseEndsAt,
       remainingMs: json['remainingMs'] as int?,
       countdownLabel: json['countdownLabel'] as String?,
-      lastAction: lastActionJson is Map
-          ? GarageDoorLastAction.fromJson(
-              lastActionJson.map((key, value) => MapEntry('$key', value)),
-            )
-          : const GarageDoorLastAction(
-              type: 'unknown',
-              source: 'unknown',
-              description: '',
-              timestamp: null,
-            ),
+      lastChangedAt: lastChangedAt,
       shelly: shellyJson is Map
           ? GarageDoorShellyStatus.fromJson(
               shellyJson.map((key, value) => MapEntry('$key', value)),
@@ -120,7 +92,7 @@ class GarageDoorStatus {
   final DateTime? phaseEndsAt;
   final int? remainingMs;
   final String? countdownLabel;
-  final GarageDoorLastAction lastAction;
+  final DateTime? lastChangedAt;
   final GarageDoorShellyStatus? shelly;
 }
 
@@ -128,8 +100,6 @@ abstract class GarageDoorController {
   Future<GarageDoorStatus> fetchStatus();
 
   Future<GarageDoorStatus> triggerPulse();
-
-  Future<GarageDoorStatus> setManualState(GarageDoorState state);
 }
 
 class GarageDoorService implements GarageDoorController {
@@ -157,24 +127,6 @@ class GarageDoorService implements GarageDoorController {
   Future<GarageDoorStatus> triggerPulse() async {
     final response = await _authService
         .sendAuthorizedRequest(method: 'POST', path: '/garage-door/trigger')
-        .timeout(const Duration(seconds: 10));
-
-    if (response.statusCode != 200) {
-      throw GarageDoorException(_messageForStatus(response.statusCode));
-    }
-
-    return _parseStatus(response.body);
-  }
-
-  @override
-  Future<GarageDoorStatus> setManualState(GarageDoorState state) async {
-    final response = await _authService
-        .sendAuthorizedRequest(
-          method: 'POST',
-          path: '/garage-door/state',
-          includeJsonContentType: true,
-          body: jsonEncode({'state': state.name}),
-        )
         .timeout(const Duration(seconds: 10));
 
     if (response.statusCode != 200) {
@@ -236,6 +188,7 @@ GarageDoorStateConfidence? _confidenceFromName(String? name) {
   return switch (name) {
     'modeled' => GarageDoorStateConfidence.modeled,
     'heuristic' => GarageDoorStateConfidence.heuristic,
+    'sensor' => GarageDoorStateConfidence.sensor,
     _ => null,
   };
 }

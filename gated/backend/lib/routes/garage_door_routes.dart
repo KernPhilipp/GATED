@@ -14,6 +14,54 @@ Router buildGarageDoorRouter(
   DatabaseService authDb,
   EmailAccessControlService accessControlService,
 ) => Router()
+  ..get('/garage-door/config', (Request request) async {
+    try {
+      await authenticateAdminRequest(request, authDb, accessControlService);
+      return Response.ok(
+        jsonEncode(garageDoorService.getConfig().toPublicJson()),
+        headers: jsonHeaders,
+      );
+    } on RequestAuthenticationException catch (error) {
+      return error.response;
+    } catch (_) {
+      return Response.internalServerError(body: 'Unexpected error');
+    }
+  })
+  ..put('/garage-door/config', (Request request) async {
+    final data = await readJsonObject(request);
+    if (data == null) {
+      return Response.badRequest(body: 'Invalid JSON body');
+    }
+
+    final baseUrl = readRequiredString(data, 'shellyBaseUrl');
+    if (baseUrl == null) {
+      return Response.badRequest(body: 'Missing shellyBaseUrl');
+    }
+
+    final uri = Uri.tryParse(baseUrl);
+    if (uri == null ||
+        !uri.isAbsolute ||
+        (uri.scheme != 'http' && uri.scheme != 'https')) {
+      return Response.badRequest(body: 'Invalid shellyBaseUrl');
+    }
+
+    try {
+      await authenticateAdminRequest(request, authDb, accessControlService);
+      final config = garageDoorService.getConfig().copyWith(
+        shellyBaseUrl: baseUrl,
+      );
+      await authDb.saveGarageDoorConfig(config.toDbConfig());
+      await garageDoorService.updateConfig(config);
+      return Response.ok(
+        jsonEncode(config.toPublicJson()),
+        headers: jsonHeaders,
+      );
+    } on RequestAuthenticationException catch (error) {
+      return error.response;
+    } catch (_) {
+      return Response.internalServerError(body: 'Unexpected error');
+    }
+  })
   ..get('/garage-door/status', (Request request) async {
     try {
       await authenticateRequest(request, authDb, accessControlService);
@@ -36,40 +84,6 @@ Router buildGarageDoorRouter(
       return Response(409, body: error.message);
     } on GarageDoorShellyException catch (error) {
       return Response(502, body: error.message);
-    } catch (_) {
-      return Response.internalServerError(body: 'Unexpected error');
-    }
-  })
-  ..post('/garage-door/state', (Request request) async {
-    final data = await readJsonObject(request);
-    if (data == null) {
-      return Response.badRequest(body: 'Invalid JSON body');
-    }
-
-    final stateName = readRequiredString(data, 'state');
-    if (stateName == null) {
-      return Response.badRequest(body: 'Missing state');
-    }
-
-    final state = switch (stateName.trim().toLowerCase()) {
-      'open' => GarageDoorState.open,
-      'closed' => GarageDoorState.closed,
-      'unknown' => GarageDoorState.unknown,
-      _ => null,
-    };
-
-    if (state == null) {
-      return Response.badRequest(body: 'Unsupported state');
-    }
-
-    try {
-      await authenticateRequest(request, authDb, accessControlService);
-      final snapshot = garageDoorService.setManualState(state);
-      return Response.ok(jsonEncode(snapshot.toJson()), headers: jsonHeaders);
-    } on RequestAuthenticationException catch (error) {
-      return error.response;
-    } on GarageDoorConflictException catch (error) {
-      return Response(409, body: error.message);
     } catch (_) {
       return Response.internalServerError(body: 'Unexpected error');
     }

@@ -61,6 +61,22 @@ class AdminPasswordResetResult {
   final String temporaryPassword;
 }
 
+class AdminGarageDoorConfig {
+  const AdminGarageDoorConfig({required this.shellyBaseUrl});
+
+  factory AdminGarageDoorConfig.fromJson(Map<String, dynamic> json) {
+    return AdminGarageDoorConfig(
+      shellyBaseUrl: json['shellyBaseUrl'] as String? ?? '',
+    );
+  }
+
+  final String shellyBaseUrl;
+
+  Map<String, Object?> toJson() {
+    return {'shellyBaseUrl': shellyBaseUrl};
+  }
+}
+
 class AdminService {
   AdminService({
     String baseUrl = AppConfig.apiBaseUrl,
@@ -178,6 +194,51 @@ class AdminService {
     }
 
     return AdminPasswordResetResult.fromJson(
+      decoded.map((key, value) => MapEntry('$key', value)),
+    );
+  }
+
+  Future<AdminGarageDoorConfig> fetchGarageDoorConfig() async {
+    final response = await _authService
+        .sendAuthorizedRequest(method: 'GET', path: '/garage-door/config')
+        .timeout(const Duration(seconds: 10));
+
+    if (response.statusCode != 200) {
+      throw AdminException(_messageForStatus(response.statusCode));
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map) {
+      throw const AdminException('Ungueltige Server-Antwort.');
+    }
+
+    return AdminGarageDoorConfig.fromJson(
+      decoded.map((key, value) => MapEntry('$key', value)),
+    );
+  }
+
+  Future<AdminGarageDoorConfig> updateGarageDoorConfig(
+    AdminGarageDoorConfig config,
+  ) async {
+    final response = await _authService
+        .sendAuthorizedRequest(
+          method: 'PUT',
+          path: '/garage-door/config',
+          body: jsonEncode(config.toJson()),
+          includeJsonContentType: true,
+        )
+        .timeout(const Duration(seconds: 10));
+
+    if (response.statusCode != 200) {
+      throw AdminException(_messageForStatus(response.statusCode));
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map) {
+      throw const AdminException('Ungueltige Server-Antwort.');
+    }
+
+    return AdminGarageDoorConfig.fromJson(
       decoded.map((key, value) => MapEntry('$key', value)),
     );
   }

@@ -36,7 +36,6 @@ class _DashboardViewState extends State<DashboardView> {
   bool _isLoading = true;
   bool _isRefreshing = false;
   bool _isTriggering = false;
-  bool _isUpdatingState = false;
   bool _isRedirectingToLogin = false;
   bool _isBackendUnavailable = false;
 
@@ -87,9 +86,9 @@ class _DashboardViewState extends State<DashboardView> {
           Text('Dashboard', style: theme.textTheme.headlineMedium),
           const SizedBox(height: 20),
           Text(
-            'Das Modelltor wird ueber den Shelly-Proxy gesteuert. '
-            'Der angezeigte Zustand ist ohne Sensor modelliert und kann '
-            'bei Bedarf manuell korrigiert werden.',
+            'Das Tor wird ueber den Shelly-Proxy gesteuert. '
+            'Der Naeherungssensor bestaetigt die stabilen Offen- und '
+            'Geschlossen-Zustaende.',
             style: theme.textTheme.bodyMedium,
           ),
           const SizedBox(height: 24),
@@ -107,38 +106,7 @@ class _DashboardViewState extends State<DashboardView> {
           else if (_loadError != null && _status == null)
             _buildLoadErrorCard(theme)
           else
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final isWide = constraints.maxWidth >= 950;
-                final statusCard = _buildStatusCard(theme);
-                final helperColumn = Column(
-                  children: [
-                    _buildShellyCard(theme),
-                    const SizedBox(height: 20),
-                    _buildInfoCard(theme),
-                  ],
-                );
-
-                if (isWide) {
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(flex: 3, child: statusCard),
-                      const SizedBox(width: 24),
-                      Expanded(flex: 2, child: helperColumn),
-                    ],
-                  );
-                }
-
-                return Column(
-                  children: [
-                    statusCard,
-                    const SizedBox(height: 20),
-                    helperColumn,
-                  ],
-                );
-              },
-            ),
+            _buildStatusCard(theme),
         ],
       ),
     );
@@ -230,7 +198,7 @@ class _DashboardViewState extends State<DashboardView> {
     }
 
     final visual = _visualForStatus(theme.colorScheme, status);
-    final isBusy = _isTriggering || _isUpdatingState;
+    final canTrigger = !_isTriggering && _isShellySensorReady(status);
 
     return Card(
       child: Padding(
@@ -275,7 +243,7 @@ class _DashboardViewState extends State<DashboardView> {
             _buildStatusMeta(theme, status),
             const SizedBox(height: 24),
             FilledButton.icon(
-              onPressed: isBusy ? null : _triggerPulse,
+              onPressed: canTrigger ? _triggerPulse : null,
               icon: _isTriggering
                   ? const SizedBox(
                       width: 18,
@@ -289,39 +257,6 @@ class _DashboardViewState extends State<DashboardView> {
                     : 'Impuls senden',
               ),
             ),
-            const SizedBox(height: 12),
-            Text(
-              'Ein weiterer Impuls ist waehrend der modellierten Bewegung gesperrt, '
-              'damit die App ohne Sensor nicht in einen widerspruechlichen Zustand laeuft.',
-              style: theme.textTheme.bodySmall,
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Status manuell korrigieren',
-              style: theme.textTheme.titleMedium,
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                _buildManualStateButton(
-                  label: 'Als offen markieren',
-                  state: GarageDoorState.open,
-                  isBusy: isBusy,
-                ),
-                _buildManualStateButton(
-                  label: 'Als geschlossen markieren',
-                  state: GarageDoorState.closed,
-                  isBusy: isBusy,
-                ),
-                _buildManualStateButton(
-                  label: 'Als unbekannt markieren',
-                  state: GarageDoorState.unknown,
-                  isBusy: isBusy,
-                ),
-              ],
-            ),
           ],
         ),
       ),
@@ -329,38 +264,39 @@ class _DashboardViewState extends State<DashboardView> {
   }
 
   Widget _buildStatusMeta(ThemeData theme, GarageDoorStatus status) {
+    final shelly = status.shelly;
+    final isReady = _isShellySensorReady(status);
+    final warningColor = theme.colorScheme.error;
+
     final rows = <Widget>[
       _DashboardInfoRow(
-        icon: Icons.timer_outlined,
-        label: status.countdownLabel ?? 'Kein aktiver Countdown',
-        value: status.remainingMs == null
-            ? 'Keiner'
-            : _formatDuration(status.remainingMs!),
+        icon: Icons.sensors_rounded,
+        label: 'Sensorstatus',
+        value: _sensorStatusText(status),
+        color: isReady ? null : warningColor,
       ),
       _DashboardInfoRow(
-        icon: Icons.route_rounded,
-        label: 'Naechster modellierter Zustand',
-        value: _titleForState(status.nextState) ?? 'Keiner',
+        icon: Icons.router_rounded,
+        label: 'Shelly',
+        value: _shellyStatusText(shelly),
+        color: isReady ? null : warningColor,
       ),
       _DashboardInfoRow(
-        icon: Icons.track_changes_rounded,
-        label: 'Statusbasis',
-        value: _titleForConfidence(status.stateConfidence),
-      ),
-      _DashboardInfoRow(
-        icon: Icons.history_rounded,
-        label: 'Letzte Aktion',
-        value: _formatLastAction(status.lastAction),
+        icon: Icons.update_rounded,
+        label: 'Sensor zuletzt geprueft',
+        value: shelly?.lastCheckedAt == null
+            ? 'Noch nicht verfuegbar'
+            : _formatDateTime(shelly!.lastCheckedAt!.toLocal()),
       ),
     ];
 
-    final actionTimestamp = status.lastAction.timestamp;
-    if (actionTimestamp != null) {
+    final lastChangedAt = status.lastChangedAt;
+    if (lastChangedAt != null) {
       rows.add(
         _DashboardInfoRow(
           icon: Icons.schedule_rounded,
           label: 'Letzte Aenderung',
-          value: _formatDateTime(actionTimestamp.toLocal()),
+          value: _formatDateTime(lastChangedAt.toLocal()),
         ),
       );
     }
@@ -372,107 +308,6 @@ class _DashboardViewState extends State<DashboardView> {
           if (index < rows.length - 1) const SizedBox(height: 12),
         ],
       ],
-    );
-  }
-
-  Widget _buildShellyCard(ThemeData theme) {
-    final shelly = _status?.shelly;
-    final relayText = switch (shelly?.relayOutput) {
-      true => 'Relais aktiv',
-      false => 'Relais inaktiv',
-      null => 'Relaiszustand unbekannt',
-    };
-    final reachabilityText = switch (shelly?.isReachable) {
-      true => 'Shelly erreichbar',
-      false => 'Shelly derzeit nicht erreichbar',
-      null => 'Shelly-Status noch nicht geprueft',
-    };
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Shelly-Hinweise', style: theme.textTheme.titleMedium),
-            const SizedBox(height: 16),
-            _DashboardInfoRow(
-              icon: Icons.router_rounded,
-              label: 'Erreichbarkeit',
-              value: reachabilityText,
-            ),
-            const SizedBox(height: 12),
-            _DashboardInfoRow(
-              icon: Icons.toggle_on_rounded,
-              label: 'Letzter Relaiswert',
-              value: relayText,
-            ),
-            const SizedBox(height: 12),
-            _DashboardInfoRow(
-              icon: Icons.update_rounded,
-              label: 'Zuletzt geprueft',
-              value: shelly?.lastCheckedAt == null
-                  ? 'Noch nicht verfuegbar'
-                  : _formatDateTime(shelly!.lastCheckedAt!.toLocal()),
-            ),
-            if (shelly?.errorMessage case final error?)
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Text(
-                  error,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.error,
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoCard(ThemeData theme) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Hinweis zum Modell', style: theme.textTheme.titleMedium),
-            const SizedBox(height: 12),
-            Text(
-              'Ohne dedizierten Sensor kennt das System keine echte Torposition. '
-              'Die Anzeige basiert daher auf festen Zeiten und kann bewusst '
-              'manuell korrigiert werden.',
-              style: theme.textTheme.bodyMedium,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildManualStateButton({
-    required String label,
-    required GarageDoorState state,
-    required bool isBusy,
-  }) {
-    final isSelected = _status?.state == state;
-    final theme = Theme.of(context);
-
-    return OutlinedButton(
-      onPressed: isBusy ? null : () => _setManualState(state),
-      style: OutlinedButton.styleFrom(
-        backgroundColor: isSelected
-            ? theme.colorScheme.surfaceContainerHighest
-            : null,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(18)),
-        ),
-      ),
-      child: Text(label),
     );
   }
 
@@ -616,41 +451,6 @@ class _DashboardViewState extends State<DashboardView> {
     }
   }
 
-  Future<void> _setManualState(GarageDoorState state) async {
-    setState(() => _isUpdatingState = true);
-
-    try {
-      final status = await _garageDoorController.setManualState(state);
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _status = status;
-        _loadError = null;
-      });
-
-      showAppSnackBar(
-        context,
-        message: 'Torstatus auf ${_titleForState(state)} gesetzt.',
-      );
-    } on SessionExpiredException catch (error) {
-      await _handleSessionExpired(error);
-    } on GarageDoorException catch (error) {
-      _showErrorSnackBar(error.message);
-    } on TimeoutException {
-      _showErrorSnackBar(
-        'Zeitueberschreitung beim manuellen Aktualisieren des Torstatus.',
-      );
-    } catch (_) {
-      _showErrorSnackBar('Torstatus konnte nicht aktualisiert werden.');
-    } finally {
-      if (mounted) {
-        setState(() => _isUpdatingState = false);
-      }
-    }
-  }
-
   Future<void> _handleSessionExpired(SessionExpiredException error) async {
     if (_isRedirectingToLogin || !mounted) {
       return;
@@ -702,68 +502,50 @@ class _DashboardViewState extends State<DashboardView> {
     ColorScheme colorScheme,
     GarageDoorStatus status,
   ) {
-    final isHeuristic =
-        status.stateConfidence == GarageDoorStateConfidence.heuristic;
     final state = status.state;
 
     return switch (state) {
       GarageDoorState.determining => _DashboardStateVisual(
         title: 'Status wird ermittelt',
-        description:
-            'Das Backend wartet kurz ab und setzt ohne Bewegung '
-            'anschliessend auf geschlossen.',
+        description: 'Das Backend wartet auf den naechsten Sensorstatus.',
         icon: Icons.hourglass_top_rounded,
         backgroundColor: colorScheme.surfaceContainerHighest,
         foregroundColor: colorScheme.primary,
       ),
       GarageDoorState.opening => _DashboardStateVisual(
         title: 'Tor oeffnet',
-        description: isHeuristic
-            ? 'Die Oeffnungsbewegung wurde heuristisch ueber einen externen '
-                  'Shelly-Impuls erkannt.'
-            : 'Das Modell rechnet aktuell mit einer Oeffnungsbewegung.',
+        description:
+            'Der Sensor bestaetigt den offenen Zustand nach kurzer Wartezeit.',
         icon: Icons.upload_rounded,
         backgroundColor: colorScheme.primaryContainer,
         foregroundColor: colorScheme.onPrimaryContainer,
       ),
       GarageDoorState.open => _DashboardStateVisual(
         title: 'Tor offen',
-        description: isHeuristic
-            ? 'Das Modell geht nach einem heuristisch erkannten externen '
-                  'Shelly-Impuls von einem offenen Tor aus.'
-            : 'Das Modell geht von einem offenen Tor aus, bis das automatische '
-                  'Schliessen beginnt.',
+        description: 'Der Naeherungssensor meldet das Tor als offen.',
         icon: Icons.door_front_door_outlined,
         backgroundColor: colorScheme.tertiaryContainer,
         foregroundColor: colorScheme.onTertiaryContainer,
       ),
       GarageDoorState.closing => _DashboardStateVisual(
         title: 'Tor schliesst',
-        description: isHeuristic
-            ? 'Die Schliessbewegung wurde heuristisch ueber einen externen '
-                  'Shelly-Impuls erkannt.'
-            : 'Das Modell rechnet aktuell mit einer Schliessbewegung.',
+        description:
+            'Der Sensor bestaetigt den geschlossenen Zustand nach kurzer Wartezeit.',
         icon: Icons.download_rounded,
         backgroundColor: colorScheme.secondaryContainer,
         foregroundColor: colorScheme.onSecondaryContainer,
       ),
       GarageDoorState.closed => _DashboardStateVisual(
         title: 'Tor geschlossen',
-        description:
-            'Das Tor sollte sich im Standardzustand geschlossen '
-            'befinden.',
+        description: 'Der Naeherungssensor meldet das Tor als geschlossen.',
         icon: Icons.garage_rounded,
         backgroundColor: colorScheme.surfaceContainerHighest,
         foregroundColor: colorScheme.secondary,
       ),
       GarageDoorState.unknown => _DashboardStateVisual(
         title: 'Status unbekannt',
-        description: isHeuristic
-            ? 'Ein externer Shelly-Impuls wurde heuristisch waehrend einer '
-                  'laufenden Bewegung erkannt. Die reale Position ist deshalb '
-                  'derzeit unklar.'
-            : 'Die reale Position ist derzeit nicht sicher. Eine manuelle '
-                  'Korrektur ist moeglich.',
+        description:
+            'Die reale Position ist derzeit nicht sicher, bis der Sensor wieder eindeutig meldet.',
         icon: Icons.help_outline_rounded,
         backgroundColor: colorScheme.errorContainer,
         foregroundColor: colorScheme.onErrorContainer,
@@ -771,31 +553,41 @@ class _DashboardViewState extends State<DashboardView> {
     };
   }
 
-  String _titleForConfidence(GarageDoorStateConfidence confidence) {
-    return switch (confidence) {
-      GarageDoorStateConfidence.modeled => 'Modelliert',
-      GarageDoorStateConfidence.heuristic => 'Heuristisch erkannt',
-    };
+  bool _isShellySensorReady(GarageDoorStatus status) {
+    final shelly = status.shelly;
+    return shelly?.isReachable == true && shelly?.inputState != null;
   }
 
-  String _formatLastAction(GarageDoorLastAction action) {
-    if (action.source == 'heuristic-external') {
-      return 'Heuristisch extern erkannt: ${action.description}';
+  String _sensorStatusText(GarageDoorStatus status) {
+    final shelly = status.shelly;
+    if (shelly == null || shelly.isReachable == null) {
+      return 'Noch nicht geprueft';
     }
-
-    return action.description;
+    if (shelly.isReachable != true) {
+      return 'Nicht erreichbar';
+    }
+    if (shelly.inputState == null) {
+      return 'Sensorwert fehlt';
+    }
+    final remainingMs = status.remainingMs;
+    if (remainingMs != null && remainingMs > 0) {
+      return 'Bestaetigung laeuft (${_formatDuration(remainingMs)})';
+    }
+    return 'Erreichbar';
   }
 
-  String? _titleForState(GarageDoorState? state) {
-    return switch (state) {
-      GarageDoorState.determining => 'Status wird ermittelt',
-      GarageDoorState.opening => 'Tor oeffnet',
-      GarageDoorState.open => 'Tor offen',
-      GarageDoorState.closing => 'Tor schliesst',
-      GarageDoorState.closed => 'Tor geschlossen',
-      GarageDoorState.unknown => 'Status unbekannt',
-      null => null,
-    };
+  String _shellyStatusText(GarageDoorShellyStatus? shelly) {
+    if (shelly == null || shelly.isReachable == null) {
+      return 'Noch nicht geprueft';
+    }
+    if (shelly.isReachable == true && shelly.inputState != null) {
+      return 'Erreichbar';
+    }
+    if (shelly.isReachable == true) {
+      return 'Erreichbar, Sensorwert fehlt';
+    }
+    final error = shelly.errorMessage;
+    return error == null || error.isEmpty ? 'Nicht erreichbar' : error;
   }
 
   String _formatDuration(int milliseconds) {
@@ -840,11 +632,13 @@ class _DashboardInfoRow extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.value,
+    this.color,
   });
 
   final IconData icon;
   final String label;
   final String value;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
@@ -853,15 +647,21 @@ class _DashboardInfoRow extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: theme.colorScheme.primary),
+        Icon(icon, color: color ?? theme.colorScheme.primary),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: theme.textTheme.labelLarge),
+              Text(
+                label,
+                style: theme.textTheme.labelLarge?.copyWith(color: color),
+              ),
               const SizedBox(height: 2),
-              Text(value, style: theme.textTheme.bodyLarge),
+              Text(
+                value,
+                style: theme.textTheme.bodyLarge?.copyWith(color: color),
+              ),
             ],
           ),
         ),
