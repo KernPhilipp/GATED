@@ -102,7 +102,7 @@ class _AdminViewState extends State<AdminView> {
                 Text('Admin', style: theme.textTheme.headlineMedium),
                 const SizedBox(height: 20),
                 Text(
-                  'Zugelassene Benutzer und registrierte Accounts verwalten.',
+                  'Benutzer und die Shelly-Konfiguration verwalten.',
                   style: theme.textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 20),
@@ -232,7 +232,7 @@ class _AdminViewState extends State<AdminView> {
     } on AdminException catch (error) {
       _showError(error.message);
     } on TimeoutException {
-      _showError('Zeitueberschreitung beim Laden der Benutzer.');
+      _showError('Zeitüberschreitung beim Laden der Benutzer.');
     } catch (_) {
       _showError('Benutzerdaten konnten nicht geladen werden.');
     } finally {
@@ -278,7 +278,7 @@ class _AdminViewState extends State<AdminView> {
     if (uri == null ||
         !uri.isAbsolute ||
         (uri.scheme != 'http' && uri.scheme != 'https')) {
-      _showError('Bitte eine gueltige Shelly-URL eingeben.');
+      _showError('Bitte eine gültige Shelly-URL eingeben.');
       return;
     }
 
@@ -382,9 +382,9 @@ class _AdminViewState extends State<AdminView> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Benutzer loeschen'),
+          title: const Text('Benutzer löschen'),
           content: Text(
-            'Soll ${user.email} wirklich geloescht und aus den zugelassenen '
+            'Soll ${user.email} wirklich gelöscht und aus den zugelassenen '
             'E-Mails entfernt werden?',
           ),
           actions: [
@@ -394,7 +394,7 @@ class _AdminViewState extends State<AdminView> {
             ),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Loeschen'),
+              child: const Text('Löschen'),
             ),
           ],
         );
@@ -416,11 +416,11 @@ class _AdminViewState extends State<AdminView> {
       if (!mounted) {
         return;
       }
-      showAppSnackBar(context, message: 'Benutzer geloescht.');
+      showAppSnackBar(context, message: 'Benutzer gelöscht.');
     } on AdminException catch (error) {
       _showError(error.message);
     } catch (_) {
-      _showError('Benutzer konnte nicht geloescht werden.');
+      _showError('Benutzer konnte nicht gelöscht werden.');
     } finally {
       if (mounted) {
         setState(() => _isMutating = false);
@@ -444,11 +444,11 @@ class _AdminViewState extends State<AdminView> {
               'Sehr geehrter GATED-User,\n\n'
               'Ihr GATED-Zugang wurde von mir aktualisiert.\n\n'
               'E-Mail-Adresse: ${result.email}\n'
-              'Temporaeres Passwort: ${result.temporaryPassword}\n\n'
-              'Bitte melden Sie sich mit diesen Zugangsdaten an und aendern '
-              'Sie Ihr Passwort anschliessend '
+              'Temporäres Passwort: ${result.temporaryPassword}\n\n'
+              'Bitte melden Sie sich mit diesen Zugangsdaten an und ändern '
+              'Sie Ihr Passwort anschließend '
               'direkt in GATED.\n\n'
-              'Mit freundlichen Gruessen\n'
+              'Mit freundlichen Grüßen\n'
               'Philipp Kern\n'
               'Administrator',
         ),
@@ -461,8 +461,7 @@ class _AdminViewState extends State<AdminView> {
       if (draftOpened) {
         showAppSnackBar(
           context,
-          message:
-              'Temporaeres Passwort erstellt und E-Mail-Entwurf geoeffnet.',
+          message: 'Temporäres Passwort erstellt und E-Mail-Entwurf geöffnet.',
         );
       } else {
         await _showPasswordFallbackDialog(result);
@@ -470,7 +469,7 @@ class _AdminViewState extends State<AdminView> {
     } on AdminException catch (error) {
       _showError(error.message);
     } catch (_) {
-      _showError('Temporaeres Passwort konnte nicht erstellt werden.');
+      _showError('Temporäres Passwort konnte nicht erstellt werden.');
     } finally {
       if (mounted) {
         setState(() => _isMutating = false);
@@ -485,16 +484,16 @@ class _AdminViewState extends State<AdminView> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('E-Mail konnte nicht geoeffnet werden'),
+          title: const Text('E-Mail konnte nicht geöffnet werden'),
           content: Text(
-            'Der E-Mail-Entwurf konnte nicht automatisch geoeffnet werden.\n\n'
+            'Der E-Mail-Entwurf konnte nicht automatisch geöffnet werden.\n\n'
             'Benutzer: ${result.email}\n'
-            'Temporaeres Passwort: ${result.temporaryPassword}',
+            'Temporäres Passwort: ${result.temporaryPassword}',
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Schliessen'),
+              child: const Text('Schließen'),
             ),
           ],
         );
@@ -636,7 +635,7 @@ class _AdminTableSection extends StatelessWidget {
     }
 
     if (users.isEmpty) {
-      return Center(child: Text('Keine Treffer fuer "$searchQuery".'));
+      return Center(child: Text('Keine Treffer für "$searchQuery".'));
     }
 
     return _AdminUsersTable(
@@ -778,7 +777,7 @@ class _AdminTableActions extends StatelessWidget {
             FilledButton.icon(
               onPressed: searchQuery.isNotEmpty ? null : onAddUser,
               icon: const Icon(Icons.add_rounded),
-              label: const Text('Benutzer hinzufuegen'),
+              label: const Text('Benutzer hinzufügen'),
               style: searchQuery.isNotEmpty
                   ? FilledButton.styleFrom(
                       foregroundColor: Theme.of(context).disabledColor,
@@ -967,7 +966,7 @@ class _AdminUsersTable extends StatelessWidget {
                                 IconButton(
                                   tooltip: users[index].canEdit
                                       ? 'Bearbeiten'
-                                      : 'Admins koennen nicht bearbeitet werden',
+                                      : 'Admins können nicht bearbeitet werden',
                                   onPressed: users[index].canEdit
                                       ? () => onEdit(users[index])
                                       : null,
@@ -982,8 +981,8 @@ class _AdminUsersTable extends StatelessWidget {
                                 ),
                                 IconButton(
                                   tooltip: users[index].canDelete
-                                      ? 'Benutzer loeschen'
-                                      : 'Admins koennen nicht geloescht werden',
+                                      ? 'Benutzer löschen'
+                                      : 'Admins können nicht gelöscht werden',
                                   onPressed: users[index].canDelete
                                       ? () => onDelete(users[index])
                                       : null,
@@ -1042,10 +1041,10 @@ class _AdminUsersTable extends StatelessWidget {
 
   String _resetPasswordTooltip(AdminUser user) {
     if (user.canResetPassword) {
-      return 'Temporaeres Passwort erstellen';
+      return 'Temporäres Passwort erstellen';
     }
     if (user.isAdmin) {
-      return 'Bei Admins nicht moeglich';
+      return 'Bei Admins nicht möglich';
     }
 
     return 'Nur registrierte Benutzer';
@@ -1138,7 +1137,7 @@ class _AdminEmailDialogState extends State<_AdminEmailDialog> {
       return 'Bitte E-Mail eingeben.';
     }
     if (!_emailPattern.hasMatch(email)) {
-      return 'Bitte eine gueltige E-Mail eingeben.';
+      return 'Bitte eine gültige E-Mail eingeben.';
     }
     return null;
   }
@@ -1160,7 +1159,7 @@ String _registeredLabel(AdminUser user) {
 
 String _formatCreatedAt(DateTime? createdAt) {
   if (createdAt == null) {
-    return 'Nicht verfuegbar';
+    return 'Nicht verfügbar';
   }
 
   final day = createdAt.day.toString().padLeft(2, '0');

@@ -98,7 +98,7 @@ class _KennzeichenViewState extends State<KennzeichenView> {
                 Text('Kennzeichen', style: theme.textTheme.headlineMedium),
                 const SizedBox(height: 20),
                 Text(
-                  'Lehrer und zugehoerige Kennzeichen verwalten.',
+                  'Lehrer und zugehörige Kennzeichen verwalten.',
                   style: theme.textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 20),
@@ -182,7 +182,7 @@ class _KennzeichenViewState extends State<KennzeichenView> {
     } on KennzeichenException catch (e) {
       _showErrorSnackBar(e.message);
     } on TimeoutException {
-      _showErrorSnackBar('Zeitueberschreitung beim Laden der Kennzeichen.');
+      _showErrorSnackBar('Zeitüberschreitung beim Laden der Kennzeichen.');
     } catch (_) {
       _showErrorSnackBar('Laden der Kennzeichen fehlgeschlagen.');
     } finally {
@@ -233,7 +233,7 @@ class _KennzeichenViewState extends State<KennzeichenView> {
     } on KennzeichenException catch (e) {
       _showErrorSnackBar(e.message);
     } on TimeoutException {
-      _showErrorSnackBar('Zeitueberschreitung beim Speichern.');
+      _showErrorSnackBar('Zeitüberschreitung beim Speichern.');
     } catch (_) {
       _showErrorSnackBar('Speichern fehlgeschlagen.');
     } finally {
@@ -284,7 +284,7 @@ class _KennzeichenViewState extends State<KennzeichenView> {
     } on KennzeichenException catch (e) {
       _showErrorSnackBar(e.message);
     } on TimeoutException {
-      _showErrorSnackBar('Zeitueberschreitung beim Speichern.');
+      _showErrorSnackBar('Zeitüberschreitung beim Speichern.');
     } catch (_) {
       _showErrorSnackBar('Speichern fehlgeschlagen.');
     } finally {
@@ -313,7 +313,7 @@ class _KennzeichenViewState extends State<KennzeichenView> {
         _rows.remove(row);
       });
 
-      showAppSnackBar(context, message: 'Eintrag geloescht.');
+      showAppSnackBar(context, message: 'Eintrag gelöscht.');
     } on SessionExpiredException catch (e) {
       if (mounted) {
         setState(() => row.isBusy = false);
@@ -325,12 +325,12 @@ class _KennzeichenViewState extends State<KennzeichenView> {
         setState(() => row.isBusy = false);
       }
     } on TimeoutException {
-      _showErrorSnackBar('Zeitueberschreitung beim Loeschen.');
+      _showErrorSnackBar('Zeitüberschreitung beim Löschen.');
       if (mounted) {
         setState(() => row.isBusy = false);
       }
     } catch (_) {
-      _showErrorSnackBar('Loeschen fehlgeschlagen.');
+      _showErrorSnackBar('Löschen fehlgeschlagen.');
       if (mounted) {
         setState(() => row.isBusy = false);
       }

@@ -319,7 +319,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     if (!_emailPattern.hasMatch(email)) {
-      return 'Bitte eine gueltige E-Mail eingeben.';
+      return 'Bitte eine gültige E-Mail eingeben.';
     }
 
     return null;

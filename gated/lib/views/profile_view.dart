@@ -478,7 +478,7 @@ class _ProfileViewState extends State<ProfileView> {
           title: const Text('Passwort aktualisiert'),
           content: const Text(
             'Dein Passwort wurde erfolgreich aktualisiert. Bitte melde dich '
-            'aus Sicherheitsgruenden erneut an.',
+            'aus Sicherheitsgründen erneut an.',
           ),
           actions: [
             TextButton(

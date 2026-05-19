@@ -74,7 +74,7 @@ class _SettingsViewState extends State<SettingsView> {
           Card(
             child: ListTile(
               leading: const Icon(Icons.info_outline_rounded),
-              title: const Text('Ueber GATED'),
+              title: const Text('Über GATED'),
               subtitle: const Text('App-Informationen anzeigen'),
               onTap: _showAboutDialog,
             ),
@@ -181,7 +181,7 @@ class _SettingsViewState extends State<SettingsView> {
         context,
         message:
             controller.statusMessage ??
-            'Installations-Flow in diesem Browser nicht unterstuetzt.',
+            'Installations-Flow in diesem Browser nicht unterstützt.',
         withCloseAction: true,
       );
       return;
@@ -192,7 +192,7 @@ class _SettingsViewState extends State<SettingsView> {
         context,
         message:
             controller.statusMessage ??
-            'Die Installation ist derzeit noch nicht verfuegbar.',
+            'Die Installation ist derzeit noch nicht verfügbar.',
         withCloseAction: true,
       );
       return;
@@ -209,9 +209,9 @@ class _SettingsViewState extends State<SettingsView> {
           'Die Installation wurde abgebrochen.',
         PwaInstallPromptResult.unavailable =>
           (controller.statusMessage ??
-              'Die Installation ist derzeit noch nicht verfuegbar.'),
+              'Die Installation ist derzeit noch nicht verfügbar.'),
         PwaInstallPromptResult.unsupported =>
-          'Installations-Flow in diesem Browser nicht unterstuetzt.',
+          'Installations-Flow in diesem Browser nicht unterstützt.',
         PwaInstallPromptResult.error =>
           'Die Installation konnte nicht gestartet werden.',
       },

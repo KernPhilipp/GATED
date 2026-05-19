@@ -272,7 +272,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             TextButton(
               onPressed: widget.pwaInstallController.dismissBanner,
-              child: const Text('Spaeter'),
+              child: const Text('Später'),
             ),
           ],
         );
@@ -328,7 +328,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                'Fuege GATED deinem Home Screen oder Startmenue hinzu und starte die App kuenftig direkt im Standalone-Modus.',
+                'Füge GATED deinem Home Screen oder Startmenü hinzu und starte die App künftig direkt im Standalone-Modus.',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onPrimaryContainer,
                 ),
@@ -354,9 +354,9 @@ class _HomeScreenState extends State<HomeScreen> {
           'Die Installation wurde abgebrochen.',
         PwaInstallPromptResult.unavailable =>
           (widget.pwaInstallController.statusMessage ??
-              'Installation derzeit nicht verfuegbar.'),
+              'Installation derzeit nicht verfügbar.'),
         PwaInstallPromptResult.unsupported =>
-          'Installations-Flow in diesem Browser nicht unterstuetzt.',
+          'Installations-Flow in diesem Browser nicht unterstützt.',
         PwaInstallPromptResult.error =>
           'Die Installation konnte nicht gestartet werden.',
       },

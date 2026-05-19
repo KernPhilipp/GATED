@@ -210,11 +210,11 @@ class _LoginScreenState extends State<LoginScreen> {
         return AlertDialog(
           title: const Text('Passwort vergessen'),
           content: const Text(
-            'Wenn du dein Passwort zuruecksetzen lassen moechtest, wird eine '
+            'Wenn du dein Passwort zurücksetzen lassen möchtest, wird eine '
             'vorbereitete E-Mail an philipp.kern.student@htl-hallein.at '
-            'geoeffnet.\n\nWichtig: Diese E-Mail muss von derselben '
+            'geöffnet.\n\nWichtig: Diese E-Mail muss von derselben '
             'E-Mail-Adresse gesendet werden, die mit deinem GATED-Account '
-            'verknuepft ist.',
+            'verknüpft ist.',
           ),
           actions: [
             TextButton(
@@ -227,7 +227,7 @@ class _LoginScreenState extends State<LoginScreen> {
               onPressed: () {
                 Navigator.of(context).pop(true);
               },
-              child: const Text('E-Mail oeffnen'),
+              child: const Text('E-Mail öffnen'),
             ),
           ],
         );
@@ -241,14 +241,14 @@ class _LoginScreenState extends State<LoginScreen> {
     final opened = await _emailDraftService.openDraft(
       EmailDraft(
         to: 'philipp.kern.student@htl-hallein.at',
-        subject: 'GATED-Passwort zuruecksetzen',
+        subject: 'GATED-Passwort zurücksetzen',
         body:
             'Sehr geehrter Herr Kern,\n\n'
-            'ich bitte um die Zuruecksetzung meines GATED-Passworts.\n'
+            'ich bitte um die Zurücksetzung meines GATED-Passworts.\n'
             'Diese Anfrage wird von der E-Mail-Adresse gesendet, die mit '
-            'meinem GATED-Account verknuepft ist.\n\n'
+            'meinem GATED-Account verknüpft ist.\n\n'
             'Vielen Dank im Voraus.\n\n'
-            'Mit freundlichen Gruessen',
+            'Mit freundlichen Grüßen',
       ),
     );
 
@@ -259,7 +259,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!opened) {
       showAppSnackBar(
         context,
-        message: 'Die E-Mail-App konnte nicht geoeffnet werden.',
+        message: 'Die E-Mail-App konnte nicht geöffnet werden.',
         isError: true,
         withCloseAction: true,
       );
@@ -373,7 +373,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     if (!_emailPattern.hasMatch(email)) {
-      return 'Bitte eine gueltige E-Mail eingeben.';
+      return 'Bitte eine gültige E-Mail eingeben.';
     }
 
     return null;
