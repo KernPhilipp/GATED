@@ -22,7 +22,3 @@ GATED - ToDo
 ---------------
 - Deutsche Umlaute im Code korrigieren
 - Betroffene Screenshots in der Diplomarbeit ersetzen
-
-5) UI:
-------
-- Der Schatten bei den Buttons ist noch immer eckig, und nicht abgerundet
