@@ -27,7 +27,7 @@ void main() {
 
     expect(find.text('Status wird ermittelt'), findsOneWidget);
     expect(find.text('Sensorstatus'), findsOneWidget);
-    expect(find.text('Bestaetigung laeuft (4 s)'), findsOneWidget);
+    expect(find.text('Bestätigung läuft (4 s)'), findsOneWidget);
     expect(find.text('Impuls senden'), findsOneWidget);
     expect(find.text('Shelly-Hinweise'), findsNothing);
     expect(find.text('Hinweis zum Modell'), findsNothing);
@@ -45,7 +45,7 @@ void main() {
         state: GarageDoorState.opening,
         stateConfidence: GarageDoorStateConfidence.modeled,
         remainingMs: 5000,
-        countdownLabel: 'Warten auf Sensorbestaetigung offen',
+        countdownLabel: 'Warten auf Sensorbestätigung offen',
       ),
     );
 
@@ -65,7 +65,7 @@ void main() {
     await tester.pump();
 
     expect(controller.triggerCalls, 1);
-    expect(find.text('Tor oeffnet'), findsOneWidget);
+    expect(find.text('Tor öffnet'), findsOneWidget);
     expect(find.text('Status manuell korrigieren'), findsNothing);
     expect(find.text('Als unbekannt markieren'), findsNothing);
 
@@ -96,8 +96,8 @@ void main() {
     expect(find.text('Erreichbar'), findsWidgets);
     expect(find.text('Shelly'), findsOneWidget);
     expect(find.text('Relais'), findsNothing);
-    expect(find.text('Sensor zuletzt geprueft'), findsOneWidget);
-    expect(find.text('Letzte Aenderung'), findsOneWidget);
+    expect(find.text('Sensor zuletzt geprüft'), findsOneWidget);
+    expect(find.text('Letzte Änderung'), findsOneWidget);
   });
 
   testWidgets('dashboard hides removed technical detail rows', (tester) async {

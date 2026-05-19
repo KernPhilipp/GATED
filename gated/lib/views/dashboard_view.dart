@@ -571,7 +571,7 @@ class _DashboardViewState extends State<DashboardView> {
     }
     final remainingMs = status.remainingMs;
     if (remainingMs != null && remainingMs > 0) {
-      return 'Bestätigung lauft (${_formatDuration(remainingMs)})';
+      return 'Bestätigung läuft (${_formatDuration(remainingMs)})';
     }
     return 'Erreichbar';
   }

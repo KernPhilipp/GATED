@@ -114,8 +114,8 @@ void main() {
     await tester.tap(find.text('Passwort vergessen?'));
     await tester.pumpAndSettle();
 
-    expect(find.text('E-Mail oeffnen'), findsOneWidget);
-    await tester.tap(find.text('E-Mail oeffnen'));
+    expect(find.text('E-Mail öffnen'), findsOneWidget);
+    await tester.tap(find.text('E-Mail öffnen'));
     await tester.pumpAndSettle();
 
     expect(emailDraftService.lastDraft, isNotNull);
@@ -123,17 +123,14 @@ void main() {
       emailDraftService.lastDraft!.to,
       'philipp.kern.student@htl-hallein.at',
     );
+    expect(emailDraftService.lastDraft!.subject, 'GATED-Passwort zurücksetzen');
     expect(
-      emailDraftService.lastDraft!.subject,
-      'GATED-Passwort zuruecksetzen',
+      emailDraftService.lastDraft!.body,
+      contains('Zurücksetzung meines GATED-Passworts'),
     );
     expect(
       emailDraftService.lastDraft!.body,
-      contains('Zuruecksetzung meines GATED-Passworts'),
-    );
-    expect(
-      emailDraftService.lastDraft!.body,
-      contains('GATED-Account verknuepft ist'),
+      contains('GATED-Account verknüpft ist'),
     );
   });
 }

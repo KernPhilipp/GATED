@@ -435,7 +435,7 @@ void main() {
 
     expect(adminService.garageDoorConfig.shellyBaseUrl, 'http://192.168.0.102');
     expect(
-      find.text('Bitte eine gueltige Shelly-URL eingeben.'),
+      find.text('Bitte eine gültige Shelly-URL eingeben.'),
       findsOneWidget,
     );
     await tester.pump(const Duration(seconds: 4));
@@ -489,10 +489,10 @@ void main() {
 
     expect(emailDraftService.lastDraft, isNotNull);
     expect(emailDraftService.lastDraft!.to, 'user@example.com');
-    expect(emailDraftService.lastDraft!.body, contains('Temporaeres Passwort'));
+    expect(emailDraftService.lastDraft!.body, contains('Temporäres Passwort'));
     expect(
       emailDraftService.lastDraft!.body,
-      contains('Mit freundlichen Gruessen'),
+      contains('Mit freundlichen Grüßen'),
     );
     expect(emailDraftService.lastDraft!.body, contains('Temp123!'));
     await tester.pump(const Duration(seconds: 4));
