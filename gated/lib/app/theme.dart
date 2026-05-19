@@ -1,6 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+const _cardShape = RoundedRectangleBorder(
+  borderRadius: BorderRadius.all(Radius.circular(12)),
+);
+
+const _buttonShape = RoundedRectangleBorder(
+  borderRadius: BorderRadius.all(Radius.circular(18)),
+);
+
 ThemeData buildLightTheme() {
   final base = ThemeData(
     colorScheme: ColorScheme.fromSeed(
@@ -14,6 +22,10 @@ ThemeData buildLightTheme() {
     textTheme: GoogleFonts.barlowSemiCondensedTextTheme(base.textTheme),
     primaryTextTheme: GoogleFonts.barlowSemiCondensedTextTheme(
       base.primaryTextTheme,
+    ),
+    cardTheme: const CardThemeData(
+      clipBehavior: Clip.antiAlias,
+      shape: _cardShape,
     ),
     filledButtonTheme: FilledButtonThemeData(style: _buildRoundedButtonStyle()),
     elevatedButtonTheme: ElevatedButtonThemeData(
@@ -39,6 +51,10 @@ ThemeData buildDarkTheme() {
     primaryTextTheme: GoogleFonts.barlowSemiCondensedTextTheme(
       base.primaryTextTheme,
     ),
+    cardTheme: const CardThemeData(
+      clipBehavior: Clip.antiAlias,
+      shape: _cardShape,
+    ),
     filledButtonTheme: FilledButtonThemeData(style: _buildRoundedButtonStyle()),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: _buildRoundedButtonStyle(),
@@ -50,12 +66,8 @@ ThemeData buildDarkTheme() {
 }
 
 ButtonStyle _buildRoundedButtonStyle() {
-  const shape = RoundedRectangleBorder(
-    borderRadius: BorderRadius.all(Radius.circular(18)),
-  );
-
   return ButtonStyle(
-    shape: const WidgetStatePropertyAll(shape),
+    shape: const WidgetStatePropertyAll(_buttonShape),
     shadowColor: const WidgetStatePropertyAll(Colors.black38),
     elevation: WidgetStateProperty.resolveWith((states) {
       if (states.contains(WidgetState.disabled)) {

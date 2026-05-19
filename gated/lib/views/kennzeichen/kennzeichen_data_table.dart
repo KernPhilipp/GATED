@@ -31,6 +31,7 @@ class KennzeichenDataTable extends StatelessWidget {
         const sortArrowPadding = 2.0;
         const sortIndicatorWidth = sortArrowIconSize + (sortArrowPadding * 2);
         const sortRightPadding = 10.0;
+        const tableBorderRadius = BorderRadius.all(Radius.circular(8));
 
         final availableWidth = constraints.maxWidth.isFinite
             ? constraints.maxWidth
@@ -48,98 +49,103 @@ class KennzeichenDataTable extends StatelessWidget {
         return HorizontalTableScrollView(
           child: ConstrainedBox(
             constraints: BoxConstraints(minWidth: tableWidth),
-            child: DataTable(
-              horizontalMargin: 0,
-              columnSpacing: 0,
-              headingRowHeight: 50,
-              dataRowMinHeight: 56,
-              dataRowMaxHeight: 72,
-              sortColumnIndex: sortColumnIndex,
-              sortAscending: sortAscending,
-              border: TableBorder(
-                top: BorderSide(color: borderColor, width: 3),
-                right: BorderSide(color: borderColor, width: 3),
-                bottom: BorderSide(color: borderColor, width: 3),
-                left: BorderSide(color: borderColor, width: 3),
-                horizontalInside: BorderSide(color: borderColor, width: 1),
-                verticalInside: BorderSide(color: borderColor, width: 1),
-                borderRadius: BorderRadius.circular(8),
+            child: ClipRRect(
+              borderRadius: tableBorderRadius,
+              child: DataTable(
+                horizontalMargin: 0,
+                columnSpacing: 0,
+                headingRowHeight: 50,
+                dataRowMinHeight: 56,
+                dataRowMaxHeight: 72,
+                sortColumnIndex: sortColumnIndex,
+                sortAscending: sortAscending,
+                border: TableBorder(
+                  top: BorderSide(color: borderColor, width: 3),
+                  right: BorderSide(color: borderColor, width: 3),
+                  bottom: BorderSide(color: borderColor, width: 3),
+                  left: BorderSide(color: borderColor, width: 3),
+                  horizontalInside: BorderSide(color: borderColor, width: 1),
+                  verticalInside: BorderSide(color: borderColor, width: 1),
+                  borderRadius: tableBorderRadius,
+                ),
+                columns: [
+                  DataColumn(
+                    headingRowAlignment: MainAxisAlignment.start,
+                    label: _headerCell(
+                      'Lehrer',
+                      columnWidth,
+                      isSortable: true,
+                      sortIndicatorWidth: sortIndicatorWidth,
+                      sortRightPadding: sortRightPadding,
+                    ),
+                    onSort: onSort,
+                  ),
+                  DataColumn(
+                    headingRowAlignment: MainAxisAlignment.start,
+                    label: _headerCell(
+                      'Kennzeichen',
+                      columnWidth,
+                      isSortable: true,
+                      sortIndicatorWidth: sortIndicatorWidth,
+                      sortRightPadding: sortRightPadding,
+                    ),
+                    onSort: onSort,
+                  ),
+                  DataColumn(label: _headerCell('Aktionen', tableActionWidth)),
+                ],
+                rows: [
+                  for (final row in rows)
+                    DataRow.byIndex(
+                      index: row.localRowId,
+                      cells: [
+                        DataCell(
+                          _dataCell(
+                            width: columnWidth,
+                            child: Text(
+                              row.teacherName,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                        DataCell(
+                          _dataCell(
+                            width: columnWidth,
+                            child: Text(
+                              row.licensePlate,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                        DataCell(
+                          _buttonCell(
+                            width: tableActionWidth,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                IconButton(
+                                  tooltip: 'Bearbeiten',
+                                  onPressed: row.isBusy
+                                      ? null
+                                      : () => onEditRow(row),
+                                  icon: const Icon(Icons.edit_rounded),
+                                ),
+                                IconButton(
+                                  tooltip: 'Löschen',
+                                  onPressed: row.isBusy
+                                      ? null
+                                      : () => onDeleteRow(row),
+                                  icon: const Icon(
+                                    Icons.delete_outline_rounded,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
               ),
-              columns: [
-                DataColumn(
-                  headingRowAlignment: MainAxisAlignment.start,
-                  label: _headerCell(
-                    'Lehrer',
-                    columnWidth,
-                    isSortable: true,
-                    sortIndicatorWidth: sortIndicatorWidth,
-                    sortRightPadding: sortRightPadding,
-                  ),
-                  onSort: onSort,
-                ),
-                DataColumn(
-                  headingRowAlignment: MainAxisAlignment.start,
-                  label: _headerCell(
-                    'Kennzeichen',
-                    columnWidth,
-                    isSortable: true,
-                    sortIndicatorWidth: sortIndicatorWidth,
-                    sortRightPadding: sortRightPadding,
-                  ),
-                  onSort: onSort,
-                ),
-                DataColumn(label: _headerCell('Aktionen', tableActionWidth)),
-              ],
-              rows: [
-                for (final row in rows)
-                  DataRow.byIndex(
-                    index: row.localRowId,
-                    cells: [
-                      DataCell(
-                        _dataCell(
-                          width: columnWidth,
-                          child: Text(
-                            row.teacherName,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ),
-                      DataCell(
-                        _dataCell(
-                          width: columnWidth,
-                          child: Text(
-                            row.licensePlate,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ),
-                      DataCell(
-                        _buttonCell(
-                          width: tableActionWidth,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              IconButton(
-                                tooltip: 'Bearbeiten',
-                                onPressed: row.isBusy
-                                    ? null
-                                    : () => onEditRow(row),
-                                icon: const Icon(Icons.edit_rounded),
-                              ),
-                              IconButton(
-                                tooltip: 'Löschen',
-                                onPressed: row.isBusy
-                                    ? null
-                                    : () => onDeleteRow(row),
-                                icon: const Icon(Icons.delete_outline_rounded),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-              ],
             ),
           ),
         );

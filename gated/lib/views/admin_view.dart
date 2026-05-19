@@ -667,6 +667,7 @@ class _AdminUsersTable extends StatelessWidget {
         const sortArrowPadding = 2.0;
         const sortIndicatorWidth = sortArrowIconSize + (sortArrowPadding * 2);
         const sortRightPadding = 10.0;
+        const tableBorderRadius = BorderRadius.all(Radius.circular(8));
 
         final availableWidth = constraints.maxWidth.isFinite
             ? constraints.maxWidth
@@ -684,142 +685,149 @@ class _AdminUsersTable extends StatelessWidget {
         return HorizontalTableScrollView(
           child: ConstrainedBox(
             constraints: BoxConstraints(minWidth: tableWidth),
-            child: DataTable(
-              horizontalMargin: 0,
-              columnSpacing: 0,
-              headingRowHeight: 50,
-              dataRowMinHeight: 56,
-              dataRowMaxHeight: 72,
-              sortColumnIndex: sortColumnIndex,
-              sortAscending: sortAscending,
-              border: TableBorder(
-                top: BorderSide(color: borderColor, width: 3),
-                right: BorderSide(color: borderColor, width: 3),
-                bottom: BorderSide(color: borderColor, width: 3),
-                left: BorderSide(color: borderColor, width: 3),
-                horizontalInside: BorderSide(color: borderColor, width: 1),
-                verticalInside: BorderSide(color: borderColor, width: 1),
-                borderRadius: BorderRadius.circular(8),
+            child: ClipRRect(
+              borderRadius: tableBorderRadius,
+              child: DataTable(
+                horizontalMargin: 0,
+                columnSpacing: 0,
+                headingRowHeight: 50,
+                dataRowMinHeight: 56,
+                dataRowMaxHeight: 72,
+                sortColumnIndex: sortColumnIndex,
+                sortAscending: sortAscending,
+                border: TableBorder(
+                  top: BorderSide(color: borderColor, width: 3),
+                  right: BorderSide(color: borderColor, width: 3),
+                  bottom: BorderSide(color: borderColor, width: 3),
+                  left: BorderSide(color: borderColor, width: 3),
+                  horizontalInside: BorderSide(color: borderColor, width: 1),
+                  verticalInside: BorderSide(color: borderColor, width: 1),
+                  borderRadius: tableBorderRadius,
+                ),
+                columns: [
+                  DataColumn(
+                    headingRowAlignment: MainAxisAlignment.start,
+                    label: _headerCell(
+                      'Email',
+                      columnWidth,
+                      isSortable: true,
+                      sortIndicatorWidth: sortIndicatorWidth,
+                      sortRightPadding: sortRightPadding,
+                    ),
+                    onSort: onSort,
+                  ),
+                  DataColumn(
+                    headingRowAlignment: MainAxisAlignment.start,
+                    label: _headerCell(
+                      'Rolle',
+                      columnWidth,
+                      isSortable: true,
+                      sortIndicatorWidth: sortIndicatorWidth,
+                      sortRightPadding: sortRightPadding,
+                    ),
+                    onSort: onSort,
+                  ),
+                  DataColumn(
+                    headingRowAlignment: MainAxisAlignment.start,
+                    label: _headerCell(
+                      'Bereits registriert',
+                      columnWidth,
+                      isSortable: true,
+                      sortIndicatorWidth: sortIndicatorWidth,
+                      sortRightPadding: sortRightPadding,
+                    ),
+                    onSort: onSort,
+                  ),
+                  DataColumn(
+                    headingRowAlignment: MainAxisAlignment.start,
+                    label: _headerCell(
+                      'Erstellt am',
+                      columnWidth,
+                      isSortable: true,
+                      sortIndicatorWidth: sortIndicatorWidth,
+                      sortRightPadding: sortRightPadding,
+                    ),
+                    onSort: onSort,
+                  ),
+                  DataColumn(label: _headerCell('Aktionen', tableActionWidth)),
+                ],
+                rows: [
+                  for (var index = 0; index < users.length; index++)
+                    DataRow.byIndex(
+                      index: index,
+                      cells: [
+                        DataCell(
+                          _dataCell(
+                            width: columnWidth,
+                            child: Text(
+                              users[index].email,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                        DataCell(
+                          _dataCell(
+                            width: columnWidth,
+                            child: Text(users[index].roleLabel),
+                          ),
+                        ),
+                        DataCell(
+                          _dataCell(
+                            width: columnWidth,
+                            child: Text(_registeredLabel(users[index])),
+                          ),
+                        ),
+                        DataCell(
+                          _dataCell(
+                            width: columnWidth,
+                            child: Text(
+                              _formatCreatedAt(users[index].createdAt),
+                            ),
+                          ),
+                        ),
+                        DataCell(
+                          _buttonCell(
+                            width: tableActionWidth,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                IconButton(
+                                  tooltip: users[index].canEdit
+                                      ? 'Bearbeiten'
+                                      : 'Admins koennen nicht bearbeitet werden',
+                                  onPressed: users[index].canEdit
+                                      ? () => onEdit(users[index])
+                                      : null,
+                                  icon: const Icon(Icons.edit_rounded),
+                                ),
+                                IconButton(
+                                  tooltip: users[index].canResetPassword
+                                      ? 'Temporaeres Passwort erstellen'
+                                      : 'Nur registrierte Benutzer',
+                                  onPressed: users[index].canResetPassword
+                                      ? () => onResetPassword(users[index])
+                                      : null,
+                                  icon: const Icon(Icons.mail_outline_rounded),
+                                ),
+                                IconButton(
+                                  tooltip: users[index].canDelete
+                                      ? 'Benutzer loeschen'
+                                      : 'Admins koennen nicht geloescht werden',
+                                  onPressed: users[index].canDelete
+                                      ? () => onDelete(users[index])
+                                      : null,
+                                  icon: const Icon(
+                                    Icons.delete_outline_rounded,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
               ),
-              columns: [
-                DataColumn(
-                  headingRowAlignment: MainAxisAlignment.start,
-                  label: _headerCell(
-                    'Email',
-                    columnWidth,
-                    isSortable: true,
-                    sortIndicatorWidth: sortIndicatorWidth,
-                    sortRightPadding: sortRightPadding,
-                  ),
-                  onSort: onSort,
-                ),
-                DataColumn(
-                  headingRowAlignment: MainAxisAlignment.start,
-                  label: _headerCell(
-                    'Rolle',
-                    columnWidth,
-                    isSortable: true,
-                    sortIndicatorWidth: sortIndicatorWidth,
-                    sortRightPadding: sortRightPadding,
-                  ),
-                  onSort: onSort,
-                ),
-                DataColumn(
-                  headingRowAlignment: MainAxisAlignment.start,
-                  label: _headerCell(
-                    'Bereits registriert',
-                    columnWidth,
-                    isSortable: true,
-                    sortIndicatorWidth: sortIndicatorWidth,
-                    sortRightPadding: sortRightPadding,
-                  ),
-                  onSort: onSort,
-                ),
-                DataColumn(
-                  headingRowAlignment: MainAxisAlignment.start,
-                  label: _headerCell(
-                    'Erstellt am',
-                    columnWidth,
-                    isSortable: true,
-                    sortIndicatorWidth: sortIndicatorWidth,
-                    sortRightPadding: sortRightPadding,
-                  ),
-                  onSort: onSort,
-                ),
-                DataColumn(label: _headerCell('Aktionen', tableActionWidth)),
-              ],
-              rows: [
-                for (var index = 0; index < users.length; index++)
-                  DataRow.byIndex(
-                    index: index,
-                    cells: [
-                      DataCell(
-                        _dataCell(
-                          width: columnWidth,
-                          child: Text(
-                            users[index].email,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ),
-                      DataCell(
-                        _dataCell(
-                          width: columnWidth,
-                          child: Text(users[index].roleLabel),
-                        ),
-                      ),
-                      DataCell(
-                        _dataCell(
-                          width: columnWidth,
-                          child: Text(_registeredLabel(users[index])),
-                        ),
-                      ),
-                      DataCell(
-                        _dataCell(
-                          width: columnWidth,
-                          child: Text(_formatCreatedAt(users[index].createdAt)),
-                        ),
-                      ),
-                      DataCell(
-                        _buttonCell(
-                          width: tableActionWidth,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              IconButton(
-                                tooltip: users[index].canEdit
-                                    ? 'Bearbeiten'
-                                    : 'Admins koennen nicht bearbeitet werden',
-                                onPressed: users[index].canEdit
-                                    ? () => onEdit(users[index])
-                                    : null,
-                                icon: const Icon(Icons.edit_rounded),
-                              ),
-                              IconButton(
-                                tooltip: users[index].canResetPassword
-                                    ? 'Temporaeres Passwort erstellen'
-                                    : 'Nur registrierte Benutzer',
-                                onPressed: users[index].canResetPassword
-                                    ? () => onResetPassword(users[index])
-                                    : null,
-                                icon: const Icon(Icons.mail_outline_rounded),
-                              ),
-                              IconButton(
-                                tooltip: users[index].canDelete
-                                    ? 'Benutzer loeschen'
-                                    : 'Admins koennen nicht geloescht werden',
-                                onPressed: users[index].canDelete
-                                    ? () => onDelete(users[index])
-                                    : null,
-                                icon: const Icon(Icons.delete_outline_rounded),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-              ],
             ),
           ),
         );

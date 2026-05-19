@@ -458,13 +458,19 @@ class _DashboardViewState extends State<DashboardView> {
     required bool isBusy,
   }) {
     final isSelected = _status?.state == state;
+    final theme = Theme.of(context);
 
     return OutlinedButton(
       onPressed: isBusy ? null : () => _setManualState(state),
       style: OutlinedButton.styleFrom(
         backgroundColor: isSelected
-            ? Theme.of(context).colorScheme.surfaceContainerHighest
+            ? theme.colorScheme.surfaceContainerHighest
             : null,
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(18)),
+        ),
       ),
       child: Text(label),
     );
