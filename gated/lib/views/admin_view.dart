@@ -801,9 +801,7 @@ class _AdminUsersTable extends StatelessWidget {
                                   icon: const Icon(Icons.edit_rounded),
                                 ),
                                 IconButton(
-                                  tooltip: users[index].canResetPassword
-                                      ? 'Temporaeres Passwort erstellen'
-                                      : 'Nur registrierte Benutzer',
+                                  tooltip: _resetPasswordTooltip(users[index]),
                                   onPressed: users[index].canResetPassword
                                       ? () => onResetPassword(users[index])
                                       : null,
@@ -867,6 +865,17 @@ class _AdminUsersTable extends StatelessWidget {
 
   Widget _buttonCell({required double width, required Widget child}) {
     return SizedBox(width: width, child: child);
+  }
+
+  String _resetPasswordTooltip(AdminUser user) {
+    if (user.canResetPassword) {
+      return 'Temporaeres Passwort erstellen';
+    }
+    if (user.isAdmin) {
+      return 'Bei Admins nicht moeglich';
+    }
+
+    return 'Nur registrierte Benutzer';
   }
 }
 
