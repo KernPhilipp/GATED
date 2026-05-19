@@ -111,7 +111,7 @@ class GarageDoorConfig {
 
   GarageDoorConfig copyWith({String? shellyBaseUrl}) {
     return GarageDoorConfig(
-      shellyBaseUrl: shellyBaseUrl ?? this.shellyBaseUrl,
+      shellyBaseUrl: shellyBaseUrl?.trim() ?? this.shellyBaseUrl,
       switchId: switchId,
       inputId: inputId,
       sensorSettleDuration: sensorSettleDuration,
@@ -128,7 +128,11 @@ class GarageDoorConfig {
   }
 
   GarageDoorConfig withRuntimeConfig(DbGarageDoorConfig config) {
-    return copyWith(shellyBaseUrl: config.shellyBaseUrl);
+    final runtimeBaseUrl = config.shellyBaseUrl.trim();
+    if (!isValidShellyBaseUrl(runtimeBaseUrl)) {
+      return this;
+    }
+    return copyWith(shellyBaseUrl: runtimeBaseUrl);
   }
 
   DbGarageDoorConfig toDbConfig() {
@@ -137,6 +141,14 @@ class GarageDoorConfig {
 
   Map<String, Object?> toPublicJson() {
     return {'shellyBaseUrl': shellyBaseUrl};
+  }
+
+  static bool isValidShellyBaseUrl(String value) {
+    final uri = Uri.tryParse(value.trim());
+    return uri != null &&
+        uri.isAbsolute &&
+        (uri.scheme == 'http' || uri.scheme == 'https') &&
+        uri.host.trim().isNotEmpty;
   }
 }
 
@@ -276,11 +288,15 @@ class HttpShellyRelayClient implements ShellyRelayClient {
     String path,
     Map<String, String> queryParameters,
   ) async {
-    final baseUri = Uri.parse(baseUrl);
-    final uri = baseUri.replace(path: path, queryParameters: queryParameters);
-    final client = HttpClient()..connectionTimeout = timeout;
+    HttpClient? client;
 
     try {
+      final baseUri = Uri.parse(baseUrl);
+      if (!GarageDoorConfig.isValidShellyBaseUrl(baseUrl)) {
+        throw const FormatException('Invalid Shelly base URL');
+      }
+      final uri = baseUri.replace(path: path, queryParameters: queryParameters);
+      client = HttpClient()..connectionTimeout = timeout;
       final request = await client.getUrl(uri).timeout(timeout);
       final response = await request.close().timeout(timeout);
       final body = await response
@@ -298,10 +314,14 @@ class HttpShellyRelayClient implements ShellyRelayClient {
       );
     } on FormatException {
       throw const GarageDoorShellyException(
-        'Shelly lieferte eine ungueltige Antwort.',
+        'Shelly lieferte eine ungültige Antwort.',
+      );
+    } on ArgumentError {
+      throw const GarageDoorShellyException(
+        'Shelly lieferte eine ungültige Antwort.',
       );
     } finally {
-      client.close(force: true);
+      client?.close(force: true);
     }
   }
 
@@ -400,7 +420,7 @@ class GarageDoorService {
     if (_state == GarageDoorState.opening ||
         _state == GarageDoorState.closing) {
       throw const GarageDoorConflictException(
-        'Waehren der Bewegung ist kein weiterer Impuls erlaubt.',
+        'Während der Bewegung ist kein weiterer Impuls erlaubt.',
       );
     }
 
@@ -436,7 +456,7 @@ class GarageDoorService {
     _setMovingState(
       GarageDoorState.opening,
       nextState: GarageDoorState.open,
-      countdownLabel: 'Warten auf Sensorbestaetigung offen',
+      countdownLabel: 'Warten auf Sensorbestätigung offen',
       stateConfidence: stateConfidence,
     );
   }
@@ -446,7 +466,7 @@ class GarageDoorService {
       GarageDoorState.open,
       duration: _config.openHoldDuration,
       nextState: GarageDoorState.closing,
-      countdownLabel: 'Bis automatisches Schliessen',
+      countdownLabel: 'Bis automatisches Schließen',
       stateConfidence: stateConfidence,
     );
   }
@@ -455,7 +475,7 @@ class GarageDoorService {
     _setMovingState(
       GarageDoorState.closing,
       nextState: GarageDoorState.closed,
-      countdownLabel: 'Warten auf Sensorbestaetigung geschlossen',
+      countdownLabel: 'Warten auf Sensorbestätigung geschlossen',
       stateConfidence: stateConfidence,
     );
   }
@@ -677,8 +697,8 @@ class GarageDoorService {
       duration: _config.sensorSettleDuration,
       nextState: targetState,
       countdownLabel: targetState == GarageDoorState.closed
-          ? 'Bis Sensorstatus geschlossen bestaetigt'
-          : 'Bis Sensorstatus offen bestaetigt',
+          ? 'Bis Sensorstatus geschlossen bestätigt'
+          : 'Bis Sensorstatus offen bestätigt',
       stateConfidence: GarageDoorStateConfidence.sensor,
       isSensorSettlePhase: true,
     );

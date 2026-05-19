@@ -368,6 +368,15 @@ void main() {
       );
       expect(invalidResponse.statusCode, 400);
 
+      final missingHostResponse = await _sendJson(
+        handler,
+        'PUT',
+        '/garage-door/config',
+        {'shellyBaseUrl': 'http://'},
+        headers: {'Authorization': 'Bearer ${tokens.accessToken}'},
+      );
+      expect(missingHostResponse.statusCode, 400);
+
       final updateResponse = await _sendJson(
         handler,
         'PUT',
@@ -385,6 +394,41 @@ void main() {
       expect(persisted.shellyBaseUrl, 'http://192.168.0.200');
     },
   );
+
+  test('invalid persisted Shelly base URL falls back to defaults', () {
+    final defaults = GarageDoorConfig(
+      shellyBaseUrl: 'http://192.168.0.102',
+      switchId: '0',
+      inputId: '0',
+      sensorSettleDuration: const Duration(milliseconds: 50),
+      shellyRequestTimeout: const Duration(seconds: 1),
+      statusRefreshDebounce: const Duration(milliseconds: 50),
+      shellyPollInterval: const Duration(milliseconds: 10),
+      selfTriggerSuppressionWindow: const Duration(milliseconds: 80),
+      pulseDuration: const Duration(milliseconds: 30),
+      openingDuration: const Duration(milliseconds: 120),
+      openHoldDuration: const Duration(milliseconds: 120),
+      closingDuration: const Duration(milliseconds: 120),
+      startupDeterminationDuration: const Duration(milliseconds: 200),
+    );
+
+    final effective = defaults.withRuntimeConfig(
+      const DbGarageDoorConfig(shellyBaseUrl: 'http://'),
+    );
+
+    expect(effective.shellyBaseUrl, defaults.shellyBaseUrl);
+  });
+
+  test('invalid Shelly client base URL becomes a handled Shelly error', () {
+    final client = HttpShellyRelayClient(
+      baseUrl: 'http://',
+      switchId: '0',
+      inputId: '0',
+      timeout: const Duration(milliseconds: 10),
+    );
+
+    expect(client.fetchStatus(), throwsA(isA<GarageDoorShellyException>()));
+  });
 
   test('garage door config endpoint requires admin access', () async {
     const userEmail = 'standard.user@example.com';

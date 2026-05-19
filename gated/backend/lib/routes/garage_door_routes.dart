@@ -38,17 +38,14 @@ Router buildGarageDoorRouter(
       return Response.badRequest(body: 'Missing shellyBaseUrl');
     }
 
-    final uri = Uri.tryParse(baseUrl);
-    if (uri == null ||
-        !uri.isAbsolute ||
-        (uri.scheme != 'http' && uri.scheme != 'https')) {
+    if (!GarageDoorConfig.isValidShellyBaseUrl(baseUrl)) {
       return Response.badRequest(body: 'Invalid shellyBaseUrl');
     }
 
     try {
       await authenticateAdminRequest(request, authDb, accessControlService);
       final config = garageDoorService.getConfig().copyWith(
-        shellyBaseUrl: baseUrl,
+        shellyBaseUrl: baseUrl.trim(),
       );
       await authDb.saveGarageDoorConfig(config.toDbConfig());
       await garageDoorService.updateConfig(config);
