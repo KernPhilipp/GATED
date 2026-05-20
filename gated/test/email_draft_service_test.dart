@@ -9,7 +9,10 @@ void main() {
       body: 'Sehr geehrte Damen und Herren,\n\nVielen Dank.',
     ).toUri();
 
-    expect(uri.toString(), contains('subject=GATED%20Passwort%20zurücksetzen'));
+    expect(
+      uri.toString(),
+      contains('subject=GATED%20Passwort%20zur%C3%BCcksetzen'),
+    );
     expect(
       uri.toString(),
       contains('body=Sehr%20geehrte%20Damen%20und%20Herren'),
