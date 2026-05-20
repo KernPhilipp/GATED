@@ -68,13 +68,29 @@ sudo journalctl -u gated-deploy.service -n 120 --no-pager
 sudo systemctl status gated-backend.service --no-pager
 for i in {1..20}; do curl -fsS http://127.0.0.1:8091/health && echo "health ok" && break; sleep 1; done
 
+echo "Installiert:"
+cat /home/gated/gated-frontend/state/last_tag
+
+echo "Neuester GitHub-Release:"
+curl -fsSL https://api.github.com/repos/KernPhilipp/GATED/releases/latest | python3 -c "import json,sys; print(json.load(sys.stdin)['tag_name'])"
+
+INSTALLED_TAG="$(cat /home/gated/gated-frontend/state/last_tag 2>/dev/null || true)"
+LATEST_TAG="$(curl -fsSL https://api.github.com/repos/KernPhilipp/GATED/releases/latest | python3 -c "import json,sys; print(json.load(sys.stdin)['tag_name'])")"
+[ "${INSTALLED_TAG}" = "${LATEST_TAG}" ] && echo "GATED ist aktuell." || echo "Update verfuegbar: installiert=${INSTALLED_TAG:-keins}, neu=${LATEST_TAG}"
+
 hostname -I
 # Browser: http://<PI-IP>:8090
 
-9) Release-Tag fixieren
------------------------
-echo "v0.1.3" | sudo tee /home/gated/gated-frontend/state/last_tag
+9) Deploy erneut ausloesen
+--------------------------
+# Normalerweise reicht dieser Befehl. Wenn bereits die neueste Version installiert ist,
+# macht das Deploy-Skript nichts.
+sudo systemctl start gated-deploy.service
+
+# Nur falls ein erneutes Deploy derselben GitHub-Version erzwungen werden soll:
+sudo rm -f /home/gated/gated-frontend/state/last_tag
 sudo systemctl reset-failed gated-deploy.service
+sudo systemctl start gated-deploy.service
 
 10) Logs
 -------
