@@ -19,6 +19,22 @@ dart run server.dart
 cd gated
 flutter run -d web-server --web-hostname 0.0.0.0 --web-port 8080 --release
 
+Hinweis:
+Flutter gibt danach http://0.0.0.0:8080 aus. Das ist die Bind-Adresse des
+Servers und nicht die beste Adresse fuer den Browser.
+
+Lokal auf demselben Rechner:
+http://127.0.0.1:8080/
+
+Auf dem Raspberry Pi im Netzwerk:
+http://<IP-DES-PI>:8080/
+
+Beispiel:
+http://192.168.0.42:8080/
+
+Die IP des Pi kann auf dem Pi mit diesem Befehl angezeigt werden:
+hostname -I
+
 3) Tests und Analyse
 --------------------
 cd gated
