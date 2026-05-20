@@ -2,7 +2,7 @@ GATED - Informationen
 
 1) Zweck
 --------
-GATED ist eine lokale Web/PWA-Loesung fuer Garagenzugang, Kennzeichenverwaltung
+GATED ist eine lokale Web/PWA-Lösung für Garagenzugang, Kennzeichenverwaltung
 und Torsteuerung.
 
 2) Architektur
@@ -22,8 +22,8 @@ und Torsteuerung.
 4) Wichtige Funktionen
 ----------------------
 - Login und Registrierung
-- Adminbereich fuer Nutzer und erlaubte E-Mails
-- Primaerer Admin ueber `PRIMARY_ADMIN_EMAIL`
+- Adminbereich für Nutzer und erlaubte E-Mails
+- Primärer Admin über `PRIMARY_ADMIN_EMAIL`
 - Passwort-Reset mit vorbereitetem E-Mail-Entwurf
 - Kennzeichenverwaltung mit Live-Events
 - Garagentorstatus und Torsteuerung

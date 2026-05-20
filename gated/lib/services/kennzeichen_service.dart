@@ -49,12 +49,12 @@ class KennzeichenService {
 
     final decoded = jsonDecode(response.body);
     if (decoded is! Map) {
-      throw const KennzeichenException('Ungueltige Server-Antwort.');
+      throw const KennzeichenException('Ungültige Server-Antwort.');
     }
 
     final items = decoded['items'];
     if (items is! List) {
-      throw const KennzeichenException('Ungueltige Server-Antwort.');
+      throw const KennzeichenException('Ungültige Server-Antwort.');
     }
 
     return items
@@ -124,7 +124,7 @@ class KennzeichenService {
   KennzeichenEntry _parseEntryResponse(String body) {
     final decoded = jsonDecode(body);
     if (decoded is! Map) {
-      throw const KennzeichenException('Ungueltige Server-Antwort.');
+      throw const KennzeichenException('Ungültige Server-Antwort.');
     }
 
     return KennzeichenEntry.fromJson(
@@ -141,9 +141,9 @@ class KennzeichenService {
       case 409:
         return 'Kennzeichen existiert bereits.';
       case 500:
-        return 'Serverfehler. Bitte spaeter versuchen.';
+        return 'Serverfehler. Bitte später versuchen.';
       default:
-        return 'Server-Fehler. Bitte spaeter versuchen.';
+        return 'Server-Fehler. Bitte später versuchen.';
     }
   }
 }

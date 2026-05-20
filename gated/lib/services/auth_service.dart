@@ -91,10 +91,10 @@ class AuthService {
     }
 
     if (response.statusCode == 500) {
-      throw const AuthException('Serverfehler. Bitte spaeter versuchen.');
+      throw const AuthException('Serverfehler. Bitte später versuchen.');
     }
 
-    throw const AuthException('Server-Fehler. Bitte spaeter versuchen.');
+    throw const AuthException('Server-Fehler. Bitte später versuchen.');
   }
 
   Future<void> register({
@@ -124,10 +124,10 @@ class AuthService {
     }
 
     if (response.statusCode == 500) {
-      throw const AuthException('Serverfehler. Bitte spaeter versuchen.');
+      throw const AuthException('Serverfehler. Bitte später versuchen.');
     }
 
-    throw const AuthException('Server-Fehler. Bitte spaeter versuchen.');
+    throw const AuthException('Server-Fehler. Bitte später versuchen.');
   }
 
   Future<AuthUser> getCurrentUser() async {
@@ -197,10 +197,10 @@ class AuthService {
     }
 
     if (response.statusCode == 500) {
-      throw const AuthException('Serverfehler. Bitte spaeter versuchen.');
+      throw const AuthException('Serverfehler. Bitte später versuchen.');
     }
 
-    throw const AuthException('Passwort konnte nicht geaendert werden.');
+    throw const AuthException('Passwort konnte nicht geändert werden.');
   }
 
   Future<bool> restoreSession() async {
@@ -325,7 +325,7 @@ class AuthService {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       if (data is! Map<String, dynamic>) {
-        throw const AuthException('Ungueltige Server-Antwort.');
+        throw const AuthException('Ungültige Server-Antwort.');
       }
 
       final user = AuthUser.fromJson(data);
@@ -336,7 +336,7 @@ class AuthService {
     }
 
     if (response.statusCode == 500) {
-      throw const AuthException('Serverfehler. Bitte spaeter versuchen.');
+      throw const AuthException('Serverfehler. Bitte später versuchen.');
     }
 
     throw const AuthException('Profil konnte nicht geladen werden.');
@@ -498,7 +498,7 @@ class _TokenPair {
 _TokenPair _parseTokenPair(String responseBody) {
   final decoded = jsonDecode(responseBody);
   if (decoded is! Map<String, dynamic>) {
-    throw const AuthException('Ungueltige Server-Antwort.');
+    throw const AuthException('Ungültige Server-Antwort.');
   }
 
   final accessToken = decoded['accessToken'];
@@ -507,7 +507,7 @@ _TokenPair _parseTokenPair(String responseBody) {
       accessToken.isEmpty ||
       refreshToken is! String ||
       refreshToken.isEmpty) {
-    throw const AuthException('Ungueltige Server-Antwort.');
+    throw const AuthException('Ungültige Server-Antwort.');
   }
 
   return _TokenPair(accessToken: accessToken, refreshToken: refreshToken);

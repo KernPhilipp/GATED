@@ -120,7 +120,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('Statusbasis'), findsNothing);
-    expect(find.text('Naechster modellierter Zustand'), findsNothing);
+    expect(find.text('Nächster modellierter Zustand'), findsNothing);
     expect(find.text('Letzte Aktion'), findsNothing);
     expect(find.text('Relais'), findsNothing);
   });

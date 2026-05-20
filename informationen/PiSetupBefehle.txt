@@ -63,7 +63,7 @@ sudo systemctl start gated-deploy.service
 sudo systemctl status gated-deploy.service --no-pager
 sudo journalctl -u gated-deploy.service -n 120 --no-pager
 
-8) Pruefen
+8) Prüfen
 ----------
 sudo systemctl status gated-backend.service --no-pager
 for i in {1..20}; do curl -fsS http://127.0.0.1:8091/health && echo "health ok" && break; sleep 1; done
@@ -76,12 +76,12 @@ curl -fsSL https://api.github.com/repos/KernPhilipp/GATED/releases/latest | pyth
 
 INSTALLED_TAG="$(cat /home/gated/gated-frontend/state/last_tag 2>/dev/null || true)"
 LATEST_TAG="$(curl -fsSL https://api.github.com/repos/KernPhilipp/GATED/releases/latest | python3 -c "import json,sys; print(json.load(sys.stdin)['tag_name'])")"
-[ "${INSTALLED_TAG}" = "${LATEST_TAG}" ] && echo "GATED ist aktuell." || echo "Update verfuegbar: installiert=${INSTALLED_TAG:-keins}, neu=${LATEST_TAG}"
+[ "${INSTALLED_TAG}" = "${LATEST_TAG}" ] && echo "GATED ist aktuell." || echo "Update verfügbar: installiert=${INSTALLED_TAG:-keins}, neu=${LATEST_TAG}"
 
 hostname -I
 # Browser: http://<PI-IP>:8090
 
-9) Deploy erneut ausloesen
+9) Deploy erneut auslösen
 --------------------------
 # Normalerweise reicht dieser Befehl. Wenn bereits die neueste Version installiert ist,
 # macht das Deploy-Skript nichts.

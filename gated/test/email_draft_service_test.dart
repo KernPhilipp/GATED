@@ -5,14 +5,11 @@ void main() {
   test('email draft URI encodes spaces without plus signs', () {
     final uri = EmailDraft(
       to: 'user@example.com',
-      subject: 'GATED Passwort zuruecksetzen',
+      subject: 'GATED Passwort zurücksetzen',
       body: 'Sehr geehrte Damen und Herren,\n\nVielen Dank.',
     ).toUri();
 
-    expect(
-      uri.toString(),
-      contains('subject=GATED%20Passwort%20zuruecksetzen'),
-    );
+    expect(uri.toString(), contains('subject=GATED%20Passwort%20zurücksetzen'));
     expect(
       uri.toString(),
       contains('body=Sehr%20geehrte%20Damen%20und%20Herren'),
