@@ -3,7 +3,8 @@ GATED - Informationen
 1) Zweck
 --------
 GATED ist eine lokale Web/PWA-Loesung fuer Garagenzugang, Kennzeichenverwaltung
-und Torsteuerung.
+und Torsteuerung. Die Anwendung wird am Raspberry Pi gehostet und von Geraeten
+im gleichen Netzwerk im Browser geoeffnet.
 
 2) Architektur
 --------------
@@ -26,7 +27,7 @@ und Torsteuerung.
 - Primaerer Admin ueber `PRIMARY_ADMIN_EMAIL`
 - Passwort-Reset mit vorbereitetem E-Mail-Entwurf
 - Kennzeichenverwaltung mit Live-Events
-- Garagentorstatus und Torsteuerung
+- Sensorbasierter Garagentorstatus und Torsteuerung
 
 5) Runtime-Daten
 ----------------
@@ -40,3 +41,8 @@ Produktive Runtime-Dateien liegen auf dem Pi unter:
 Bekannter Schaltbefehl:
 
 http://192.168.0.102/rpc/Switch.Set?id=0&on=true&toggle_after=1
+
+Der Torstatus kommt vom Shelly-Input:
+
+- `false` = geschlossen
+- `true` = offen

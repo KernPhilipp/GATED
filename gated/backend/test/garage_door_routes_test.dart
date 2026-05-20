@@ -23,24 +23,16 @@ void main() {
   late Directory tempDir;
   late EmailAccessControlService accessControlService;
 
-  void rebuildHandler({
-    Duration startupDeterminationDuration = const Duration(milliseconds: 200),
-  }) {
+  void rebuildHandler() {
     garageDoorService = GarageDoorService(
-      config: GarageDoorConfig(
+      config: const GarageDoorConfig(
         shellyBaseUrl: 'http://192.168.0.102',
         switchId: '0',
         inputId: '0',
-        sensorSettleDuration: const Duration(milliseconds: 50),
-        shellyRequestTimeout: const Duration(seconds: 1),
-        statusRefreshDebounce: const Duration(milliseconds: 50),
-        shellyPollInterval: const Duration(milliseconds: 10),
-        selfTriggerSuppressionWindow: const Duration(milliseconds: 80),
-        pulseDuration: const Duration(milliseconds: 30),
-        openingDuration: const Duration(milliseconds: 120),
-        openHoldDuration: const Duration(milliseconds: 120),
-        closingDuration: const Duration(milliseconds: 120),
-        startupDeterminationDuration: startupDeterminationDuration,
+        shellyRequestTimeout: Duration(seconds: 1),
+        statusRefreshDebounce: Duration(milliseconds: 50),
+        shellyPollInterval: Duration(milliseconds: 10),
+        pulseDuration: Duration(milliseconds: 30),
       ),
       shellyClient: shellyClient,
     );
@@ -72,129 +64,179 @@ void main() {
 
   tearDown(() {
     garageDoorService.dispose();
-    shellyClient.dispose();
     db.close();
     tempDir.deleteSync(recursive: true);
   });
 
-  test('sensor input false becomes closed after settle delay', () async {
+  test('sensor input false is reported as closed', () async {
     final tokens = await _registerAndLogin(
       handler,
       email: email,
       password: password,
     );
-    garageDoorService.dispose();
-    rebuildHandler(
-      startupDeterminationDuration: const Duration(milliseconds: 200),
-    );
 
     await Future<void>.delayed(const Duration(milliseconds: 80));
-
-    final settledResponse = await _send(
+    final response = await _send(
       handler,
       'GET',
       '/garage-door/status',
       headers: {'Authorization': 'Bearer ${tokens.accessToken}'},
     );
-    final settledBody = await _readJson(settledResponse);
-    expect(settledBody['state'], 'closed');
-    expect(settledBody['stateConfidence'], 'sensor');
+    final body = await _readJson(response);
+
+    expect(body['state'], 'closed');
+    expect(body.containsKey('stateConfidence'), false);
+    expect(body.containsKey('remainingMs'), false);
+    expect(body.containsKey('countdownLabel'), false);
+    expect((body['shelly'] as Map<String, dynamic>)['inputState'], false);
     expect(
-      (settledBody['shelly'] as Map<String, dynamic>)['inputState'],
-      false,
-    );
-    expect(
-      (settledBody['shelly'] as Map<String, dynamic>)['isDoorClosedBySensor'],
+      (body['shelly'] as Map<String, dynamic>)['isDoorClosedBySensor'],
       true,
     );
   });
 
-  test('trigger opens and closes after sensor confirmation', () async {
+  test('sensor input true is reported as open', () async {
     final tokens = await _registerAndLogin(
       handler,
       email: email,
       password: password,
     );
-    await Future<void>.delayed(const Duration(milliseconds: 260));
-
-    final triggerResponse = await _send(
-      handler,
-      'POST',
-      '/garage-door/trigger',
-      headers: {'Authorization': 'Bearer ${tokens.accessToken}'},
-    );
-
-    expect(triggerResponse.statusCode, 200);
-    final triggerBody = await _readJson(triggerResponse);
-    expect(triggerBody['state'], 'opening');
-    expect(triggerBody['stateConfidence'], 'modeled');
-    expect(shellyClient.triggerCount, 1);
-
     shellyClient.inputState = true;
-    await Future<void>.delayed(const Duration(milliseconds: 80));
-    final openStatus = await _send(
-      handler,
-      'GET',
-      '/garage-door/status',
-      headers: {'Authorization': 'Bearer ${tokens.accessToken}'},
-    );
-    expect((await _readJson(openStatus))['state'], 'open');
 
-    final closeTrigger = await _send(
-      handler,
-      'POST',
-      '/garage-door/trigger',
-      headers: {'Authorization': 'Bearer ${tokens.accessToken}'},
-    );
-    expect(closeTrigger.statusCode, 200);
-    shellyClient.inputState = false;
     await Future<void>.delayed(const Duration(milliseconds: 80));
-    final closedStatus = await _send(
+    final response = await _send(
       handler,
       'GET',
       '/garage-door/status',
       headers: {'Authorization': 'Bearer ${tokens.accessToken}'},
     );
-    expect((await _readJson(closedStatus))['state'], 'closed');
+    final body = await _readJson(response);
+
+    expect(body['state'], 'open');
+    expect(
+      (body['shelly'] as Map<String, dynamic>)['isDoorClosedBySensor'],
+      false,
+    );
+  });
+
+  test('missing sensor value is reported as unknown', () async {
+    final tokens = await _registerAndLogin(
+      handler,
+      email: email,
+      password: password,
+    );
+    shellyClient.inputState = null;
+
+    await Future<void>.delayed(const Duration(milliseconds: 80));
+    final response = await _send(
+      handler,
+      'GET',
+      '/garage-door/status',
+      headers: {'Authorization': 'Bearer ${tokens.accessToken}'},
+    );
+    final body = await _readJson(response);
+
+    expect(body['state'], 'unknown');
+    expect((body['shelly'] as Map<String, dynamic>)['inputState'], isNull);
   });
 
   test(
-    'second trigger during movement is rejected deterministically',
+    'trigger waits for a real sensor change before confirming state',
     () async {
       final tokens = await _registerAndLogin(
         handler,
         email: email,
         password: password,
       );
-      await Future<void>.delayed(const Duration(milliseconds: 260));
+      await Future<void>.delayed(const Duration(milliseconds: 80));
 
-      final firstTrigger = await _send(
+      final triggerResponse = await _send(
         handler,
         'POST',
         '/garage-door/trigger',
         headers: {'Authorization': 'Bearer ${tokens.accessToken}'},
       );
-      expect(firstTrigger.statusCode, 200);
+      final triggerBody = await _readJson(triggerResponse);
 
-      final secondTrigger = await _send(
+      expect(triggerResponse.statusCode, 200);
+      expect(triggerBody['state'], 'unknown');
+      expect(shellyClient.triggerCount, 1);
+
+      await Future<void>.delayed(const Duration(milliseconds: 80));
+      final unchangedResponse = await _send(
         handler,
-        'POST',
-        '/garage-door/trigger',
+        'GET',
+        '/garage-door/status',
         headers: {'Authorization': 'Bearer ${tokens.accessToken}'},
       );
-      expect(secondTrigger.statusCode, 409);
+      expect((await _readJson(unchangedResponse))['state'], 'unknown');
+
+      shellyClient.inputState = true;
+      await Future<void>.delayed(const Duration(milliseconds: 80));
+      final openResponse = await _send(
+        handler,
+        'GET',
+        '/garage-door/status',
+        headers: {'Authorization': 'Bearer ${tokens.accessToken}'},
+      );
+      expect((await _readJson(openResponse))['state'], 'open');
     },
   );
 
+  test('second trigger while status is unknown is rejected', () async {
+    final tokens = await _registerAndLogin(
+      handler,
+      email: email,
+      password: password,
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 80));
+
+    final firstTrigger = await _send(
+      handler,
+      'POST',
+      '/garage-door/trigger',
+      headers: {'Authorization': 'Bearer ${tokens.accessToken}'},
+    );
+    expect(firstTrigger.statusCode, 200);
+
+    final secondTrigger = await _send(
+      handler,
+      'POST',
+      '/garage-door/trigger',
+      headers: {'Authorization': 'Bearer ${tokens.accessToken}'},
+    );
+    expect(secondTrigger.statusCode, 409);
+  });
+
+  test('trigger is rejected while sensor value is unavailable', () async {
+    final tokens = await _registerAndLogin(
+      handler,
+      email: email,
+      password: password,
+    );
+    shellyClient.inputState = null;
+    await Future<void>.delayed(const Duration(milliseconds: 80));
+
+    final response = await _send(
+      handler,
+      'POST',
+      '/garage-door/trigger',
+      headers: {'Authorization': 'Bearer ${tokens.accessToken}'},
+    );
+
+    expect(response.statusCode, 409);
+    expect(shellyClient.triggerCount, 0);
+  });
+
   test(
-    'shelly failures return a proxy error without state transition',
+    'shelly trigger failures return a proxy error without state transition',
     () async {
       final tokens = await _registerAndLogin(
         handler,
         email: email,
         password: password,
       );
-      await Future<void>.delayed(const Duration(milliseconds: 260));
+      await Future<void>.delayed(const Duration(milliseconds: 80));
       shellyClient.failTrigger = true;
 
       final triggerResponse = await _send(
@@ -215,140 +257,6 @@ void main() {
       expect((await _readJson(statusResponse))['state'], 'closed');
     },
   );
-
-  test('external rising edge at closed starts opening heuristically', () async {
-    final tokens = await _registerAndLogin(
-      handler,
-      email: email,
-      password: password,
-    );
-    await Future<void>.delayed(const Duration(milliseconds: 260));
-    shellyClient.inputState = null;
-
-    shellyClient.emitExternalPulse(const Duration(milliseconds: 40));
-    await Future<void>.delayed(const Duration(milliseconds: 25));
-
-    final statusResponse = await _send(
-      handler,
-      'GET',
-      '/garage-door/status',
-      headers: {'Authorization': 'Bearer ${tokens.accessToken}'},
-    );
-    final body = await _readJson(statusResponse);
-    expect(body['state'], 'opening');
-    expect(body['stateConfidence'], 'heuristic');
-    expect(body.containsKey('lastAction'), false);
-    expect(body['lastChangedAt'], isA<String>());
-  });
-
-  test('external rising edge at open starts closing heuristically', () async {
-    final tokens = await _registerAndLogin(
-      handler,
-      email: email,
-      password: password,
-    );
-    await Future<void>.delayed(const Duration(milliseconds: 260));
-    shellyClient.inputState = true;
-    await Future<void>.delayed(const Duration(milliseconds: 80));
-    shellyClient.inputState = null;
-
-    shellyClient.emitExternalPulse(const Duration(milliseconds: 40));
-    await Future<void>.delayed(const Duration(milliseconds: 25));
-
-    final statusResponse = await _send(
-      handler,
-      'GET',
-      '/garage-door/status',
-      headers: {'Authorization': 'Bearer ${tokens.accessToken}'},
-    );
-    final body = await _readJson(statusResponse);
-    expect(body['state'], 'closing');
-    expect(body['stateConfidence'], 'heuristic');
-  });
-
-  test(
-    'external rising edge during opening sets state to unknown heuristically',
-    () async {
-      final tokens = await _registerAndLogin(
-        handler,
-        email: email,
-        password: password,
-      );
-      await Future<void>.delayed(const Duration(milliseconds: 260));
-      shellyClient.inputState = null;
-
-      shellyClient.emitExternalPulse(const Duration(milliseconds: 20));
-      await Future<void>.delayed(const Duration(milliseconds: 60));
-      shellyClient.emitExternalPulse(const Duration(milliseconds: 20));
-      await Future<void>.delayed(const Duration(milliseconds: 40));
-
-      final statusResponse = await _send(
-        handler,
-        'GET',
-        '/garage-door/status',
-        headers: {'Authorization': 'Bearer ${tokens.accessToken}'},
-      );
-      final body = await _readJson(statusResponse);
-      expect(body['state'], 'unknown');
-      expect(body['stateConfidence'], 'heuristic');
-      expect(body.containsKey('lastAction'), false);
-      expect(body['lastChangedAt'], isA<String>());
-    },
-  );
-
-  test(
-    'own trigger does not get re-classified as external heuristic',
-    () async {
-      final tokens = await _registerAndLogin(
-        handler,
-        email: email,
-        password: password,
-      );
-      await Future<void>.delayed(const Duration(milliseconds: 260));
-      shellyClient.inputState = null;
-
-      final triggerResponse = await _send(
-        handler,
-        'POST',
-        '/garage-door/trigger',
-        headers: {'Authorization': 'Bearer ${tokens.accessToken}'},
-      );
-      expect(triggerResponse.statusCode, 200);
-
-      await Future<void>.delayed(const Duration(milliseconds: 40));
-
-      final statusResponse = await _send(
-        handler,
-        'GET',
-        '/garage-door/status',
-        headers: {'Authorization': 'Bearer ${tokens.accessToken}'},
-      );
-      final body = await _readJson(statusResponse);
-      expect(body['state'], 'opening');
-      expect(body['stateConfidence'], 'modeled');
-      expect(body.containsKey('lastAction'), false);
-      expect(body['lastChangedAt'], isA<String>());
-    },
-  );
-
-  test('polling without rising edge keeps the state unchanged', () async {
-    final tokens = await _registerAndLogin(
-      handler,
-      email: email,
-      password: password,
-    );
-    await Future<void>.delayed(const Duration(milliseconds: 320));
-
-    final statusResponse = await _send(
-      handler,
-      'GET',
-      '/garage-door/status',
-      headers: {'Authorization': 'Bearer ${tokens.accessToken}'},
-    );
-    final body = await _readJson(statusResponse);
-    expect(body['state'], 'closed');
-    expect(body['stateConfidence'], 'sensor');
-  });
 
   test(
     'admin config endpoint validates and persists Shelly base URL',
@@ -396,20 +304,14 @@ void main() {
   );
 
   test('invalid persisted Shelly base URL falls back to defaults', () {
-    final defaults = GarageDoorConfig(
+    const defaults = GarageDoorConfig(
       shellyBaseUrl: 'http://192.168.0.102',
       switchId: '0',
       inputId: '0',
-      sensorSettleDuration: const Duration(milliseconds: 50),
-      shellyRequestTimeout: const Duration(seconds: 1),
-      statusRefreshDebounce: const Duration(milliseconds: 50),
-      shellyPollInterval: const Duration(milliseconds: 10),
-      selfTriggerSuppressionWindow: const Duration(milliseconds: 80),
-      pulseDuration: const Duration(milliseconds: 30),
-      openingDuration: const Duration(milliseconds: 120),
-      openHoldDuration: const Duration(milliseconds: 120),
-      closingDuration: const Duration(milliseconds: 120),
-      startupDeterminationDuration: const Duration(milliseconds: 200),
+      shellyRequestTimeout: Duration(seconds: 1),
+      statusRefreshDebounce: Duration(milliseconds: 50),
+      shellyPollInterval: Duration(milliseconds: 10),
+      pulseDuration: Duration(milliseconds: 30),
     );
 
     final effective = defaults.withRuntimeConfig(
@@ -448,26 +350,30 @@ void main() {
     expect(response.statusCode, 403);
   });
 
-  test('shelly polling failure marks reachability but keeps state', () async {
-    final tokens = await _registerAndLogin(
-      handler,
-      email: email,
-      password: password,
-    );
-    await Future<void>.delayed(const Duration(milliseconds: 260));
-    shellyClient.failFetch = true;
-    await Future<void>.delayed(const Duration(milliseconds: 40));
+  test(
+    'shelly polling failure marks reachability and reports unknown',
+    () async {
+      final tokens = await _registerAndLogin(
+        handler,
+        email: email,
+        password: password,
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 80));
+      shellyClient.failFetch = true;
+      await Future<void>.delayed(const Duration(milliseconds: 80));
 
-    final statusResponse = await _send(
-      handler,
-      'GET',
-      '/garage-door/status',
-      headers: {'Authorization': 'Bearer ${tokens.accessToken}'},
-    );
-    final body = await _readJson(statusResponse);
-    expect(body['state'], 'closed');
-    expect((body['shelly'] as Map<String, dynamic>)['isReachable'], false);
-  });
+      final statusResponse = await _send(
+        handler,
+        'GET',
+        '/garage-door/status',
+        headers: {'Authorization': 'Bearer ${tokens.accessToken}'},
+      );
+      final body = await _readJson(statusResponse);
+
+      expect(body['state'], 'unknown');
+      expect((body['shelly'] as Map<String, dynamic>)['isReachable'], false);
+    },
+  );
 }
 
 Future<_Tokens> _registerAndLogin(
@@ -548,23 +454,6 @@ class _FakeShellyRelayClient implements ShellyRelayClient {
   bool failFetch = false;
   bool relayOutput = false;
   bool? inputState = false;
-  final List<Timer> _timers = [];
-
-  void emitExternalPulse(Duration pulseDuration) {
-    relayOutput = true;
-    _timers.add(
-      Timer(pulseDuration, () {
-        relayOutput = false;
-      }),
-    );
-  }
-
-  void dispose() {
-    for (final timer in _timers) {
-      timer.cancel();
-    }
-    _timers.clear();
-  }
 
   @override
   Future<ShellyStatusSnapshot> fetchStatus() async {
@@ -586,6 +475,9 @@ class _FakeShellyRelayClient implements ShellyRelayClient {
     }
 
     triggerCount++;
-    emitExternalPulse(pulseDuration);
+    relayOutput = true;
+    Timer(pulseDuration, () {
+      relayOutput = false;
+    });
   }
 }

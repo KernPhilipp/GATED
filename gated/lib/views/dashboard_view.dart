@@ -86,9 +86,7 @@ class _DashboardViewState extends State<DashboardView> {
           Text('Dashboard', style: theme.textTheme.headlineMedium),
           const SizedBox(height: 20),
           Text(
-            'Das Tor wird über den Shelly-Proxy gesteuert. '
-            'Der Näherungssensor bestätigt die stabilen Offen- und '
-            'Geschlossen-Zustände.',
+            'Das Tor wird ueber den Shelly-Proxy gesteuert. Der Sensor ist die verbindliche Quelle fuer offen und geschlossen.',
             style: theme.textTheme.bodyMedium,
           ),
           const SizedBox(height: 24),
@@ -100,7 +98,7 @@ class _DashboardViewState extends State<DashboardView> {
             const Card(
               child: Padding(
                 padding: EdgeInsets.all(24),
-                child: Center(child: CircularProgressIndicator.adaptive()),
+                child: Center(child: CircularProgressIndicator()),
               ),
             )
           else if (_loadError != null && _status == null)
@@ -138,9 +136,7 @@ class _DashboardViewState extends State<DashboardView> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Der letzte erfolgreiche Torstatus bleibt sichtbar. '
-                    'Im Hintergrund wird weiter versucht, die Verbindung '
-                    'wiederherzustellen.',
+                    'Der letzte erfolgreiche Torstatus bleibt sichtbar. Im Hintergrund wird weiter versucht, die Verbindung wiederherzustellen.',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onErrorContainer,
                     ),
@@ -198,7 +194,10 @@ class _DashboardViewState extends State<DashboardView> {
     }
 
     final visual = _visualForStatus(theme.colorScheme, status);
-    final canTrigger = !_isTriggering && _isShellySensorReady(status);
+    final canTrigger =
+        !_isTriggering &&
+        status.state != GarageDoorState.unknown &&
+        _isShellySensorReady(status);
 
     return Card(
       child: Padding(
@@ -253,7 +252,7 @@ class _DashboardViewState extends State<DashboardView> {
                   : const Icon(Icons.power_settings_new_rounded),
               label: Text(
                 status.state == GarageDoorState.open
-                    ? 'Impuls zum Schließen senden'
+                    ? 'Impuls zum Schliessen senden'
                     : 'Impuls senden',
               ),
             ),
@@ -273,7 +272,9 @@ class _DashboardViewState extends State<DashboardView> {
         icon: Icons.sensors_rounded,
         label: 'Sensorstatus',
         value: _sensorStatusText(status),
-        color: isReady ? null : warningColor,
+        color: isReady && status.state != GarageDoorState.unknown
+            ? null
+            : warningColor,
       ),
       _DashboardInfoRow(
         icon: Icons.router_rounded,
@@ -283,9 +284,9 @@ class _DashboardViewState extends State<DashboardView> {
       ),
       _DashboardInfoRow(
         icon: Icons.update_rounded,
-        label: 'Sensor zuletzt geprüft',
+        label: 'Sensor zuletzt geprueft',
         value: shelly?.lastCheckedAt == null
-            ? 'Noch nicht verfügbar'
+            ? 'Noch nicht verfuegbar'
             : _formatDateTime(shelly!.lastCheckedAt!.toLocal()),
       ),
     ];
@@ -295,7 +296,7 @@ class _DashboardViewState extends State<DashboardView> {
       rows.add(
         _DashboardInfoRow(
           icon: Icons.schedule_rounded,
-          label: 'Letzte Änderung',
+          label: 'Letzte Aenderung',
           value: _formatDateTime(lastChangedAt.toLocal()),
         ),
       );
@@ -379,7 +380,7 @@ class _DashboardViewState extends State<DashboardView> {
         return;
       }
 
-      const message = 'Zeitüberschreitung beim Laden des Torstatus.';
+      const message = 'Zeitueberschreitung beim Laden des Torstatus.';
       setState(() {
         _isLoading = false;
         if (_status == null) {
@@ -441,7 +442,7 @@ class _DashboardViewState extends State<DashboardView> {
     } on GarageDoorException catch (error) {
       _showErrorSnackBar(error.message);
     } on TimeoutException {
-      _showErrorSnackBar('Zeitüberschreitung beim Senden des Impulses.');
+      _showErrorSnackBar('Zeitueberschreitung beim Senden des Impulses.');
     } catch (_) {
       _showErrorSnackBar('Impuls konnte nicht gesendet werden.');
     } finally {
@@ -492,7 +493,7 @@ class _DashboardViewState extends State<DashboardView> {
     showAppSnackBar(
       context,
       message:
-          '$message Letzter bekannter Stand bleibt sichtbar, während im Hintergrund neu verbunden wird.',
+          '$message Letzter bekannter Stand bleibt sichtbar, waehrend im Hintergrund neu verbunden wird.',
       isError: true,
       withCloseAction: true,
     );
@@ -502,42 +503,17 @@ class _DashboardViewState extends State<DashboardView> {
     ColorScheme colorScheme,
     GarageDoorStatus status,
   ) {
-    final state = status.state;
-
-    return switch (state) {
-      GarageDoorState.determining => _DashboardStateVisual(
-        title: 'Status wird ermittelt',
-        description: 'Das Backend wartet auf den nächsten Sensorstatus.',
-        icon: Icons.hourglass_top_rounded,
-        backgroundColor: colorScheme.surfaceContainerHighest,
-        foregroundColor: colorScheme.primary,
-      ),
-      GarageDoorState.opening => _DashboardStateVisual(
-        title: 'Tor öffnet',
-        description:
-            'Der Sensor bestätigt den offenen Zustand nach kurzer Wartezeit.',
-        icon: Icons.upload_rounded,
-        backgroundColor: colorScheme.primaryContainer,
-        foregroundColor: colorScheme.onPrimaryContainer,
-      ),
+    return switch (status.state) {
       GarageDoorState.open => _DashboardStateVisual(
         title: 'Tor offen',
-        description: 'Der Näherungssensor meldet das Tor als offen.',
+        description: 'Der Sensor meldet das Tor als offen.',
         icon: Icons.door_front_door_outlined,
         backgroundColor: colorScheme.tertiaryContainer,
         foregroundColor: colorScheme.onTertiaryContainer,
       ),
-      GarageDoorState.closing => _DashboardStateVisual(
-        title: 'Tor schließt',
-        description:
-            'Der Sensor bestätigt den geschlossenen Zustand nach kurzer Wartezeit.',
-        icon: Icons.download_rounded,
-        backgroundColor: colorScheme.secondaryContainer,
-        foregroundColor: colorScheme.onSecondaryContainer,
-      ),
       GarageDoorState.closed => _DashboardStateVisual(
         title: 'Tor geschlossen',
-        description: 'Der Näherungssensor meldet das Tor als geschlossen.',
+        description: 'Der Sensor meldet das Tor als geschlossen.',
         icon: Icons.garage_rounded,
         backgroundColor: colorScheme.surfaceContainerHighest,
         foregroundColor: colorScheme.secondary,
@@ -545,7 +521,7 @@ class _DashboardViewState extends State<DashboardView> {
       GarageDoorState.unknown => _DashboardStateVisual(
         title: 'Status unbekannt',
         description:
-            'Die reale Position ist derzeit nicht sicher, bis der Sensor wieder eindeutig meldet.',
+            'Die reale Position ist derzeit nicht bestaetigt, bis Shelly und Sensor eindeutig melden.',
         icon: Icons.help_outline_rounded,
         backgroundColor: colorScheme.errorContainer,
         foregroundColor: colorScheme.onErrorContainer,
@@ -561,7 +537,7 @@ class _DashboardViewState extends State<DashboardView> {
   String _sensorStatusText(GarageDoorStatus status) {
     final shelly = status.shelly;
     if (shelly == null || shelly.isReachable == null) {
-      return 'Noch nicht geprüft';
+      return 'Noch nicht geprueft';
     }
     if (shelly.isReachable != true) {
       return 'Nicht erreichbar';
@@ -569,16 +545,15 @@ class _DashboardViewState extends State<DashboardView> {
     if (shelly.inputState == null) {
       return 'Sensorwert fehlt';
     }
-    final remainingMs = status.remainingMs;
-    if (remainingMs != null && remainingMs > 0) {
-      return 'Bestätigung läuft (${_formatDuration(remainingMs)})';
+    if (status.state == GarageDoorState.unknown) {
+      return 'Warten auf Sensorwechsel';
     }
-    return 'Erreichbar';
+    return shelly.isDoorClosedBySensor == true ? 'Geschlossen' : 'Offen';
   }
 
   String _shellyStatusText(GarageDoorShellyStatus? shelly) {
     if (shelly == null || shelly.isReachable == null) {
-      return 'Noch nicht geprüft';
+      return 'Noch nicht geprueft';
     }
     if (shelly.isReachable == true && shelly.inputState != null) {
       return 'Erreichbar';
@@ -588,18 +563,6 @@ class _DashboardViewState extends State<DashboardView> {
     }
     final error = shelly.errorMessage;
     return error == null || error.isEmpty ? 'Nicht erreichbar' : error;
-  }
-
-  String _formatDuration(int milliseconds) {
-    final totalSeconds = (milliseconds / 1000).ceil();
-    final minutes = totalSeconds ~/ 60;
-    final seconds = totalSeconds % 60;
-
-    if (minutes == 0) {
-      return '$seconds s';
-    }
-
-    return '$minutes min ${seconds.toString().padLeft(2, '0')} s';
   }
 
   String _formatDateTime(DateTime dateTime) {

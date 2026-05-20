@@ -8,10 +8,7 @@ import 'package:gated/views/dashboard_view.dart';
 void main() {
   testWidgets('dashboard waits for activation before polling', (tester) async {
     final controller = _FakeGarageDoorController(
-      status: _status(
-        state: GarageDoorState.closed,
-        stateConfidence: GarageDoorStateConfidence.modeled,
-      ),
+      status: _status(state: GarageDoorState.closed),
     );
     const key = ValueKey('dashboard');
 
@@ -116,17 +113,9 @@ class _FakeAuthService extends AuthService {
   }
 }
 
-GarageDoorStatus _status({
-  required GarageDoorState state,
-  required GarageDoorStateConfidence stateConfidence,
-}) {
+GarageDoorStatus _status({required GarageDoorState state}) {
   return GarageDoorStatus(
     state: state,
-    stateConfidence: stateConfidence,
-    nextState: null,
-    phaseEndsAt: null,
-    remainingMs: null,
-    countdownLabel: null,
     lastChangedAt: DateTime.utc(2026, 4, 19, 12),
     shelly: const GarageDoorShellyStatus(
       isReachable: true,

@@ -4,13 +4,72 @@ import 'package:gated/services/garage_door_service.dart';
 import 'package:gated/views/dashboard_view.dart';
 
 void main() {
-  testWidgets('dashboard renders fetched garage door status', (tester) async {
+  testWidgets('dashboard renders confirmed closed status', (tester) async {
+    final controller = _FakeGarageDoorController(
+      initialStatus: _status(state: GarageDoorState.closed),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: DashboardView(garageDoorController: controller),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Tor geschlossen'), findsOneWidget);
+    expect(find.text('Sensorstatus'), findsOneWidget);
+    expect(find.text('Geschlossen'), findsOneWidget);
+    expect(find.text('Impuls senden'), findsOneWidget);
+    expect(find.text('Status wird ermittelt'), findsNothing);
+  });
+
+  testWidgets(
+    'dashboard sends trigger and shows unknown until sensor changes',
+    (tester) async {
+      final controller = _FakeGarageDoorController(
+        initialStatus: _status(state: GarageDoorState.closed),
+        triggerStatus: _status(state: GarageDoorState.unknown),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: DashboardView(garageDoorController: controller),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await tester.ensureVisible(find.text('Impuls senden'));
+      await tester.tap(find.text('Impuls senden'));
+      await tester.pump();
+
+      expect(controller.triggerCalls, 1);
+      expect(find.text('Status unbekannt'), findsOneWidget);
+      expect(find.text('Tor oeffnet'), findsNothing);
+      expect(find.text('Status manuell korrigieren'), findsNothing);
+
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
+  testWidgets('dashboard displays confirmed open sensor state', (tester) async {
     final controller = _FakeGarageDoorController(
       initialStatus: _status(
-        state: GarageDoorState.determining,
-        stateConfidence: GarageDoorStateConfidence.modeled,
-        remainingMs: 4000,
-        countdownLabel: 'Warten auf Sensorstatus',
+        state: GarageDoorState.open,
+        shelly: const GarageDoorShellyStatus(
+          isReachable: true,
+          relayOutput: false,
+          inputState: true,
+          isDoorClosedBySensor: false,
+        ),
       ),
     );
 
@@ -25,28 +84,19 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('Status wird ermittelt'), findsOneWidget);
-    expect(find.text('Sensorstatus'), findsOneWidget);
-    expect(find.text('Bestätigung läuft (4 s)'), findsOneWidget);
-    expect(find.text('Impuls senden'), findsOneWidget);
-    expect(find.text('Shelly-Hinweise'), findsNothing);
-    expect(find.text('Hinweis zum Modell'), findsNothing);
+    expect(find.text('Tor offen'), findsOneWidget);
+    expect(find.text('Offen'), findsOneWidget);
+    expect(find.text('Shelly'), findsOneWidget);
+    expect(find.text('Relais'), findsNothing);
+    expect(find.text('Sensor zuletzt geprueft'), findsOneWidget);
+    expect(find.text('Letzte Aenderung'), findsOneWidget);
   });
 
-  testWidgets('dashboard sends trigger without manual correction controls', (
+  testWidgets('dashboard disables trigger while status is unknown', (
     tester,
   ) async {
     final controller = _FakeGarageDoorController(
-      initialStatus: _status(
-        state: GarageDoorState.closed,
-        stateConfidence: GarageDoorStateConfidence.modeled,
-      ),
-      triggerStatus: _status(
-        state: GarageDoorState.opening,
-        stateConfidence: GarageDoorStateConfidence.modeled,
-        remainingMs: 5000,
-        countdownLabel: 'Warten auf Sensorbestätigung offen',
-      ),
+      initialStatus: _status(state: GarageDoorState.unknown),
     );
 
     await tester.pumpWidget(
@@ -60,69 +110,13 @@ void main() {
     );
     await tester.pump();
 
-    await tester.ensureVisible(find.text('Impuls senden'));
-    await tester.tap(find.text('Impuls senden'));
-    await tester.pump();
+    expect(find.text('Status unbekannt'), findsOneWidget);
+    expect(find.text('Warten auf Sensorwechsel'), findsOneWidget);
 
-    expect(controller.triggerCalls, 1);
-    expect(find.text('Tor öffnet'), findsOneWidget);
-    expect(find.text('Status manuell korrigieren'), findsNothing);
-    expect(find.text('Als unbekannt markieren'), findsNothing);
-
-    await tester.pump(const Duration(seconds: 3));
-    await tester.pumpWidget(const SizedBox.shrink());
-  });
-
-  testWidgets('dashboard displays Shelly sensor state', (tester) async {
-    final controller = _FakeGarageDoorController(
-      initialStatus: _status(
-        state: GarageDoorState.closed,
-        stateConfidence: GarageDoorStateConfidence.sensor,
-      ),
+    final button = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Impuls senden'),
     );
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: SingleChildScrollView(
-            child: DashboardView(garageDoorController: controller),
-          ),
-        ),
-      ),
-    );
-    await tester.pump();
-
-    expect(find.text('Sensorstatus'), findsOneWidget);
-    expect(find.text('Erreichbar'), findsWidgets);
-    expect(find.text('Shelly'), findsOneWidget);
-    expect(find.text('Relais'), findsNothing);
-    expect(find.text('Sensor zuletzt geprüft'), findsOneWidget);
-    expect(find.text('Letzte Änderung'), findsOneWidget);
-  });
-
-  testWidgets('dashboard hides removed technical detail rows', (tester) async {
-    final controller = _FakeGarageDoorController(
-      initialStatus: _status(
-        state: GarageDoorState.unknown,
-        stateConfidence: GarageDoorStateConfidence.heuristic,
-      ),
-    );
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: SingleChildScrollView(
-            child: DashboardView(garageDoorController: controller),
-          ),
-        ),
-      ),
-    );
-    await tester.pump();
-
-    expect(find.text('Statusbasis'), findsNothing);
-    expect(find.text('Naechster modellierter Zustand'), findsNothing);
-    expect(find.text('Letzte Aktion'), findsNothing);
-    expect(find.text('Relais'), findsNothing);
+    expect(button.onPressed, isNull);
   });
 
   testWidgets('dashboard disables trigger while Shelly sensor is unavailable', (
@@ -130,8 +124,7 @@ void main() {
   ) async {
     final controller = _FakeGarageDoorController(
       initialStatus: _status(
-        state: GarageDoorState.closed,
-        stateConfidence: GarageDoorStateConfidence.sensor,
+        state: GarageDoorState.unknown,
         shelly: const GarageDoorShellyStatus(
           isReachable: false,
           errorMessage: 'Shelly antwortet nicht rechtzeitig.',
@@ -164,14 +157,16 @@ void main() {
   ) async {
     final controller = _SequenceGarageDoorController(
       fetchResults: [
-        _status(
-          state: GarageDoorState.closed,
-          stateConfidence: GarageDoorStateConfidence.modeled,
-        ),
+        _status(state: GarageDoorState.closed),
         const GarageDoorException('Backend offline.'),
         _status(
           state: GarageDoorState.open,
-          stateConfidence: GarageDoorStateConfidence.modeled,
+          shelly: const GarageDoorShellyStatus(
+            isReachable: true,
+            relayOutput: false,
+            inputState: true,
+            isDoorClosedBySensor: false,
+          ),
         ),
       ],
     );
@@ -254,9 +249,6 @@ class _SequenceGarageDoorController implements GarageDoorController {
 
 GarageDoorStatus _status({
   required GarageDoorState state,
-  required GarageDoorStateConfidence stateConfidence,
-  int? remainingMs,
-  String? countdownLabel,
   GarageDoorShellyStatus shelly = const GarageDoorShellyStatus(
     isReachable: true,
     relayOutput: false,
@@ -266,11 +258,6 @@ GarageDoorStatus _status({
 }) {
   return GarageDoorStatus(
     state: state,
-    stateConfidence: stateConfidence,
-    nextState: null,
-    phaseEndsAt: null,
-    remainingMs: remainingMs,
-    countdownLabel: countdownLabel,
     lastChangedAt: DateTime.utc(2026, 4, 19, 12),
     shelly: shelly,
   );

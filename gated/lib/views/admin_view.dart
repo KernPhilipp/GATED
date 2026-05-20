@@ -138,7 +138,7 @@ class _AdminViewState extends State<AdminView> {
             child: IgnorePointer(
               child: ColoredBox(
                 color: Colors.black26,
-                child: Center(child: CircularProgressIndicator.adaptive()),
+                child: Center(child: CircularProgressIndicator()),
               ),
             ),
           ),
@@ -617,7 +617,7 @@ class _AdminTableSection extends StatelessWidget {
 
   Widget _buildContent() {
     if (isLoading) {
-      return const Center(child: CircularProgressIndicator.adaptive());
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (!hasAnyUsers && searchQuery.isEmpty) {
@@ -689,7 +689,7 @@ class _AdminGarageDoorConfigCard extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               if (isLoading)
-                const Center(child: CircularProgressIndicator.adaptive())
+                const Center(child: CircularProgressIndicator())
               else
                 LayoutBuilder(
                   builder: (context, constraints) {

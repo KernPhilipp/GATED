@@ -4,9 +4,7 @@ import 'dart:convert';
 import '../config/app_config.dart';
 import 'auth_service.dart';
 
-enum GarageDoorState { determining, opening, open, closing, closed, unknown }
-
-enum GarageDoorStateConfidence { modeled, heuristic, sensor }
+enum GarageDoorState { open, closed, unknown }
 
 class GarageDoorShellyStatus {
   const GarageDoorShellyStatus({
@@ -45,23 +43,12 @@ class GarageDoorShellyStatus {
 class GarageDoorStatus {
   const GarageDoorStatus({
     required this.state,
-    required this.stateConfidence,
     this.lastChangedAt,
-    this.nextState,
-    this.phaseEndsAt,
-    this.remainingMs,
-    this.countdownLabel,
     this.shelly,
   });
 
   factory GarageDoorStatus.fromJson(Map<String, dynamic> json) {
     final stateName = json['state'] as String?;
-    final confidenceName = json['stateConfidence'] as String?;
-    final nextStateName = json['nextState'] as String?;
-    final phaseEndsAtValue = json['phaseEndsAt'];
-    final phaseEndsAt = phaseEndsAtValue is String
-        ? DateTime.tryParse(phaseEndsAtValue)
-        : null;
     final lastChangedAtValue = json['lastChangedAt'];
     final lastChangedAt = lastChangedAtValue is String
         ? DateTime.tryParse(lastChangedAtValue)
@@ -70,13 +57,6 @@ class GarageDoorStatus {
 
     return GarageDoorStatus(
       state: _stateFromName(stateName) ?? GarageDoorState.unknown,
-      stateConfidence:
-          _confidenceFromName(confidenceName) ??
-          GarageDoorStateConfidence.modeled,
-      nextState: _stateFromName(nextStateName),
-      phaseEndsAt: phaseEndsAt,
-      remainingMs: json['remainingMs'] as int?,
-      countdownLabel: json['countdownLabel'] as String?,
       lastChangedAt: lastChangedAt,
       shelly: shellyJson is Map
           ? GarageDoorShellyStatus.fromJson(
@@ -87,11 +67,6 @@ class GarageDoorStatus {
   }
 
   final GarageDoorState state;
-  final GarageDoorStateConfidence stateConfidence;
-  final GarageDoorState? nextState;
-  final DateTime? phaseEndsAt;
-  final int? remainingMs;
-  final String? countdownLabel;
   final DateTime? lastChangedAt;
   final GarageDoorShellyStatus? shelly;
 }
@@ -155,7 +130,7 @@ class GarageDoorService implements GarageDoorController {
       case 403:
         return 'Sitzung abgelaufen. Bitte erneut anmelden.';
       case 409:
-        return 'Waehren der Torbewegung ist derzeit kein weiterer Impuls erlaubt.';
+        return 'Torstatus ist nicht bestaetigt. Impuls derzeit nicht erlaubt.';
       case 500:
         return 'Serverfehler. Bitte spaeter versuchen.';
       case 502:
@@ -174,21 +149,9 @@ class GarageDoorException implements Exception {
 
 GarageDoorState? _stateFromName(String? name) {
   return switch (name) {
-    'determining' => GarageDoorState.determining,
-    'opening' => GarageDoorState.opening,
     'open' => GarageDoorState.open,
-    'closing' => GarageDoorState.closing,
     'closed' => GarageDoorState.closed,
     'unknown' => GarageDoorState.unknown,
-    _ => null,
-  };
-}
-
-GarageDoorStateConfidence? _confidenceFromName(String? name) {
-  return switch (name) {
-    'modeled' => GarageDoorStateConfidence.modeled,
-    'heuristic' => GarageDoorStateConfidence.heuristic,
-    'sensor' => GarageDoorStateConfidence.sensor,
     _ => null,
   };
 }

@@ -19,15 +19,7 @@ dart run server.dart
 cd gated
 flutter run -d web-server --web-hostname 0.0.0.0 --web-port 8080 --release
 
-3) Smartphone per USB
----------------------
-adb reverse tcp:8080 tcp:8080
-adb reverse tcp:8091 tcp:8091
-
-Frontend:
-http://127.0.0.1:8080
-
-4) Tests und Analyse
+3) Tests und Analyse
 --------------------
 cd gated
 flutter analyze
@@ -37,26 +29,6 @@ cd gated/backend
 dart analyze
 dart test
 
-5) Assets und App-Metadaten
----------------------------
-cd gated
-dart run flutter_launcher_icons
-
-dart pub global run rename
-dart pub global run rename setAppName --targets android,ios,web,windows,macos,linux --value "GATED"
-
-dart pub global run rename getBundleId --targets android
-dart pub global run rename setBundleId --targets android --value "com.example.gated"
-
-dart pub global run rename getBundleId --targets ios
-dart pub global run rename setBundleId --targets ios --value "com.example.gated"
-
-dart pub global run rename getBundleId --targets windows
-dart pub global run rename setBundleId --targets windows --value "gated"
-
-dart pub global run rename getBundleId --targets macos
-dart pub global run rename setBundleId --targets macos --value "com.example.gated"
-
-6) Lokale Diagnose
+4) Lokale Diagnose
 ------------------
 curl http://127.0.0.1:8091/health

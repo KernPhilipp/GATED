@@ -126,7 +126,7 @@ class _KennzeichenViewState extends State<KennzeichenView> {
             child: IgnorePointer(
               child: ColoredBox(
                 color: Colors.black26,
-                child: Center(child: CircularProgressIndicator.adaptive()),
+                child: Center(child: CircularProgressIndicator()),
               ),
             ),
           ),
