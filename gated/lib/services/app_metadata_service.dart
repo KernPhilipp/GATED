@@ -21,12 +21,12 @@ class AppMetadataService {
 
     final decoded = jsonDecode(response.body);
     if (decoded is! Map) {
-      throw const AppMetadataException('Ungueltige Server-Antwort.');
+      throw const AppMetadataException('Ungültige Server-Antwort.');
     }
 
     final version = decoded['version'];
     if (version is! String || version.trim().isEmpty) {
-      throw const AppMetadataException('Ungueltige Server-Antwort.');
+      throw const AppMetadataException('Ungültige Server-Antwort.');
     }
 
     return version.trim();

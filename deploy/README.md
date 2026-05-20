@@ -1,14 +1,14 @@
 # GATED Deployment
 
-Dieser Ordner enthaelt die Deployment-Dateien fuer den Raspberry Pi.
+Dieser Ordner enthält die Deployment-Dateien für den Raspberry Pi.
 
 ## Dateien
 
 - `build_release_package.sh`: erstellt das Release-Paket
-- `deploy_release.sh`: laedt und aktiviert GitHub Releases auf dem Pi
-- `gated-backend.service`: systemd Service fuer das Backend
+- `deploy_release.sh`: lädt und aktiviert GitHub Releases auf dem Pi
+- `gated-backend.service`: systemd Service für das Backend
 - `gated-deploy.service`: manueller Deploy-Trigger
-- `gated-deploy.timer`: regelmaessige Deploy-Pruefung
+- `gated-deploy.timer`: regelmäßige Deploy-Prüfung
 - `gated.conf`: nginx Frontend-Auslieferung und `/api/` Proxy
 - `backend.env.example`: Backend-Env-Vorlage
 - `deploy.env.example`: Deploy-Env-Vorlage
@@ -17,7 +17,7 @@ Dieser Ordner enthaelt die Deployment-Dateien fuer den Raspberry Pi.
 
 1. GitHub Actions baut Flutter Web mit `API_BASE_URL=/api`.
 2. `build_release_package.sh` packt das Frontend und Backend.
-3. Das Paket wird an ein GitHub Release gehaengt.
+3. Das Paket wird an ein GitHub Release gehängt.
 4. `deploy_release.sh` entpackt neue Releases auf dem Pi.
 5. Der `current`-Symlink wird auf das neue Release gesetzt.
 
@@ -49,7 +49,7 @@ nicht in den Repository-Checkout schreiben.
 
 ## PWA im LAN
 
-Die HTTP-URL funktioniert als Website. Fuer eine installierbare PWA im LAN
+Die HTTP-URL funktioniert als Website. Für eine installierbare PWA im LAN
 braucht der Browser in der Regel `https://<hostname>` mit vertrauenswuerdigem
 Zertifikat.
 

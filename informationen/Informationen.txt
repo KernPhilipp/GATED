@@ -23,8 +23,8 @@ im gleichen Netzwerk im Browser geoeffnet.
 4) Wichtige Funktionen
 ----------------------
 - Login und Registrierung
-- Adminbereich fuer Nutzer und erlaubte E-Mails
-- Primaerer Admin ueber `PRIMARY_ADMIN_EMAIL`
+- Adminbereich für Nutzer und erlaubte E-Mails
+- Primärer Admin über `PRIMARY_ADMIN_EMAIL`
 - Passwort-Reset mit vorbereitetem E-Mail-Entwurf
 - Kennzeichenverwaltung mit Live-Events
 - Sensorbasierter Garagentorstatus und Torsteuerung

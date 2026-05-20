@@ -15,12 +15,12 @@ von Geraeten im gleichen Netzwerk ueber den Browser geoeffnet.
 
 ## Kernfunktionen
 
-- Login und Registrierung ueber erlaubte E-Mail-Adressen
-- Adminbereich fuer Nutzer und erlaubte E-Mails
+- Login und Registrierung über erlaubte E-Mail-Adressen
+- Adminbereich für Nutzer und erlaubte E-Mails
 - Kennzeichenverwaltung mit Live-Aktualisierung
 - Dashboard fuer sensorbasierten Garagentorstatus und Torsteuerung
 
-## Weiterfuehrende Doku
+## Weiterführende Doku
 
 - Lokale Befehle: `informationen/Befehle.txt`
 - Projektfakten: `informationen/Informationen.txt`

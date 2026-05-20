@@ -114,7 +114,7 @@ class GarageDoorService implements GarageDoorController {
   GarageDoorStatus _parseStatus(String body) {
     final decoded = jsonDecode(body);
     if (decoded is! Map) {
-      throw const GarageDoorException('Ungueltige Server-Antwort.');
+      throw const GarageDoorException('Ungültige Server-Antwort.');
     }
 
     return GarageDoorStatus.fromJson(
@@ -125,18 +125,18 @@ class GarageDoorService implements GarageDoorController {
   String _messageForStatus(int statusCode) {
     switch (statusCode) {
       case 400:
-        return 'Ungueltige Anfrage fuer den Torstatus.';
+        return 'Ungültige Anfrage für den Torstatus.';
       case 401:
       case 403:
         return 'Sitzung abgelaufen. Bitte erneut anmelden.';
       case 409:
         return 'Torstatus ist nicht bestaetigt. Impuls derzeit nicht erlaubt.';
       case 500:
-        return 'Serverfehler. Bitte spaeter versuchen.';
+        return 'Serverfehler. Bitte später versuchen.';
       case 502:
         return 'Shelly ist derzeit nicht erreichbar.';
       default:
-        return 'Server-Fehler. Bitte spaeter versuchen.';
+        return 'Server-Fehler. Bitte später versuchen.';
     }
   }
 }

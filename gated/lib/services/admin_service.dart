@@ -96,12 +96,12 @@ class AdminService {
 
     final decoded = jsonDecode(response.body);
     if (decoded is! List) {
-      throw const AdminException('Ungueltige Server-Antwort.');
+      throw const AdminException('Ungültige Server-Antwort.');
     }
 
     return decoded.map<AdminUser>((entry) {
       if (entry is! Map) {
-        throw const AdminException('Ungueltige Server-Antwort.');
+        throw const AdminException('Ungültige Server-Antwort.');
       }
 
       return AdminUser.fromJson(
@@ -190,7 +190,7 @@ class AdminService {
 
     final decoded = jsonDecode(response.body);
     if (decoded is! Map) {
-      throw const AdminException('Ungueltige Server-Antwort.');
+      throw const AdminException('Ungültige Server-Antwort.');
     }
 
     return AdminPasswordResetResult.fromJson(
@@ -209,7 +209,7 @@ class AdminService {
 
     final decoded = jsonDecode(response.body);
     if (decoded is! Map) {
-      throw const AdminException('Ungueltige Server-Antwort.');
+      throw const AdminException('Ungültige Server-Antwort.');
     }
 
     return AdminGarageDoorConfig.fromJson(
@@ -235,7 +235,7 @@ class AdminService {
 
     final decoded = jsonDecode(response.body);
     if (decoded is! Map) {
-      throw const AdminException('Ungueltige Server-Antwort.');
+      throw const AdminException('Ungültige Server-Antwort.');
     }
 
     return AdminGarageDoorConfig.fromJson(
@@ -247,15 +247,15 @@ class AdminService {
     switch (statusCode) {
       case 401:
       case 403:
-        return 'Keine Berechtigung fuer diesen Bereich.';
+        return 'Keine Berechtigung für diesen Bereich.';
       case 404:
         return 'Benutzer oder E-Mail wurde nicht gefunden.';
       case 409:
         return 'Diese E-Mail kann nicht bearbeitet werden.';
       case 500:
-        return 'Serverfehler. Bitte spaeter versuchen.';
+        return 'Serverfehler. Bitte später versuchen.';
       default:
-        return 'Aktion konnte nicht ausgefuehrt werden.';
+        return 'Aktion konnte nicht ausgeführt werden.';
     }
   }
 }

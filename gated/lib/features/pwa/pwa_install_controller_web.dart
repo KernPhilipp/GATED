@@ -78,9 +78,9 @@ class PwaInstallControllerImpl extends PwaInstallController {
       PwaInstallState.available => 'GATED kann als Web-App installiert werden.',
       PwaInstallState.installed => 'GATED ist bereits als Web-App installiert.',
       PwaInstallState.unavailableYet =>
-        'Die Installation ist in Chrome oder Edge moeglich, sobald der Browser GATED als installierbar erkannt hat.',
+        'Die Installation ist in Chrome oder Edge möglich, sobald der Browser GATED als installierbar erkannt hat.',
       PwaInstallState.unsupported =>
-        'Installations-Flow in diesem Browser nicht unterstuetzt.',
+        'Installations-Flow in diesem Browser nicht unterstützt.',
     };
   }
 
