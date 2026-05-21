@@ -91,6 +91,21 @@
 </head>
 
 <body>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        registrations.forEach((registration) => registration.unregister());
+      });
+    }
+
+    if ('caches' in window) {
+      caches.keys().then((cacheNames) => {
+        cacheNames
+          .filter((cacheName) => cacheName.startsWith('flutter-app-cache'))
+          .forEach((cacheName) => caches.delete(cacheName));
+      });
+    }
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 
