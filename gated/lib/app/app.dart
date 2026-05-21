@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../features/pwa/pwa_install_controller.dart';
 import '../services/auth_service.dart';
+import '../screens/auto_login_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/register_screen.dart';
@@ -85,6 +86,7 @@ class _GatedAppState extends State<GatedApp> {
       routes: {
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
+        '/auto-login': (context) => const AutoLoginScreen(),
         '/home': (context) => HomeScreen(
           onThemeModeChanged: _setThemeMode,
           pwaInstallController: _pwaInstallController,
