@@ -698,6 +698,12 @@ class _AdminGarageDoorConfigCard extends StatelessWidget {
                       controller: shellyBaseUrlController,
                       enabled: !isSaving,
                       keyboardType: TextInputType.url,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) {
+                        if (!isSaving) {
+                          onSave();
+                        }
+                      },
                       decoration: const InputDecoration(
                         labelText: 'Shelly Base-URL',
                         hintText: 'http://192.168.0.102',
