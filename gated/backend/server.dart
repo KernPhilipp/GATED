@@ -81,6 +81,7 @@ void main() async {
           garageDoorService,
           authDb,
           accessControlService,
+          adminEventsBroker,
         ).call,
       )
       .add(adminEventsBroker.handler(authDb, accessControlService))

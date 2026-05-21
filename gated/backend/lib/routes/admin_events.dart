@@ -20,7 +20,10 @@ class AdminEventsBroker {
     );
   }
 
-  void publish({required String type, required String email}) {
-    _broker.publish({'type': type, 'email': normalizeEmail(email)});
+  void publish({required String type, String? email}) {
+    _broker.publish({
+      'type': type,
+      if (email != null) 'email': normalizeEmail(email),
+    });
   }
 }

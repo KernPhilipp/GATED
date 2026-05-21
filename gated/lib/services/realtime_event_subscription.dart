@@ -11,7 +11,7 @@ class RealtimeEventSubscription {
     required AuthService authService,
     required String path,
     required bool Function() canConnect,
-    required void Function() onEvent,
+    required void Function(Map<String, dynamic>? event) onEvent,
   }) : _authService = authService,
        _path = path,
        _canConnect = canConnect,
@@ -20,7 +20,7 @@ class RealtimeEventSubscription {
   final AuthService _authService;
   final String _path;
   final bool Function() _canConnect;
-  final void Function() _onEvent;
+  final void Function(Map<String, dynamic>? event) _onEvent;
 
   WebSocketChannel? _channel;
   StreamSubscription<dynamic>? _subscription;
@@ -110,12 +110,14 @@ class RealtimeEventSubscription {
         if (decoded is! Map<String, dynamic>) {
           return;
         }
+        _onEvent(decoded);
+        return;
       } catch (_) {
         return;
       }
     }
 
-    _onEvent();
+    _onEvent(null);
   }
 
   void _handleClosed() {

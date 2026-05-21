@@ -512,16 +512,26 @@ class _AdminViewState extends State<AdminView> {
     _realtimeEvents.start();
   }
 
-  void _handleRealtimeEvent() {
+  void _handleRealtimeEvent(Map<String, dynamic>? event) {
     if (!mounted || !widget.isActive || _isRedirectingToLogin) {
       return;
     }
 
-    if (_isLoading || _isRefreshing || _isMutating) {
-      return;
+    final type = event?['type'];
+    final shouldReloadGarageDoorConfig =
+        type == null || type == 'garage-door-config-updated';
+    final shouldReloadUsers =
+        type == null || type != 'garage-door-config-updated';
+
+    if (shouldReloadUsers && !_isLoading && !_isRefreshing && !_isMutating) {
+      unawaited(_loadUsers(refreshOnly: true));
     }
 
-    unawaited(_loadUsers(refreshOnly: true));
+    if (shouldReloadGarageDoorConfig &&
+        !_isLoadingGarageDoorConfig &&
+        !_isSavingGarageDoorConfig) {
+      unawaited(_loadGarageDoorConfig());
+    }
   }
 
   void _disconnectRealtimeUpdates() {

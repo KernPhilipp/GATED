@@ -6,9 +6,11 @@ import 'package:gated_backend/auth/email_access_control.dart';
 import 'package:gated_backend/auth/jwt_service.dart';
 import 'package:gated_backend/db/database.dart';
 import 'package:gated_backend/garage_door/garage_door_service.dart';
+import 'package:gated_backend/routes/admin_events.dart';
 import 'package:gated_backend/routes/auth_routes.dart';
 import 'package:gated_backend/routes/garage_door_routes.dart';
 import 'package:shelf/shelf.dart';
+import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_router/shelf_router.dart';
 import 'package:test/test.dart';
 
@@ -19,6 +21,7 @@ void main() {
   late DatabaseService db;
   late _FakeShellyRelayClient shellyClient;
   late GarageDoorService garageDoorService;
+  late AdminEventsBroker adminEventsBroker;
   late Handler handler;
   late Directory tempDir;
   late EmailAccessControlService accessControlService;
@@ -44,8 +47,10 @@ void main() {
             garageDoorService,
             db,
             accessControlService,
+            adminEventsBroker,
           ).call,
         )
+        .add(adminEventsBroker.handler(db, accessControlService))
         .handler;
   }
 
@@ -58,6 +63,7 @@ void main() {
       db: db,
       allowedEmailsFilePath: '${tempDir.path}/allowed_emails.txt',
     );
+    adminEventsBroker = AdminEventsBroker();
     shellyClient = _FakeShellyRelayClient();
     rebuildHandler();
   });
@@ -302,6 +308,44 @@ void main() {
       expect(persisted.shellyBaseUrl, 'http://192.168.0.200');
     },
   );
+
+  test('admin config update publishes admin event', () async {
+    final tokens = await _registerAndLogin(
+      handler,
+      email: email,
+      password: password,
+    );
+    final server = await shelf_io.serve(
+      handler,
+      InternetAddress.loopbackIPv4,
+      0,
+    );
+
+    WebSocket? socket;
+    try {
+      socket = await WebSocket.connect(
+        'ws://127.0.0.1:${server.port}/admin/events'
+        '?accessToken=${tokens.accessToken}',
+      );
+      final eventFuture = socket.first.timeout(const Duration(seconds: 2));
+
+      final updateResponse = await _sendJson(
+        handler,
+        'PUT',
+        '/garage-door/config',
+        {'shellyBaseUrl': 'http://192.168.0.210'},
+        headers: {'Authorization': 'Bearer ${tokens.accessToken}'},
+      );
+      expect(updateResponse.statusCode, 200);
+
+      final event = jsonDecode(await eventFuture as String);
+      expect(event['type'], 'garage-door-config-updated');
+      expect(event.containsKey('at'), true);
+    } finally {
+      await socket?.close();
+      await server.close(force: true);
+    }
+  });
 
   test('invalid persisted Shelly base URL falls back to defaults', () {
     const defaults = GarageDoorConfig(

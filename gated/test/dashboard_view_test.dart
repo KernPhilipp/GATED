@@ -88,8 +88,8 @@ void main() {
     expect(find.text('Offen'), findsOneWidget);
     expect(find.text('Shelly'), findsOneWidget);
     expect(find.text('Relais'), findsNothing);
-    expect(find.text('Sensor zuletzt geprueft'), findsOneWidget);
-    expect(find.text('Letzte Aenderung'), findsOneWidget);
+    expect(find.text('Sensor zuletzt geprüft'), findsOneWidget);
+    expect(find.text('Letzte Änderung'), findsOneWidget);
   });
 
   testWidgets('dashboard disables trigger while status is unknown', (
