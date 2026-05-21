@@ -19,6 +19,10 @@ dart run server.dart
 cd gated
 flutter run -d web-server --web-hostname 0.0.0.0 --web-port 8080 --release
 
+Fuer Android-Geraete per USB:
+adb reverse tcp:8080 tcp:8080
+adb reverse tcp:8091 tcp:8091
+
 Hinweis:
 Flutter gibt danach http://0.0.0.0:8080 aus. Das ist die Bind-Adresse des
 Servers und nicht die beste Adresse fuer den Browser.

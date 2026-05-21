@@ -880,7 +880,7 @@ class _AdminUsersTable extends StatelessWidget {
                   DataColumn(
                     headingRowAlignment: MainAxisAlignment.start,
                     label: _headerCell(
-                      'Email',
+                      'E-Mail',
                       columnWidth,
                       isSortable: true,
                       sortIndicatorWidth: sortIndicatorWidth,
