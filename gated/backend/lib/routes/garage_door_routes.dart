@@ -7,13 +7,15 @@ import '../auth/email_access_control.dart';
 import '../auth/request_auth.dart';
 import '../db/database.dart';
 import '../garage_door/garage_door_service.dart';
+import 'admin_events.dart';
 import 'request_helpers.dart';
 
 Router buildGarageDoorRouter(
   GarageDoorService garageDoorService,
   DatabaseService authDb,
-  EmailAccessControlService accessControlService,
-) => Router()
+  EmailAccessControlService accessControlService, [
+  AdminEventsBroker? eventsBroker,
+]) => Router()
   ..get('/garage-door/config', (Request request) async {
     try {
       await authenticateAdminRequest(request, authDb, accessControlService);
@@ -49,6 +51,7 @@ Router buildGarageDoorRouter(
       );
       await authDb.saveGarageDoorConfig(config.toDbConfig());
       await garageDoorService.updateConfig(config);
+      eventsBroker?.publish(type: 'garage-door-config-updated');
       return Response.ok(
         jsonEncode(config.toPublicJson()),
         headers: jsonHeaders,

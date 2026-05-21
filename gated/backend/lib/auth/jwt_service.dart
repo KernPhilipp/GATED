@@ -15,7 +15,7 @@ void loadJwtEnv({String? overrideSecret}) {
   final envFile = File('.env');
   if (!envFile.existsSync()) {
     throw StateError(
-      'Missing .env file. Create it from .env.example before starting the backend.',
+      'Missing .env file. Create it from ../../deploy/backend.env.example before starting the backend.',
     );
   }
 

@@ -130,7 +130,7 @@ class GarageDoorService implements GarageDoorController {
       case 403:
         return 'Sitzung abgelaufen. Bitte erneut anmelden.';
       case 409:
-        return 'Torstatus ist nicht bestaetigt. Impuls derzeit nicht erlaubt.';
+        return 'Torstatus ist nicht bestätigt. Impuls derzeit nicht erlaubt.';
       case 500:
         return 'Serverfehler. Bitte später versuchen.';
       case 502:

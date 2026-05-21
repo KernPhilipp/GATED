@@ -46,7 +46,7 @@ class _KennzeichenViewState extends State<KennzeichenView> {
       authService: _authService,
       path: '/kennzeichen/events',
       canConnect: () => mounted && widget.isActive && !_isRedirectingToLogin,
-      onEvent: _handleRealtimeEvent,
+      onEvent: (_) => _handleRealtimeEvent(),
     );
     if (widget.isActive) {
       _activateRealtimeUpdates(initialLoad: true);

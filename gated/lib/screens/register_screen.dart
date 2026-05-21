@@ -1,16 +1,24 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../features/logo_assets.dart';
 import '../services/auth_service.dart';
+import '../services/credential_login_service.dart';
+import '../services/manual_password_autofill_suppressor.dart';
 import '../utils/snackbar_utils.dart';
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key, AuthService? authService})
-    : _authService = authService;
+  const RegisterScreen({
+    super.key,
+    AuthService? authService,
+    CredentialLoginService? credentialLoginService,
+  }) : _authService = authService,
+       _credentialLoginService = credentialLoginService;
 
   final AuthService? _authService;
+  final CredentialLoginService? _credentialLoginService;
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -25,6 +33,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailFocusNode = FocusNode();
   final _passwordFocusNode = FocusNode();
   late final AuthService _authService;
+  late final CredentialLoginService _credentialLoginService;
+  late final ManualPasswordAutofillSuppressor _manualPasswordAutofillSuppressor;
 
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -35,6 +45,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void initState() {
     super.initState();
     _authService = widget._authService ?? const AuthService();
+    _credentialLoginService =
+        widget._credentialLoginService ?? CredentialLoginService();
+    _manualPasswordAutofillSuppressor = ManualPasswordAutofillSuppressor()
+      ..install();
     _emailFocusNode.addListener(_handleEmailFocusChange);
     _passwordFocusNode.addListener(_handlePasswordFocusChange);
   }
@@ -47,6 +61,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _passwordController.dispose();
     _emailFocusNode.dispose();
     _passwordFocusNode.dispose();
+    _manualPasswordAutofillSuppressor.dispose();
     super.dispose();
   }
 
@@ -66,109 +81,97 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   constraints: const BoxConstraints(maxWidth: 400),
                   child: Padding(
                     padding: const EdgeInsets.all(30.0),
-                    child: AutofillGroup(
-                      child: Form(
-                        key: _formKey,
-                        autovalidateMode: AutovalidateMode.always,
-                        child: Column(
-                          children: [
-                            const Text(
-                              'Willkommen bei',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 50,
-                                fontWeight: FontWeight.w600,
-                              ),
+                    child: Form(
+                      key: _formKey,
+                      autovalidateMode: AutovalidateMode.always,
+                      child: Column(
+                        children: [
+                          const Text(
+                            'Willkommen bei',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 50,
+                              fontWeight: FontWeight.w600,
                             ),
-                            SizedBox(
-                              height: 200,
-                              child: SvgPicture.asset(logoAsset),
+                          ),
+                          SizedBox(
+                            height: 200,
+                            child: SvgPicture.asset(logoAsset),
+                          ),
+                          TextFormField(
+                            controller: _emailController,
+                            focusNode: _emailFocusNode,
+                            keyboardType: TextInputType.emailAddress,
+                            textInputAction: TextInputAction.next,
+                            decoration: const InputDecoration(
+                              labelText: 'E-Mail',
                             ),
-                            TextFormField(
-                              controller: _emailController,
-                              focusNode: _emailFocusNode,
-                              keyboardType: TextInputType.emailAddress,
-                              textInputAction: TextInputAction.next,
-                              autofillHints: const [
-                                AutofillHints.email,
-                                AutofillHints.username,
-                              ],
-                              decoration: const InputDecoration(
-                                labelText: 'E-Mail',
-                              ),
-                              onTap: () {
-                                _markEmailTouched();
-                              },
-                              onFieldSubmitted: (_) => _focusPasswordField(),
-                              validator: _validateEmailField,
-                            ),
-                            const SizedBox(height: 20),
-                            TextFormField(
-                              controller: _passwordController,
-                              focusNode: _passwordFocusNode,
-                              obscureText: _obscurePassword,
-                              keyboardType: TextInputType.visiblePassword,
-                              enableSuggestions: false,
-                              autocorrect: false,
-                              textInputAction: TextInputAction.done,
-                              autofillHints: const [AutofillHints.newPassword],
-                              decoration: InputDecoration(
-                                labelText: 'Passwort',
-                                suffixIcon: IconButton(
-                                  tooltip: _obscurePassword
-                                      ? 'Passwort anzeigen'
-                                      : 'Passwort verbergen',
-                                  onPressed: () {
-                                    setState(() {
-                                      _obscurePassword = !_obscurePassword;
-                                    });
-                                  },
-                                  icon: Icon(
-                                    _obscurePassword
-                                        ? Icons.visibility_off_rounded
-                                        : Icons.visibility_rounded,
-                                  ),
+                            onTap: () {
+                              _markEmailTouched();
+                            },
+                            onFieldSubmitted: (_) => _focusPasswordField(),
+                            validator: _validateEmailField,
+                          ),
+                          const SizedBox(height: 20),
+                          TextFormField(
+                            controller: _passwordController,
+                            focusNode: _passwordFocusNode,
+                            obscureText: _obscurePassword,
+                            keyboardType: TextInputType.visiblePassword,
+                            enableSuggestions: false,
+                            autocorrect: false,
+                            textInputAction: TextInputAction.done,
+                            decoration: InputDecoration(
+                              labelText: 'Passwort',
+                              suffixIcon: IconButton(
+                                tooltip: _obscurePassword
+                                    ? 'Passwort anzeigen'
+                                    : 'Passwort verbergen',
+                                onPressed: () {
+                                  setState(() {
+                                    _obscurePassword = !_obscurePassword;
+                                  });
+                                },
+                                icon: Icon(
+                                  _obscurePassword
+                                      ? Icons.visibility_off_rounded
+                                      : Icons.visibility_rounded,
                                 ),
                               ),
-                              onTap: () {
-                                _markPasswordTouched();
-                              },
-                              onFieldSubmitted: (_) => _submitRegister(),
-                              validator: _validatePasswordField,
                             ),
-                            const SizedBox(height: 40),
-                            SizedBox(
-                              width: double.infinity,
-                              child: FilledButton(
-                                onPressed: _isLoading ? null : _submitRegister,
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: colorScheme.primary,
-                                ),
-                                child: _isLoading
-                                    ? const SizedBox(
-                                        height: 20,
-                                        width: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 3,
-                                        ),
-                                      )
-                                    : const Text('Registrieren'),
+                            onTap: () {
+                              _markPasswordTouched();
+                            },
+                            onFieldSubmitted: (_) => _submitRegister(),
+                            validator: _validatePasswordField,
+                          ),
+                          const SizedBox(height: 40),
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton(
+                              onPressed: _isLoading ? null : _submitRegister,
+                              style: FilledButton.styleFrom(
+                                backgroundColor: colorScheme.primary,
                               ),
+                              child: _isLoading
+                                  ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 3,
+                                      ),
+                                    )
+                                  : const Text('Registrieren'),
                             ),
-                            const SizedBox(height: 10),
-                            TextButton(
-                              onPressed: () {
-                                Navigator.pushReplacementNamed(
-                                  context,
-                                  '/login',
-                                );
-                              },
-                              child: const Text(
-                                'Schon einen Account? Anmelden',
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(height: 10),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pushReplacementNamed(context, '/login');
+                            },
+                            child: const Text('Schon einen Account? Anmelden'),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -201,7 +204,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     try {
       await _authService.register(email: email, password: password);
-      TextInput.finishAutofillContext(shouldSave: true);
+      unawaited(
+        _credentialLoginService.storePasswordCredential(
+          email: email,
+          password: password,
+        ),
+      );
       if (!mounted) return;
       if (_isLoading) {
         setState(() => _isLoading = false);

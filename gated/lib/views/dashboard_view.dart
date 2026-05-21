@@ -86,7 +86,7 @@ class _DashboardViewState extends State<DashboardView> {
           Text('Dashboard', style: theme.textTheme.headlineMedium),
           const SizedBox(height: 20),
           Text(
-            'Das Tor wird ueber den Shelly-Proxy gesteuert. Der Sensor ist die verbindliche Quelle fuer offen und geschlossen.',
+            'Das Tor wird über den Shelly-Proxy gesteuert. Der Sensor ist die verbindliche Quelle für offen und geschlossen.',
             style: theme.textTheme.bodyMedium,
           ),
           const SizedBox(height: 24),
@@ -252,7 +252,7 @@ class _DashboardViewState extends State<DashboardView> {
                   : const Icon(Icons.power_settings_new_rounded),
               label: Text(
                 status.state == GarageDoorState.open
-                    ? 'Impuls zum Schliessen senden'
+                    ? 'Impuls zum Schließen senden'
                     : 'Impuls senden',
               ),
             ),
@@ -284,9 +284,9 @@ class _DashboardViewState extends State<DashboardView> {
       ),
       _DashboardInfoRow(
         icon: Icons.update_rounded,
-        label: 'Sensor zuletzt geprueft',
+        label: 'Sensor zuletzt geprüft',
         value: shelly?.lastCheckedAt == null
-            ? 'Noch nicht verfuegbar'
+            ? 'Noch nicht verfügbar'
             : _formatDateTime(shelly!.lastCheckedAt!.toLocal()),
       ),
     ];
@@ -296,7 +296,7 @@ class _DashboardViewState extends State<DashboardView> {
       rows.add(
         _DashboardInfoRow(
           icon: Icons.schedule_rounded,
-          label: 'Letzte Aenderung',
+          label: 'Letzte Änderung',
           value: _formatDateTime(lastChangedAt.toLocal()),
         ),
       );
@@ -380,7 +380,7 @@ class _DashboardViewState extends State<DashboardView> {
         return;
       }
 
-      const message = 'Zeitueberschreitung beim Laden des Torstatus.';
+      const message = 'Zeitüberschreitung beim Laden des Torstatus.';
       setState(() {
         _isLoading = false;
         if (_status == null) {
@@ -442,7 +442,7 @@ class _DashboardViewState extends State<DashboardView> {
     } on GarageDoorException catch (error) {
       _showErrorSnackBar(error.message);
     } on TimeoutException {
-      _showErrorSnackBar('Zeitueberschreitung beim Senden des Impulses.');
+      _showErrorSnackBar('Zeitüberschreitung beim Senden des Impulses.');
     } catch (_) {
       _showErrorSnackBar('Impuls konnte nicht gesendet werden.');
     } finally {
@@ -493,7 +493,7 @@ class _DashboardViewState extends State<DashboardView> {
     showAppSnackBar(
       context,
       message:
-          '$message Letzter bekannter Stand bleibt sichtbar, waehrend im Hintergrund neu verbunden wird.',
+          '$message Letzter bekannter Stand bleibt sichtbar, während im Hintergrund neu verbunden wird.',
       isError: true,
       withCloseAction: true,
     );
@@ -521,7 +521,7 @@ class _DashboardViewState extends State<DashboardView> {
       GarageDoorState.unknown => _DashboardStateVisual(
         title: 'Status unbekannt',
         description:
-            'Die reale Position ist derzeit nicht bestaetigt, bis Shelly und Sensor eindeutig melden.',
+            'Die reale Position ist derzeit nicht bestätigt, bis Shelly und Sensor eindeutig melden.',
         icon: Icons.help_outline_rounded,
         backgroundColor: colorScheme.errorContainer,
         foregroundColor: colorScheme.onErrorContainer,
@@ -537,7 +537,7 @@ class _DashboardViewState extends State<DashboardView> {
   String _sensorStatusText(GarageDoorStatus status) {
     final shelly = status.shelly;
     if (shelly == null || shelly.isReachable == null) {
-      return 'Noch nicht geprueft';
+      return 'Noch nicht geprüft';
     }
     if (shelly.isReachable != true) {
       return 'Nicht erreichbar';
@@ -553,7 +553,7 @@ class _DashboardViewState extends State<DashboardView> {
 
   String _shellyStatusText(GarageDoorShellyStatus? shelly) {
     if (shelly == null || shelly.isReachable == null) {
-      return 'Noch nicht geprueft';
+      return 'Noch nicht geprüft';
     }
     if (shelly.isReachable == true && shelly.inputState != null) {
       return 'Erreichbar';

@@ -342,7 +342,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Aktualisieren'), findsNothing);
-    expect(find.text('Email'), findsOneWidget);
+    expect(find.text('E-Mail'), findsOneWidget);
     expect(find.text('Rolle'), findsOneWidget);
     expect(find.text('Bereits registriert'), findsOneWidget);
     expect(find.text('Erstellt am'), findsOneWidget);
@@ -390,6 +390,52 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(adminService.garageDoorConfig.shellyBaseUrl, 'http://192.168.0.250');
+    expect(find.text('Shelly-Konfiguration gespeichert.'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 4));
+    await tester.binding.setSurfaceSize(null);
+  });
+
+  testWidgets('admin view saves Shelly configuration with enter', (
+    tester,
+  ) async {
+    final adminService = _FakeAdminService();
+
+    await tester.binding.setSurfaceSize(const Size(1400, 900));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: HomeScreen(
+          onThemeModeChanged: (_) {},
+          pwaInstallController: _FakePwaInstallController(),
+          authService: _FakeAuthService(
+            user: AuthUser(
+              id: 1,
+              email: 'admin@example.com',
+              role: AuthUserRole.admin,
+              createdAt: DateTime.utc(2026, 4, 24),
+            ),
+          ),
+          adminService: adminService,
+          emailDraftService: _FakeEmailDraftService(),
+          dashboardViewBuilder: (_) => const SizedBox.shrink(),
+          kennzeichenViewBuilder: (_) => const SizedBox.shrink(),
+          profileView: const SizedBox.shrink(),
+          settingsView: const SizedBox.shrink(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.admin_panel_settings_rounded));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Shelly Base-URL'),
+      'http://192.168.0.251',
+    );
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+
+    expect(adminService.garageDoorConfig.shellyBaseUrl, 'http://192.168.0.251');
     expect(find.text('Shelly-Konfiguration gespeichert.'), findsOneWidget);
     await tester.pump(const Duration(seconds: 4));
     await tester.binding.setSurfaceSize(null);

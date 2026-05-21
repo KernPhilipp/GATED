@@ -1,7 +1,1 @@
 GATED - ToDo
-
-1) Autofill
------------
-- Flutter Issue beobachten: https://github.com/flutter/flutter/issues/185327
-- Danach Autofill für Login und Registrierung sauber implementieren.
-- Auf Web, Android und PWA testen.
