@@ -31,7 +31,7 @@ jobs:
 
       - name: Build Flutter web release
         working-directory: gated
-        run: flutter build web --release --dart-define=API_BASE_URL=/api
+        run: flutter build web --release --no-web-resources-cdn --dart-define=API_BASE_URL=/api
 
       - name: Backend dependencies
         working-directory: gated/backend

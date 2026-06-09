@@ -16,7 +16,7 @@ mkdir -p "${BUILD_ROOT}" "${DIST_ROOT}"
 
 if [[ ! -d "${REPO_ROOT}/gated/build/web" ]]; then
   echo "Missing Flutter web build at gated/build/web."
-  echo "Run flutter build web before packaging."
+  echo "Run flutter build web --release --no-web-resources-cdn --dart-define=API_BASE_URL=/api before packaging."
   exit 1
 fi
 
